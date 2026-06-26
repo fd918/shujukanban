@@ -297,8 +297,14 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
     hour: "2-digit",
     hour12: false
   }).format(now);
+  const minuteText = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai",
+    minute: "2-digit"
+  }).format(now);
   const hour = Number(hourText);
-  const dateHour = `${today} ${String(hour).padStart(2, "0")}:00`;
+  const minute = Number(minuteText);
+  const slotMinute = minute < 30 ? 0 : 30;
+  const dateHour = `${today} ${String(hour).padStart(2, "0")}:${String(slotMinute).padStart(2, "0")}`;
   const todayRow = rows.find(row => row[0] === today) || [];
   const metric = tiers.find(tier => tier.metric)?.metric || "amount";
   const actualRows = rows.filter(row => row[4] != null);
@@ -312,6 +318,7 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
     metric,
     date: today,
     hour,
+    slotMinute,
     dateHour,
     recordedAt: updatedAt,
     todayValidOrders: todayRow[1] ?? null,
@@ -336,7 +343,7 @@ function replaceBetween(source, startMarker, endMarker, replacement) {
 
 function existingDefaultActivity(html) {
   const startMarker = "    const DEFAULT_ACTIVITY = ";
-  const endMarker = ";\n\n    let activities";
+  const endMarker = ";\n\n    const HOURLY_SNAPSHOTS = ";
   const start = html.indexOf(startMarker);
   const end = html.indexOf(endMarker, start);
   if (start < 0 || end < 0) return {};
@@ -402,11 +409,18 @@ async function main() {
   html = replaceBetween(
     html,
     "    const DEFAULT_ACTIVITY = ",
-    ";\n\n    let activities",
+    ";\n\n    const HOURLY_SNAPSHOTS = ",
     `${jsString(activityBlock)}`
   );
-  writeFileSync(htmlPath, html);
   writeHourlySnapshot(activityId, title, rows, activityBlock.tiers, updatedAt);
+  const hourlySnapshots = readJson(resolve(root, "data", `hourly-snapshots-${activityId}.json`), []);
+  html = replaceBetween(
+    html,
+    "    const HOURLY_SNAPSHOTS = ",
+    ";\n\n    let activities",
+    `${jsString({ [String(activityId)]: hourlySnapshots })}`
+  );
+  writeFileSync(htmlPath, html);
 
   const actualTotal = rows.reduce((sum, row) => sum + (row[4] || 0), 0);
   console.log(`已刷新活动 ${activityId}。接口日期 ${rows.filter(row => row[4] != null).length} 天，核销累计 ${actualTotal.toFixed(2)} 元。`);

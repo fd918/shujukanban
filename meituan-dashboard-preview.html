@@ -72,7 +72,7 @@
     }
 
     .kpi-grid {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       margin-bottom: 14px;
     }
 
@@ -203,7 +203,7 @@
 
     .control-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 10px;
       align-items: end;
     }
@@ -215,6 +215,16 @@
       font-size: 12px;
     }
 
+    .field .checkbox-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+      margin-bottom: 0;
+      color: var(--text);
+      font-size: 14px;
+    }
+
     .text-input,
     .select-input {
       width: 100%;
@@ -224,17 +234,6 @@
       border-radius: 6px;
       font: inherit;
       background: #fff;
-    }
-
-    .textarea-input {
-      width: 100%;
-      min-height: 110px;
-      margin-top: 12px;
-      padding: 10px;
-      border: 1px solid #d0d5dd;
-      border-radius: 6px;
-      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      resize: vertical;
     }
 
     .button {
@@ -404,10 +403,10 @@
         <h1>美团联盟年框媒体激励2026年6月-云瞻-看板</h1>
         <div class="sub">口径：主指标按有效核销订单实付金额计算。接口数据作为默认值；每一天都可以在“预估数据”列手动调整，调整后优先按你的输入计算。</div>
         <div class="activity-time" id="activity-time">活动时间：2026-06-06 00:00:00 - 2026-06-30 23:59:59</div>
-        <div class="data-deadline" id="data-deadline">数据截止时间：2026/6/26 23:43:01</div>
+        <div class="data-deadline" id="data-deadline">数据截止时间：2026/6/27 00:31:36</div>
       </div>
       <div class="header-actions">
-        <div class="badge">活动 1199 · 数据截至 2026/6/26 23:43:01</div>
+        <div class="badge">活动 1199 · 数据截至 2026/6/27 00:31:36</div>
         <button class="button" id="refresh-now">刷新数据</button>
         <button class="button secondary" id="open-settings">设置</button>
       </div>
@@ -425,24 +424,19 @@
         <div class="note">接口当天有效订单实付金额。</div>
       </div>
       <div class="panel kpi">
+        <div class="label" id="today-forecast-label">今日预估</div>
+        <div class="value positive" id="today-forecast">-</div>
+        <div class="note" id="today-forecast-note">等待快照数据。</div>
+      </div>
+      <div class="panel kpi">
         <div class="label" id="actual-label">实际核销累计</div>
         <div class="value" id="actual-total">-</div>
         <div class="note" id="actual-note">只统计接口已经返回的实际核销金额。</div>
       </div>
       <div class="panel kpi">
-        <div class="label">手动调整净变化</div>
-        <div class="value warning" id="estimate-total">-</div>
-        <div class="note">任意日期可手动覆盖；清空后恢复接口默认值。</div>
-      </div>
-      <div class="panel kpi">
         <div class="label" id="projected-label">预计最终核销</div>
         <div class="value positive" id="projected-total">-</div>
-        <div class="note" id="projected-note">接口默认累计 + 手动调整净变化。</div>
-      </div>
-      <div class="panel kpi">
-        <div class="label">预计最高达成档位</div>
-        <div class="value" id="projected-level">-</div>
-        <div class="note">按照预计最终核销判断。</div>
+        <div class="note" id="projected-note">接口默认累计 + 手动输入预估。</div>
       </div>
     </section>
 
@@ -490,6 +484,10 @@
             <input class="text-input" id="new-activity-id" placeholder="例如 1294">
           </div>
           <div class="field">
+            <label>记录快照</label>
+            <label class="checkbox-line"><input type="checkbox" id="new-activity-record-snapshot"> 纳入后台定时刷新</label>
+          </div>
+          <div class="field">
             <label>页面自动刷新</label>
             <select class="select-input" id="auto-refresh">
               <option value="0">关闭</option>
@@ -500,19 +498,11 @@
             </select>
           </div>
           <div class="field">
-            <label>本机接口刷新</label>
-            <button class="button secondary" id="copy-refresh-command">复制命令</button>
-          </div>
-          <div class="field">
             <label>新增</label>
             <button class="button" id="add-activity">新增并切换</button>
           </div>
         </div>
-        <div style="margin-top: 10px;">
-          <button class="button secondary" id="import-response">导入接口响应到当前活动</button>
-        </div>
-        <textarea class="textarea-input" id="response-json" placeholder="把 /ipc/pcActivityData 的完整 JSON 响应粘贴到这里，然后点“导入接口响应到当前活动”。"></textarea>
-        <div class="note" id="auto-refresh-status">页面自动刷新会定时请求本机刷新服务；请先启动 `node scripts/local-refresh-server.mjs`。</div>
+        <div class="note" id="auto-refresh-status">页面自动刷新会定时请求后台看板服务；请确认桌面“美团看板服务.command”处于运行状态。</div>
       </div>
     </div>
 
@@ -555,7 +545,7 @@
           <tbody id="daily-body"></tbody>
         </table>
       </div>
-      <div class="note">金额单位为元。任意日期输入后会实时更新顶部指标，并自动保存在当前浏览器；清空输入框则恢复使用接口默认值。</div>
+      <div class="note">金额单位为元。任意日期输入后会实时更新顶部指标，并同步保存到后台服务；清空输入框则恢复使用接口默认值。</div>
     </section>
   </main>
 
@@ -564,6 +554,7 @@
     const ACTIVE_KEY = "meituan_dashboard_active_activity";
     const AUTO_REFRESH_KEY = "meituan_dashboard_auto_refresh_minutes";
     const DATE_SORT_KEY = "meituan_dashboard_date_sort";
+    const SERVICE_URL = "http://127.0.0.1:8765";
     const CAP = 600000;
     const DEFAULT_TIERS = [
       { name: "档一", metric: "amount", threshold: 95378491, rewardType: "rate", rate: 0.002 },
@@ -571,7 +562,9 @@
       { name: "档三", metric: "amount", threshold: 117885379, rewardType: "rate", rate: 0.005 }
     ];
 
-    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 23:43:01","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124454,123614,3426748.17,3400854.95],["2026-06-12",133937,132977,3740932.81,3703258.21],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132788,131137,4069099,3998131.48],["2026-06-20",136139,134570,4005542.26,3941249.34],["2026-06-21",145769,143866,4227243.38,4154024.91],["2026-06-22",127977,127137,3397733.43,3367576.01],["2026-06-23",131831,130840,3581194.73,3544982.15],["2026-06-24",142500,140622,3890762.67,3826561.61],["2026-06-25",148592,147258,4101655.34,4048326.41],["2026-06-26",155043,145168,4346097.67,4026831.92],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
+    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/27 00:31:36","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124454,123615,3426748.17,3401062.95],["2026-06-12",133937,132977,3740932.81,3703258.21],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132788,131137,4069099,3998131.48],["2026-06-20",136139,134570,4005542.26,3941249.34],["2026-06-21",145769,143866,4227243.38,4154024.91],["2026-06-22",127975,127137,3397616.48,3367576.01],["2026-06-23",131831,130840,3581194.73,3544982.15],["2026-06-24",142500,140623,3890762.67,3826583.21],["2026-06-25",148592,147280,4101655.34,4049677.28],["2026-06-26",156001,149355,4377711.68,4154555.59],["2026-06-27",1475,13,46730.88,908.55],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
+
+    const HOURLY_SNAPSHOTS = {"1199":[{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":22,"dateHour":"2026-06-26 22:00","recordedAt":"2026/6/26 22:58:46","todayValidOrders":152230,"todayRedemptionOrders":141091,"todayActualPayment":4256428.93,"todayRedemptionAmount":3901332.1,"cumulativeRedemptionOrders":2836672,"cumulativeRedemptionAmount":79459876.84999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":23,"dateHour":"2026-06-26 23:00","recordedAt":"2026/6/26 23:51:42","todayValidOrders":155548,"todayRedemptionOrders":145919,"todayActualPayment":4361707.46,"todayRedemptionAmount":4050527.83,"cumulativeRedemptionOrders":2841521,"cumulativeRedemptionAmount":79610164.75999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":23,"slotMinute":30,"dateHour":"2026-06-26 23:30","recordedAt":"2026/6/26 23:59:32","todayValidOrders":155986,"todayRedemptionOrders":146623,"todayActualPayment":4376467.96,"todayRedemptionAmount":4073010.26,"cumulativeRedemptionOrders":2842231,"cumulativeRedemptionAmount":79632997.00999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":0,"slotMinute":0,"dateHour":"2026-06-27 00:00","recordedAt":"2026/6/27 00:29:36","todayValidOrders":1381,"todayRedemptionOrders":7,"todayActualPayment":44057.24,"todayRedemptionAmount":755.93,"cumulativeRedemptionOrders":2844842,"cumulativeRedemptionAmount":79712170.11999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":0,"slotMinute":30,"dateHour":"2026-06-27 00:30","recordedAt":"2026/6/27 00:31:36","todayValidOrders":1475,"todayRedemptionOrders":13,"todayActualPayment":46730.88,"todayRedemptionAmount":908.55,"cumulativeRedemptionOrders":2844986,"cumulativeRedemptionAmount":79716425.68999998}]};
 
     let activities = loadActivities();
     let activeId = DEFAULT_ACTIVITY.id;
@@ -580,22 +573,22 @@
     function loadActivities() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-      const savedDefault = saved[DEFAULT_ACTIVITY.id] || {};
-      return {
-        ...saved,
-        [DEFAULT_ACTIVITY.id]: {
-          ...DEFAULT_ACTIVITY,
-          ...savedDefault,
-          title: DEFAULT_ACTIVITY.title,
-          activityTime: DEFAULT_ACTIVITY.activityTime,
-          ruleImage: DEFAULT_ACTIVITY.ruleImage,
-          updatedAt: DEFAULT_ACTIVITY.updatedAt,
-          rewardCap: DEFAULT_ACTIVITY.rewardCap,
-          rows: DEFAULT_ACTIVITY.rows,
-          tiers: DEFAULT_ACTIVITY.tiers,
-          overrides: savedDefault.overrides || DEFAULT_ACTIVITY.overrides || {}
-        }
-      };
+        const savedDefault = saved[DEFAULT_ACTIVITY.id] || {};
+        return {
+          ...saved,
+          [DEFAULT_ACTIVITY.id]: {
+            ...DEFAULT_ACTIVITY,
+            ...savedDefault,
+            title: DEFAULT_ACTIVITY.title,
+            activityTime: DEFAULT_ACTIVITY.activityTime,
+            ruleImage: DEFAULT_ACTIVITY.ruleImage,
+            updatedAt: DEFAULT_ACTIVITY.updatedAt,
+            rewardCap: DEFAULT_ACTIVITY.rewardCap,
+            rows: DEFAULT_ACTIVITY.rows,
+            tiers: DEFAULT_ACTIVITY.tiers,
+            overrides: savedDefault.overrides || DEFAULT_ACTIVITY.overrides || {}
+          }
+        };
       } catch {
         return { [DEFAULT_ACTIVITY.id]: DEFAULT_ACTIVITY };
       }
@@ -603,6 +596,41 @@
 
     function saveActivities() {
       localStorage.setItem(STORE_KEY, JSON.stringify(activities));
+    }
+
+    async function loadSavedOverrides() {
+      try {
+        const response = await fetch(`${SERVICE_URL}/overrides`);
+        const data = await response.json();
+        if (!data.ok || !data.overrides) return;
+        Object.entries(data.overrides).forEach(([id, overrides]) => {
+          if (!activities[id]) return;
+          activities[id].overrides = {
+            ...(activities[id].overrides || {}),
+            ...(overrides || {})
+          };
+        });
+        saveActivities();
+        renderTable();
+        updateMetrics();
+      } catch {
+        // 后台服务不可用时，继续使用浏览器本地保存的数据。
+      }
+    }
+
+    async function saveOverridesToService(activity) {
+      try {
+        await fetch(`${SERVICE_URL}/overrides`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activityId: activity.id,
+            overrides: activity.overrides || {}
+          })
+        });
+      } catch {
+        // 页面仍会保存到 localStorage；服务恢复后再次输入会重新同步。
+      }
     }
 
     function activeActivity() {
@@ -641,19 +669,86 @@
       return metric === "orders" ? (row[2] || 0) : (row[4] || 0);
     }
 
-    function todayMetricLabel(metric = activeMetric()) {
-      return metric === "orders" ? "今日核销订单数" : "今日核销 GMV";
+    function metricDisplayDate(rows) {
+      const today = todayYmd();
+      const snapshots = HOURLY_SNAPSHOTS[String(activeActivity().id)] || [];
+      const hasTodaySnapshot = snapshots.some(item => item && item.date === today);
+      const todayRow = rows.find(item => item[0] === today);
+      if (hasTodaySnapshot || (todayRow && todayRow.some((value, index) => index > 0 && value != null))) return today;
+      return rows.filter(row => row[4] != null).map(row => row[0]).sort().pop() || today;
     }
 
-    function todayMetricValue(rows, metric = activeMetric()) {
-      const row = rows.find(item => item[0] === todayYmd());
+    function datePrefix(date, rows) {
+      return date === todayYmd() ? "今日" : `${date} 最新日`;
+    }
+
+    function todayMetricLabel(metric = activeMetric(), date = metricDisplayDate(activeActivity().rows)) {
+      const prefix = datePrefix(date, activeActivity().rows);
+      return metric === "orders" ? `${prefix}核销订单数` : `${prefix}核销 GMV`;
+    }
+
+    function todayMetricValue(rows, metric = activeMetric(), date = metricDisplayDate(rows)) {
+      const row = rows.find(item => item[0] === date);
       if (!row) return null;
       return metric === "orders" ? row[2] : row[4];
     }
 
-    function todayValidGmv(rows) {
-      const row = rows.find(item => item[0] === todayYmd());
+    function todayValidGmv(rows, date = metricDisplayDate(rows)) {
+      const row = rows.find(item => item[0] === date);
       return row ? row[3] : null;
+    }
+
+    function snapshotMetricValue(snapshot, metric = activeMetric()) {
+      if (!snapshot) return null;
+      return metric === "orders" ? snapshot.todayRedemptionOrders : snapshot.todayRedemptionAmount;
+    }
+
+    function snapshotElapsedMinutes(snapshot) {
+      const hour = Number(snapshot.hour || 0);
+      const slotMinute = Number(snapshot.slotMinute || 0);
+      return Math.min(1440, Math.max(30, hour * 60 + slotMinute + 30));
+    }
+
+    function forecastToday(rows, metric = activeMetric(), date = metricDisplayDate(rows)) {
+      const current = todayMetricValue(rows, metric, date);
+      const snapshots = (HOURLY_SNAPSHOTS[String(activeActivity().id)] || [])
+        .filter(item => item && item.date && snapshotMetricValue(item, metric) != null)
+        .sort((a, b) => String(a.dateHour).localeCompare(String(b.dateHour)));
+      const todaySnapshots = snapshots.filter(item => item.date === date);
+      if (!todaySnapshots.length) {
+        return {
+          value: current,
+          note: current == null ? `暂无 ${date} 接口数据和快照。` : `暂无 ${date} 快照，先显示当前接口值。`
+        };
+      }
+
+      const latest = todaySnapshots[todaySnapshots.length - 1];
+      const latestValue = snapshotMetricValue(latest, metric);
+      const previousDates = [...new Set(snapshots.map(item => item.date).filter(itemDate => itemDate < date))].sort();
+      const previousDate = previousDates[previousDates.length - 1];
+      if (previousDate) {
+        const previousSnapshots = snapshots.filter(item => item.date === previousDate);
+        const previousFinal = previousSnapshots[previousSnapshots.length - 1];
+        const currentElapsed = snapshotElapsedMinutes(latest);
+        const previousAtSameProgress = previousSnapshots
+          .filter(item => snapshotElapsedMinutes(item) <= currentElapsed)
+          .pop() || previousSnapshots[0];
+        const previousFinalValue = snapshotMetricValue(previousFinal, metric);
+        const previousProgressValue = snapshotMetricValue(previousAtSameProgress, metric);
+        if (previousFinalValue > 0 && previousProgressValue > 0) {
+          const progressRatio = Math.min(1, previousProgressValue / previousFinalValue);
+          return {
+            value: Math.max(latestValue, latestValue / progressRatio),
+            note: `按 ${previousDate} 同时间进度曲线预估 ${date}，最新快照 ${latest.dateHour}。`
+          };
+        }
+      }
+
+      const progressRatio = Math.min(1, snapshotElapsedMinutes(latest) / 1440);
+      return {
+        value: Math.max(latestValue, latestValue / progressRatio),
+        note: `历史曲线不足，按 ${date} 时间进度粗估，最新快照 ${latest.dateHour}。`
+      };
     }
 
     function intText(value) {
@@ -691,76 +786,6 @@
         if (amount > 0) estimates[date] = amount;
       });
       return estimates;
-    }
-
-    function dateRange(start, end) {
-      const result = [];
-      const cursor = new Date(`${start}T00:00:00+08:00`);
-      const endDate = new Date(`${end}T00:00:00+08:00`);
-      while (cursor <= endDate) {
-        result.push(cursor.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }));
-        cursor.setDate(cursor.getDate() + 1);
-      }
-      return result;
-    }
-
-    function ymdFromSeconds(seconds) {
-      return new Date(seconds * 1000).toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
-    }
-
-    function centsToYuan(value) {
-      return value == null ? null : Number((value / 100).toFixed(2));
-    }
-
-    function rowsFromResponse(json, fallbackRows) {
-      const data = json.data || {};
-      const category = data.categoryRewardList && data.categoryRewardList[0];
-      if (!category || !Array.isArray(category.dailyData)) throw new Error("响应里没有 dailyData。");
-      const byDate = new Map();
-      category.dailyData.forEach(item => {
-        byDate.set(ymdFromSeconds(item.date), [
-          ymdFromSeconds(item.date),
-          item.validOrders ?? null,
-          item.redemptionOrders ?? null,
-          centsToYuan(item.actualPayment),
-          centsToYuan(item.redemptionOrdersAmount)
-        ]);
-      });
-      const dates = fallbackRows.map(row => row[0]);
-      category.dailyData.forEach(item => {
-        const date = ymdFromSeconds(item.date);
-        if (!dates.includes(date)) dates.push(date);
-      });
-      dates.sort();
-      return dates.map(date => byDate.get(date) || [date, null, null, null, null]);
-    }
-
-    function tiersFromResponse(json, fallbackTiers) {
-      const stages = json.data?.categoryRewardList?.[0]?.activityStages || [];
-      if (!stages.length) return fallbackTiers;
-      return stages.map(stage => {
-        const amountThreshold = (stage.finalConsumeOrdersAmount || stage.consumeOrdersAmount || 0) / 100;
-        const orderThreshold = stage.finalConsumeOrders || stage.consumeOrders || 0;
-        const rate = (stage.perOrderCommission || 0) / 10000;
-        const perOrderReward = (stage.perOrderReward || 0) / 100;
-        const fixedReward = (stage.extraReward || 0) / 100;
-        if (amountThreshold > 0 && rate > 0) {
-          return { name: `档${stage.levelId}`, metric: "amount", threshold: amountThreshold, rewardType: "rate", rate };
-        }
-        if (orderThreshold > 0 && perOrderReward > 0) {
-          return { name: `档${stage.levelId}`, metric: "orders", threshold: orderThreshold, rewardType: "per_order", perOrderReward };
-        }
-        if ((amountThreshold > 0 || orderThreshold > 0) && fixedReward > 0) {
-          return {
-            name: `档${stage.levelId}`,
-            metric: amountThreshold > 0 ? "amount" : "orders",
-            threshold: amountThreshold > 0 ? amountThreshold : orderThreshold,
-            rewardType: "fixed",
-            fixedReward
-          };
-        }
-        return null;
-      }).filter(Boolean);
     }
 
     function updateHeader() {
@@ -834,6 +859,7 @@
         input.addEventListener("input", () => {
           activity.overrides = getEstimatesFromDom();
           saveActivities();
+          saveOverridesToService(activity);
           updateMetrics();
         });
       });
@@ -970,23 +996,22 @@
       document.getElementById("actual-label").textContent = `实际${metricName(metric)}累计`;
       document.getElementById("actual-note").textContent = `只统计接口已经返回的${metricName(metric)}。`;
       document.getElementById("projected-label").textContent = `预计最终${metricName(metric)}`;
-      document.getElementById("projected-note").textContent = "接口默认累计 + 手动调整净变化。";
-      const todayValue = todayMetricValue(activeActivity().rows, metric);
-      document.getElementById("today-label").textContent = todayMetricLabel(metric);
+      document.getElementById("projected-note").textContent = "接口默认累计 + 手动输入预估。";
+      const displayDate = metricDisplayDate(activeActivity().rows);
+      const todayValue = todayMetricValue(activeActivity().rows, metric, displayDate);
+      document.getElementById("today-label").textContent = todayMetricLabel(metric, displayDate);
       document.getElementById("today-total").textContent = todayValue == null ? "-" : metricText(todayValue, metric);
-      const todayGmv = todayValidGmv(activeActivity().rows);
+      const todayGmv = todayValidGmv(activeActivity().rows, displayDate);
       document.getElementById("today-valid-gmv").textContent = todayGmv == null ? "-" : wan(todayGmv);
+      const todayForecast = forecastToday(activeActivity().rows, metric, displayDate);
+      document.getElementById("today-forecast-label").textContent = metric === "orders" ? `${datePrefix(displayDate, activeActivity().rows)}预估订单数` : `${datePrefix(displayDate, activeActivity().rows)}预估 GMV`;
+      document.getElementById("today-forecast").textContent = todayForecast.value == null ? "-" : metricText(todayForecast.value, metric);
+      document.getElementById("today-forecast-note").textContent = todayForecast.note;
       document.getElementById("today-note").textContent = metric === "orders"
         ? "当前活动按订单数门槛和每单奖励计算。"
         : "当前活动按核销 GMV 门槛和比例奖励计算。";
       document.getElementById("actual-total").textContent = metricText(amounts.actualTotal, metric);
-      document.getElementById("estimate-total").textContent = metricText(amounts.estimateTotal, metric);
       document.getElementById("projected-total").textContent = metricText(amounts.projectedTotal, metric);
-
-      const reached = activeActivity().tiers.filter(tier => amounts.projectedTotal >= tier.threshold).pop();
-      const levelEl = document.getElementById("projected-level");
-      levelEl.textContent = activeActivity().tiers.length ? (reached ? reached.name : "暂未达档") : "未读取到档位";
-      levelEl.className = `value ${reached ? "positive" : "warning"}`;
 
       renderRewardTable(amounts);
       renderTargetCards(amounts);
@@ -1020,7 +1045,8 @@
         updatedAt: "",
         tiers: DEFAULT_TIERS,
         rows: [],
-        overrides: {}
+        overrides: {},
+        recordSnapshot: document.getElementById("new-activity-record-snapshot").checked
       };
       activeId = id;
       localStorage.setItem(ACTIVE_KEY, activeId);
@@ -1028,23 +1054,9 @@
       updateHeader();
       renderTable();
       updateMetrics();
-    });
-
-    document.getElementById("import-response").addEventListener("click", () => {
-      try {
-        const json = JSON.parse(document.getElementById("response-json").value);
-        if (json.code !== 0) throw new Error(json.msg || "接口返回失败");
-        const activity = activeActivity();
-        activity.rows = rowsFromResponse(json, activity.rows);
-        activity.tiers = tiersFromResponse(json, activity.tiers);
-        activity.updatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
-        saveActivities();
-        updateHeader();
-        renderTable();
-        updateMetrics();
-      } catch (error) {
-        alert(`导入失败：${error.message}`);
-      }
+      alert(activities[id].recordSnapshot
+        ? "已新增并切换活动。点击“刷新数据”后，该活动会纳入后台定时快照。"
+        : "已新增并切换活动。点击“刷新数据”只会拉取当前数据，不会纳入后台定时快照。");
     });
 
     document.getElementById("open-settings").addEventListener("click", () => {
@@ -1079,16 +1091,6 @@
       applyAutoRefresh();
     });
 
-    document.getElementById("copy-refresh-command").addEventListener("click", async () => {
-      const command = "node scripts/local-refresh-server.mjs";
-      try {
-        await navigator.clipboard.writeText(command);
-        alert("已复制本机刷新服务命令。请在项目根目录执行。");
-      } catch {
-        alert(command);
-      }
-    });
-
     async function refreshCurrentActivity({ silent = false } = {}) {
       const activityId = encodeURIComponent(activeActivity().id);
       const activity = activeActivity();
@@ -1099,7 +1101,8 @@
           title: activity.title,
           activityTime: activity.activityTime || "",
           ruleImage: activity.ruleImage || "",
-          rows: activity.rows || []
+          rows: activity.rows || [],
+          recordSnapshot: Boolean(activity.recordSnapshot)
         })
       });
       const data = await res.json();
@@ -1122,17 +1125,17 @@
       const select = document.getElementById("auto-refresh");
       select.value = String(minutes);
       if (minutes > 0) {
-        setAutoRefreshStatus(`已开启自动刷新：每 ${minutes} 分钟请求一次本机刷新服务。`);
+        setAutoRefreshStatus(`已开启自动刷新：每 ${minutes} 分钟请求一次后台看板服务。`);
         refreshTimer = setInterval(async () => {
           try {
             setAutoRefreshStatus(`自动刷新中：${new Date().toLocaleString("zh-CN", { hour12: false })}`);
             await refreshCurrentActivity({ silent: true });
           } catch (error) {
-            setAutoRefreshStatus(`自动刷新失败：${error.message}。请确认本机服务已启动：node scripts/local-refresh-server.mjs`);
+        setAutoRefreshStatus(`自动刷新失败：${error.message}。请双击桌面“美团看板服务.command”，选择“重启服务”。`);
           }
         }, minutes * 60 * 1000);
       } else {
-        setAutoRefreshStatus("自动刷新已关闭。开启后会定时请求本机刷新服务。");
+        setAutoRefreshStatus("自动刷新已关闭。开启后会定时请求后台看板服务。");
       }
     }
 
@@ -1143,7 +1146,7 @@
       try {
         await refreshCurrentActivity();
       } catch (error) {
-        alert(`刷新失败：${error.message}。请先在项目根目录启动：node scripts/local-refresh-server.mjs`);
+        alert(`刷新失败：${error.message}。请双击桌面“美团看板服务.command”，选择“重启服务”。`);
       } finally {
         button.disabled = false;
         button.textContent = "刷新数据";
@@ -1155,6 +1158,7 @@
     renderTable();
     updateMetrics();
     applyAutoRefresh();
+    loadSavedOverrides();
   </script>
 </body>
 </html>
