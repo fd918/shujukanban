@@ -16,7 +16,21 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function runRefresh(activityId) {
+function readBody(req) {
+  return new Promise(resolve => {
+    let body = "";
+    req.on("data", chunk => { body += chunk.toString(); });
+    req.on("end", () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
+
+function runRefresh(activityId, meta = {}) {
   return new Promise((resolvePromise, reject) => {
     if (running) {
       reject(new Error("已有刷新任务正在运行。"));
@@ -28,7 +42,14 @@ function runRefresh(activityId) {
     if (activityId) args.push(String(activityId));
     const child = spawn("node", args, {
       cwd: root,
-      shell: true
+      shell: true,
+      env: {
+        ...process.env,
+        MEITUAN_ACTIVITY_TITLE: meta.title || "",
+        MEITUAN_ACTIVITY_TIME: meta.activityTime || "",
+        MEITUAN_RULE_IMAGE: meta.ruleImage || "",
+        MEITUAN_FALLBACK_ROWS_JSON: JSON.stringify(meta.rows || [])
+      }
     });
     child.stdout.on("data", chunk => { output += chunk.toString(); });
     child.stderr.on("data", chunk => { output += chunk.toString(); });
@@ -55,8 +76,9 @@ createServer(async (req, res) => {
     return;
   }
   try {
+    const body = await readBody(req);
     const activityId = url.searchParams.get("activityId");
-    const message = await runRefresh(activityId);
+    const message = await runRefresh(activityId, body);
     send(res, 200, { ok: true, message });
   } catch (error) {
     send(res, 500, { ok: false, message: error.message });

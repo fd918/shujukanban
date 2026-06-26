@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>活动 1294看板</title>
+  <title>美团联盟年框媒体激励2026年6月-云瞻-看板</title>
   <style>
     :root {
       --bg: #f6f7f9;
@@ -325,6 +325,21 @@
 
     .formula b { color: var(--ink); }
 
+    .activity-time {
+      margin-top: 8px;
+      color: #344054;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .rule-image {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
     @media (max-width: 980px) {
       main { padding: 16px; }
       header { display: grid; grid-template-columns: 1fr; }
@@ -341,11 +356,12 @@
   <main>
     <header>
       <div>
-        <h1>活动 1294看板</h1>
+        <h1>美团联盟年框媒体激励2026年6月-云瞻-看板</h1>
         <div class="sub">口径：主指标按有效核销订单实付金额计算。接口数据作为默认值；每一天都可以在“预估数据”列手动调整，调整后优先按你的输入计算。</div>
+        <div class="activity-time" id="activity-time">活动时间：2026-06-06 00:00:00 - 2026-06-30 23:59:59</div>
       </div>
       <div class="header-actions">
-        <div class="badge">活动 1294 · 数据截至 2026/6/26 17:39:52</div>
+        <div class="badge">活动 1199 · 数据截至 2026/6/26 17:53:07</div>
         <button class="button secondary" id="open-settings">设置</button>
       </div>
     </header>
@@ -400,15 +416,8 @@
       </div>
 
       <div class="panel">
-        <h2>计算规则</h2>
-        <div class="formula">
-          <b>接口默认值：</b>接口 dailyData 返回的“有效核销订单实付金额”。<br>
-          <b>预估数据：</b>每一天都可手动输入；一旦输入，就优先用你的输入覆盖接口默认值参与计算。<br>
-          <b>当天未完整：</b>如果接口最新日期是今天，默认不计入计算；你可以手动输入今日预估值参与计算。<br>
-          <b>预计最终核销：</b>所有日期“用于计算金额”的合计。<br>
-          <b>未录入每日需做到：</b>如果仍有未来日期没有接口值也没有手填值，则用“档位剩余缺口 / 未填天数”计算。<br>
-          <b>接口更新后：</b>应整体刷新 dailyData，因为历史日期和当天日期都可能继续变动；你手动调整过的日期会继续保留覆盖。
-        </div>
+        <h2>活动规则</h2>
+        <img class="rule-image" id="rule-image" src="./assets/activity-rule-1199.png" alt="活动规则">
       </div>
     </section>
 
@@ -490,7 +499,7 @@
       { name: "档三", threshold: 117885379, rate: 0.005 }
     ];
 
-    const DEFAULT_ACTIVITY = {"id":"1294","title":"活动 1294","updatedAt":"2026/6/26 17:39:52","tiers":[{"name":"档一","threshold":95378491,"rate":0.002},{"name":"档二","threshold":104381246,"rate":0.004},{"name":"档三","threshold":117885379,"rate":0.005}],"rows":[["2026-06-19",97227,95370,3111875.83,3050362.61],["2026-06-20",98994,97137,3055210.95,2995684.51],["2026-06-21",106346,104316,3242572.01,3180774.03]],"overrides":{}};
+    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 17:53:07","tiers":[{"name":"档1","threshold":95378491,"rate":0.002},{"name":"档2","threshold":104381246,"rate":0.004},{"name":"档3","threshold":117885379,"rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124455,123601,3426871.17,3397355.95],["2026-06-12",133939,132977,3741008.81,3703258.21],["2026-06-13",151428,148937,4370175.05,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148292,4325171.88,4276935.73],["2026-06-19",132788,131112,4069099,3994453.13],["2026-06-20",136141,134564,4005756.14,3941004.96],["2026-06-21",145772,143861,4227661.85,4153788.27],["2026-06-22",127982,127136,3398402.75,3367518.91],["2026-06-23",131834,130836,3581744.63,3544695.37],["2026-06-24",142504,140589,3891349.16,3824134.12],["2026-06-25",148605,147000,4102222.12,4029166.73],["2026-06-26",102545,88188,2723590.76,2300718.09],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
 
     let activities = loadActivities();
     let activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ACTIVITY.id;
@@ -499,14 +508,20 @@
     function loadActivities() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-        const savedDefault = saved[DEFAULT_ACTIVITY.id] || {};
-        return {
-          ...saved,
-          [DEFAULT_ACTIVITY.id]: {
-            ...DEFAULT_ACTIVITY,
-            overrides: savedDefault.overrides || DEFAULT_ACTIVITY.overrides || {}
-          }
-        };
+      const savedDefault = saved[DEFAULT_ACTIVITY.id] || {};
+      return {
+        ...saved,
+        [DEFAULT_ACTIVITY.id]: {
+          ...DEFAULT_ACTIVITY,
+          ...savedDefault,
+          title: DEFAULT_ACTIVITY.title,
+          activityTime: DEFAULT_ACTIVITY.activityTime,
+          ruleImage: DEFAULT_ACTIVITY.ruleImage,
+          rows: DEFAULT_ACTIVITY.rows,
+          tiers: DEFAULT_ACTIVITY.tiers,
+          overrides: savedDefault.overrides || DEFAULT_ACTIVITY.overrides || {}
+        }
+      };
       } catch {
         return { [DEFAULT_ACTIVITY.id]: DEFAULT_ACTIVITY };
       }
@@ -622,8 +637,16 @@
 
     function updateHeader() {
       const activity = activeActivity();
-      document.title = `${activity.title}看板`;
-      document.querySelector("h1").textContent = `${activity.title}看板`;
+      document.title = `${activity.title}-看板`;
+      document.querySelector("h1").textContent = `${activity.title}-看板`;
+      document.getElementById("activity-time").textContent = activity.activityTime ? `活动时间：${activity.activityTime}` : "活动时间：未获取";
+      const ruleImage = document.getElementById("rule-image");
+      if (activity.ruleImage) {
+        ruleImage.src = activity.ruleImage;
+        ruleImage.style.display = "block";
+      } else {
+        ruleImage.style.display = "none";
+      }
       document.querySelector(".badge").textContent = `活动 ${activity.id} · 数据截至 ${activity.updatedAt || "-"}`;
       const select = document.getElementById("activity-select");
       select.innerHTML = Object.values(activities).map(item => (
@@ -768,6 +791,8 @@
       activities[id] = {
         id,
         title: `活动 ${id}`,
+        activityTime: "",
+        ruleImage: "",
         updatedAt: "未导入接口数据",
         tiers: DEFAULT_TIERS,
         rows: [],
@@ -841,7 +866,17 @@
       button.textContent = "刷新中";
       try {
         const activityId = encodeURIComponent(activeActivity().id);
-        const res = await fetch(`http://127.0.0.1:8765/refresh?activityId=${activityId}`, { method: "POST" });
+        const activity = activeActivity();
+        const res = await fetch(`http://127.0.0.1:8765/refresh?activityId=${activityId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: activity.title,
+            activityTime: activity.activityTime || "",
+            ruleImage: activity.ruleImage || "",
+            rows: activity.rows || []
+          })
+        });
         const data = await res.json();
         if (!data.ok) throw new Error(data.message || "刷新失败");
         location.reload();

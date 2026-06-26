@@ -102,7 +102,7 @@ function centsToYuan(value) {
   return value == null ? null : Number((value / 100).toFixed(2));
 }
 
-function buildRows(data, startDate, endDate) {
+function buildRows(data, startDate, endDate, fallbackRows = []) {
   const category = data?.data?.categoryRewardList?.[0];
   if (!category || !Array.isArray(category.dailyData)) {
     throw new Error("接口响应中没有 data.categoryRewardList[0].dailyData。");
@@ -113,9 +113,10 @@ function buildRows(data, startDate, endDate) {
     byDate.set(ymdFromSeconds(item.date), item);
   });
 
+  const fallbackDates = fallbackRows.map(row => row[0]);
   const dates = startDate && endDate
     ? dateRange(startDate, endDate)
-    : [...byDate.keys()].sort();
+    : [...new Set([...fallbackDates, ...byDate.keys()])].sort();
 
   return dates.map(date => {
     const item = byDate.get(date);
@@ -150,6 +151,19 @@ function replaceBetween(source, startMarker, endMarker, replacement) {
   return source.slice(0, start + startMarker.length) + replacement + source.slice(end);
 }
 
+function existingDefaultActivity(html) {
+  const startMarker = "    const DEFAULT_ACTIVITY = ";
+  const endMarker = ";\n\n    let activities";
+  const start = html.indexOf(startMarker);
+  const end = html.indexOf(endMarker, start);
+  if (start < 0 || end < 0) return {};
+  try {
+    return JSON.parse(html.slice(start + startMarker.length, end));
+  } catch {
+    return {};
+  }
+}
+
 async function main() {
   const env = loadEnv();
   const activityId = Number(process.argv[2] || env.MEITUAN_ACTIVITY_ID);
@@ -173,18 +187,24 @@ async function main() {
     throw new Error(`接口返回失败：${json.msg || "未知错误"}`);
   }
 
-  const rows = buildRows(json, env.MEITUAN_ACTIVITY_START, env.MEITUAN_ACTIVITY_END);
+  let html = readFileSync(htmlPath, "utf8");
+  const existing = existingDefaultActivity(html);
+  const fallbackRows = process.env.MEITUAN_FALLBACK_ROWS_JSON
+    ? JSON.parse(process.env.MEITUAN_FALLBACK_ROWS_JSON)
+    : (existing.rows || []);
+  const rows = buildRows(json, env.MEITUAN_ACTIVITY_START, env.MEITUAN_ACTIVITY_END, fallbackRows);
   const tiers = buildTiers(json);
   writeFileSync(resolve(root, `meituan-activity-${activityId}-latest.json`), JSON.stringify(json, null, 2));
 
-  const title = env.MEITUAN_ACTIVITY_TITLE || `活动 ${activityId}`;
-  let html = readFileSync(htmlPath, "utf8");
-  html = html.replace(/<title>.*?<\/title>/, `<title>${title}看板</title>`);
-  html = html.replace(/<h1>.*?<\/h1>/, `<h1>${title}看板</h1>`);
+  const title = process.env.MEITUAN_ACTIVITY_TITLE || env.MEITUAN_ACTIVITY_TITLE || existing.title || `活动 ${activityId}`;
+  html = html.replace(/<title>.*?<\/title>/, `<title>${title}-看板</title>`);
+  html = html.replace(/<h1>.*?<\/h1>/, `<h1>${title}-看板</h1>`);
   html = html.replace(/活动 \d+ · 数据截至 .*?<\/div>/, `活动 ${activityId} · 数据截至 ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}</div>`);
   const activityBlock = {
     id: String(activityId),
     title,
+    activityTime: process.env.MEITUAN_ACTIVITY_TIME || existing.activityTime || "",
+    ruleImage: process.env.MEITUAN_RULE_IMAGE || existing.ruleImage || "",
     updatedAt: new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }),
     tiers: tiers.length ? tiers : [
       { name: "档一", threshold: 95378491, rate: 0.002 },
@@ -192,7 +212,7 @@ async function main() {
       { name: "档三", threshold: 117885379, rate: 0.005 }
     ],
     rows,
-    overrides: {}
+    overrides: existing.overrides || {}
   };
   html = replaceBetween(
     html,
