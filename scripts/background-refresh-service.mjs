@@ -49,7 +49,7 @@ function readJson(path, fallback) {
 
 function writeJson(path, value) {
   mkdirSync(resolve(root, "data"), { recursive: true });
-  writeFileSync(path, JSON.stringify(value, null, 2));
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function rememberActivity(activityId, { primary = false } = {}) {
