@@ -1,20 +1,3 @@
-# macOS
-.DS_Store
-
-# Environment files
 .env
-.env.*
-!.env.example
-
-# Logs
-*.log
-
-# Dependencies and build outputs
-node_modules/
-dist/
-build/
-
-# Editor files
-.vscode/
-.idea/
-
+*.latest.json
+meituan-activity-*-latest.json

@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>美团联盟年框媒体激励2026年6月-云瞻看板</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #fff;
+      --ink: #20242a;
+      --muted: #667085;
+      --line: #e5e7eb;
+      --orange: #ff6a2a;
+      --green: #16803c;
+      --red: #d92d20;
+      --shadow: 0 10px 28px rgba(27, 39, 54, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    main {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.35;
+    }
+
+    .sub {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid #ffd9c8;
+      border-radius: 6px;
+      background: #fff7f3;
+      color: #bd3f13;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .kpi-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-bottom: 14px;
+    }
+
+    .target-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 14px;
+    }
+
+    .two-grid {
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .kpi { min-height: 116px; }
+
+    .label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .value {
+      margin-top: 10px;
+      font-size: 28px;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .positive { color: var(--green); }
+    .warning { color: var(--orange); }
+    .danger { color: var(--red); }
+
+    .target-card {
+      min-height: 216px;
+      border: 2px solid #ffd1bd;
+      background: #fff7f3;
+    }
+
+    .target-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .target-head strong { font-size: 18px; }
+
+    .pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #fff;
+      color: #bd3f13;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .daily-target {
+      font-size: 34px;
+      line-height: 1.05;
+      font-weight: 800;
+      color: var(--red);
+    }
+
+    .target-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .mini {
+      border-radius: 6px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    .mini b {
+      display: block;
+      margin-top: 6px;
+      font-size: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child { text-align: left; }
+
+    th {
+      background: #f1f3f7;
+      color: #4b5563;
+      font-weight: 600;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .text-input,
+    .select-input {
+      width: 100%;
+      height: 36px;
+      padding: 6px 8px;
+      border: 1px solid #d0d5dd;
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .textarea-input {
+      width: 100%;
+      min-height: 110px;
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid #d0d5dd;
+      border-radius: 6px;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      resize: vertical;
+    }
+
+    .button {
+      height: 36px;
+      border: 0;
+      border-radius: 6px;
+      padding: 0 12px;
+      background: var(--orange);
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .button.secondary {
+      border: 1px solid #d0d5dd;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, .42);
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-panel {
+      width: min(980px, 100%);
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+      padding: 18px;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .amount-input {
+      width: 148px;
+      height: 34px;
+      padding: 6px 8px;
+      border: 1px solid #d0d5dd;
+      border-radius: 6px;
+      text-align: right;
+      font: inherit;
+    }
+
+    .amount-input:focus {
+      outline: 2px solid #ffd1bd;
+      border-color: var(--orange);
+    }
+
+    .row-future td {
+      background: #fffaf7;
+    }
+
+    .formula {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    .formula b { color: var(--ink); }
+
+    @media (max-width: 980px) {
+      main { padding: 16px; }
+      header { display: grid; grid-template-columns: 1fr; }
+      .header-actions { justify-content: flex-start; }
+      .kpi-grid,
+      .target-grid,
+      .two-grid,
+      .control-grid { grid-template-columns: 1fr; }
+      .daily-target { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>美团联盟年框媒体激励2026年6月-云瞻看板</h1>
+        <div class="sub">口径：主指标按有效核销订单实付金额计算。接口数据作为默认值；每一天都可以在“预估数据”列手动调整，调整后优先按你的输入计算。</div>
+      </div>
+      <div class="header-actions">
+        <div class="badge">活动 1199 · 数据截至 2026-06-26 14:44</div>
+        <button class="button secondary" id="open-settings">设置</button>
+      </div>
+    </header>
+
+    <section class="grid kpi-grid">
+      <div class="panel kpi">
+        <div class="label">实际核销累计</div>
+        <div class="value" id="actual-total">-</div>
+        <div class="note">只统计接口已经返回的实际核销金额。</div>
+      </div>
+      <div class="panel kpi">
+        <div class="label">手动调整净变化</div>
+        <div class="value warning" id="estimate-total">-</div>
+        <div class="note">任意日期可手动覆盖；清空后恢复接口默认值。</div>
+      </div>
+      <div class="panel kpi">
+        <div class="label">预计最终核销</div>
+        <div class="value positive" id="projected-total">-</div>
+        <div class="note">接口默认累计 + 手动调整净变化。</div>
+      </div>
+      <div class="panel kpi">
+        <div class="label">预计最高达成档位</div>
+        <div class="value" id="projected-level">-</div>
+        <div class="note">按照预计最终核销判断。</div>
+      </div>
+    </section>
+
+    <section class="grid target-grid" id="target-cards"></section>
+
+    <section class="grid two-grid">
+      <div class="panel">
+        <h2>各档奖励金额</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>档位</th>
+                <th>门槛金额</th>
+                <th>奖励比例</th>
+                <th>按门槛计算奖励</th>
+                <th>封顶后奖励</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>档一</td><td>9,537.85 万</td><td>0.2%</td><td>19.08 万</td><td>19.08 万</td></tr>
+              <tr><td>档二</td><td>10,438.12 万</td><td>0.4%</td><td>41.75 万</td><td>41.75 万</td></tr>
+              <tr><td>档三</td><td>11,788.54 万</td><td>0.5%</td><td>58.94 万</td><td>58.94 万</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note">活动总封顶金额为 60 万元，三个门槛奖励都未超过封顶。</div>
+      </div>
+
+      <div class="panel">
+        <h2>计算规则</h2>
+        <div class="formula">
+          <b>接口默认值：</b>接口 dailyData 返回的“有效核销订单实付金额”。<br>
+          <b>预估数据：</b>每一天都可手动输入；一旦输入，就优先用你的输入覆盖接口默认值参与计算。<br>
+          <b>当天未完整：</b>如果接口最新日期是今天，默认不计入计算；你可以手动输入今日预估值参与计算。<br>
+          <b>预计最终核销：</b>所有日期“用于计算金额”的合计。<br>
+          <b>未录入每日需做到：</b>如果仍有未来日期没有接口值也没有手填值，则用“档位剩余缺口 / 未填天数”计算。<br>
+          <b>接口更新后：</b>应整体刷新 dailyData，因为历史日期和当天日期都可能继续变动；你手动调整过的日期会继续保留覆盖。
+        </div>
+      </div>
+    </section>
+
+    <div class="modal" id="settings-modal">
+      <div class="modal-panel">
+        <div class="modal-head">
+          <h2>设置</h2>
+          <button class="button secondary" id="close-settings">关闭</button>
+        </div>
+        <div class="control-grid">
+          <div class="field">
+            <label>当前活动</label>
+            <select class="select-input" id="activity-select"></select>
+          </div>
+          <div class="field">
+            <label>新增活动 ID</label>
+            <input class="text-input" id="new-activity-id" placeholder="例如 1294">
+          </div>
+          <div class="field">
+            <label>页面自动刷新</label>
+            <select class="select-input" id="auto-refresh">
+              <option value="0">关闭</option>
+              <option value="5">每 5 分钟</option>
+              <option value="10">每 10 分钟</option>
+              <option value="30">每 30 分钟</option>
+              <option value="60">每 60 分钟</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>本机接口刷新</label>
+            <button class="button secondary" id="copy-refresh-command">复制命令</button>
+          </div>
+          <div class="field">
+            <label>新增</label>
+            <button class="button" id="add-activity">新增并切换</button>
+          </div>
+        </div>
+        <div style="margin-top: 10px;">
+          <button class="button" id="refresh-now">立即刷新数据</button>
+          <button class="button secondary" id="import-response">导入接口响应到当前活动</button>
+        </div>
+        <textarea class="textarea-input" id="response-json" placeholder="把 /ipc/pcActivityData 的完整 JSON 响应粘贴到这里，然后点“导入接口响应到当前活动”。"></textarea>
+        <div class="note">页面自动刷新只是重新加载公开看板文件。真正请求美团接口需要本机脚本读取 `.env` 里的 Cookie 和 mtgsig；公开网页不能安全保存 Cookie。</div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2>全部日活动数据</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>数据来源</th>
+              <th>有效订单量</th>
+              <th>有效核销订单量</th>
+              <th>有效订单实付金额</th>
+              <th>有效核销订单实付金额</th>
+              <th>预估数据</th>
+              <th>用于计算金额</th>
+              <th>计算累计</th>
+            </tr>
+          </thead>
+          <tbody id="daily-body"></tbody>
+        </table>
+      </div>
+      <div class="note">金额单位为元。任意日期输入后会实时更新顶部指标，并自动保存在当前浏览器；清空输入框则恢复使用接口默认值。</div>
+    </section>
+  </main>
+
+  <script>
+    const STORE_KEY = "meituan_dashboard_activities";
+    const ACTIVE_KEY = "meituan_dashboard_active_activity";
+    const AUTO_REFRESH_KEY = "meituan_dashboard_auto_refresh_minutes";
+    const CAP = 600000;
+    const DEFAULT_TIERS = [
+      { name: "档一", threshold: 95378491, rate: 0.002 },
+      { name: "档二", threshold: 104381246, rate: 0.004 },
+      { name: "档三", threshold: 117885379, rate: 0.005 }
+    ];
+
+    const DEFAULT_ACTIVITY = {
+      id: "1199",
+      title: "美团联盟年框媒体激励2026年6月-云瞻",
+      updatedAt: "2026-06-26 14:44",
+      tiers: DEFAULT_TIERS,
+      rows: [
+        ["2026-06-06", 148840, 146693, 4356523.33, 4284502.83],
+        ["2026-06-07", 144047, 141899, 4133954.17, 4062849.69],
+        ["2026-06-08", 122645, 121925, 3339594.30, 3317473.35],
+        ["2026-06-09", 121428, 120676, 3394781.15, 3368033.11],
+        ["2026-06-10", 121587, 119894, 3326042.72, 3274713.94],
+        ["2026-06-11", 124455, 123592, 3426871.17, 3396199.45],
+        ["2026-06-12", 133940, 132977, 3741156.81, 3703258.21],
+        ["2026-06-13", 151428, 148937, 4370175.05, 4285891.74],
+        ["2026-06-14", 147374, 144961, 4234809.66, 4150734.95],
+        ["2026-06-15", 130668, 129772, 3526381.84, 3483297.03],
+        ["2026-06-16", 131840, 130995, 3578525.40, 3545880.35],
+        ["2026-06-17", 131129, 129526, 3580598.76, 3523822.39],
+        ["2026-06-18", 149163, 148291, 4325171.88, 4276934.72],
+        ["2026-06-19", 132789, 131110, 4069112.04, 3994367.22],
+        ["2026-06-20", 136139, 134561, 4005633.99, 3940934.25],
+        ["2026-06-21", 145778, 143859, 4227906.95, 4153732.46],
+        ["2026-06-22", 127984, 127132, 3398539.75, 3367324.81],
+        ["2026-06-23", 131835, 130830, 3581842.63, 3543737.14],
+        ["2026-06-24", 142505, 140578, 3891397.96, 3823763.25],
+        ["2026-06-25", 148625, 146865, 4103337.96, 4023197.28],
+        ["2026-06-26", 78580, 66727, 2042811.25, 1722931.34],
+        ["2026-06-27", null, null, null, null],
+        ["2026-06-28", null, null, null, null],
+        ["2026-06-29", null, null, null, null],
+        ["2026-06-30", null, null, null, null]
+      ],
+      overrides: {}
+    };
+
+    let activities = loadActivities();
+    let activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ACTIVITY.id;
+    let refreshTimer = null;
+
+    function loadActivities() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+        const savedDefault = saved[DEFAULT_ACTIVITY.id] || {};
+        return {
+          ...saved,
+          [DEFAULT_ACTIVITY.id]: {
+            ...DEFAULT_ACTIVITY,
+            overrides: savedDefault.overrides || DEFAULT_ACTIVITY.overrides || {}
+          }
+        };
+      } catch {
+        return { [DEFAULT_ACTIVITY.id]: DEFAULT_ACTIVITY };
+      }
+    }
+
+    function saveActivities() {
+      localStorage.setItem(STORE_KEY, JSON.stringify(activities));
+    }
+
+    function activeActivity() {
+      return activities[activeId] || activities[DEFAULT_ACTIVITY.id];
+    }
+
+    function money(value) {
+      return Number(value || 0).toLocaleString("zh-CN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function wan(value) {
+      return `${money(value / 10000)} 万`;
+    }
+
+    function intText(value) {
+      return value == null ? "-" : Number(value).toLocaleString("zh-CN");
+    }
+
+    function parseAmount(value) {
+      const cleaned = String(value || "").replace(/,/g, "").trim();
+      const parsed = Number(cleaned);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    }
+
+    function inputId(date) {
+      return `estimate-${date}`;
+    }
+
+    function todayYmd() {
+      return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+    }
+
+    function latestActualDate(rows) {
+      return rows.filter(row => row[4] != null).map(row => row[0]).sort().pop();
+    }
+
+    function isIncompleteToday(row, rows) {
+      return row[4] != null && row[0] === todayYmd() && row[0] === latestActualDate(rows);
+    }
+
+    function getEstimatesFromDom() {
+      const estimates = {};
+      activeActivity().rows.forEach(row => {
+        const [date] = row;
+        const input = document.getElementById(inputId(date));
+        const amount = parseAmount(input && input.value);
+        if (amount > 0) estimates[date] = amount;
+      });
+      return estimates;
+    }
+
+    function dateRange(start, end) {
+      const result = [];
+      const cursor = new Date(`${start}T00:00:00+08:00`);
+      const endDate = new Date(`${end}T00:00:00+08:00`);
+      while (cursor <= endDate) {
+        result.push(cursor.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return result;
+    }
+
+    function ymdFromSeconds(seconds) {
+      return new Date(seconds * 1000).toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+    }
+
+    function centsToYuan(value) {
+      return value == null ? null : Number((value / 100).toFixed(2));
+    }
+
+    function rowsFromResponse(json, fallbackRows) {
+      const data = json.data || {};
+      const category = data.categoryRewardList && data.categoryRewardList[0];
+      if (!category || !Array.isArray(category.dailyData)) throw new Error("响应里没有 dailyData。");
+      const byDate = new Map();
+      category.dailyData.forEach(item => {
+        byDate.set(ymdFromSeconds(item.date), [
+          ymdFromSeconds(item.date),
+          item.validOrders ?? null,
+          item.redemptionOrders ?? null,
+          centsToYuan(item.actualPayment),
+          centsToYuan(item.redemptionOrdersAmount)
+        ]);
+      });
+      const dates = fallbackRows.map(row => row[0]);
+      category.dailyData.forEach(item => {
+        const date = ymdFromSeconds(item.date);
+        if (!dates.includes(date)) dates.push(date);
+      });
+      dates.sort();
+      return dates.map(date => byDate.get(date) || [date, null, null, null, null]);
+    }
+
+    function tiersFromResponse(json, fallbackTiers) {
+      const stages = json.data?.categoryRewardList?.[0]?.activityStages || [];
+      if (!stages.length) return fallbackTiers;
+      return stages.map(stage => ({
+        name: `档${stage.levelId}`,
+        threshold: (stage.finalConsumeOrdersAmount || stage.consumeOrdersAmount || 0) / 100,
+        rate: (stage.perOrderCommission || 0) / 10000
+      })).filter(stage => stage.threshold > 0 && stage.rate > 0);
+    }
+
+    function updateHeader() {
+      const activity = activeActivity();
+      document.title = `${activity.title}看板`;
+      document.querySelector("h1").textContent = `${activity.title}看板`;
+      document.querySelector(".badge").textContent = `活动 ${activity.id} · 数据截至 ${activity.updatedAt || "-"}`;
+      const select = document.getElementById("activity-select");
+      select.innerHTML = Object.values(activities).map(item => (
+        `<option value="${item.id}" ${item.id === activeId ? "selected" : ""}>${item.id} · ${item.title}</option>`
+      )).join("");
+    }
+
+    function renderTable() {
+      const activity = activeActivity();
+      const overrides = activity.overrides || {};
+      const body = document.getElementById("daily-body");
+      body.innerHTML = "";
+      let runningTotal = 0;
+
+      activity.rows.forEach(row => {
+        const [date, validOrders, redemptionOrders, actualPayment, actualRedemption] = row;
+        const isActual = actualRedemption != null;
+        const isTodayPartial = isIncompleteToday(row, activity.rows);
+        const overrideValue = overrides[date] || "";
+        const usedAmount = overrideValue ? parseAmount(overrideValue) : (isTodayPartial ? 0 : (actualRedemption || 0));
+        runningTotal += usedAmount;
+
+        const tr = document.createElement("tr");
+        if (!isActual || isTodayPartial) tr.className = "row-future";
+        tr.innerHTML = `
+          <td>${date}</td>
+          <td>${isTodayPartial ? "今日未完整" : (isActual ? "接口默认" : "未返回")}</td>
+          <td>${intText(validOrders)}</td>
+          <td>${intText(redemptionOrders)}</td>
+          <td>${actualPayment == null ? "-" : money(actualPayment)}</td>
+          <td>${actualRedemption == null ? "-" : money(actualRedemption)}</td>
+          <td><input class="amount-input" id="${inputId(date)}" inputmode="decimal" placeholder="${isTodayPartial ? "输入今日预估" : (isActual ? "默认用接口" : "输入金额")}" value="${overrideValue}"></td>
+          <td data-used="${date}">${money(usedAmount)}</td>
+          <td data-running="${date}">${money(runningTotal)}</td>
+        `;
+        body.appendChild(tr);
+      });
+
+      document.querySelectorAll(".amount-input").forEach(input => {
+        input.addEventListener("input", () => {
+          activity.overrides = getEstimatesFromDom();
+          saveActivities();
+          updateMetrics();
+        });
+      });
+    }
+
+    function currentAmounts() {
+      const overrides = getEstimatesFromDom();
+      const rows = activeActivity().rows;
+      const actualTotal = rows.reduce((sum, row) => sum + (isIncompleteToday(row, rows) ? 0 : (row[4] || 0)), 0);
+      const estimateTotal = rows.reduce((sum, row) => {
+        const [date, , , , actualRedemption] = row;
+        const overrideAmount = overrides[date] || 0;
+        if (overrideAmount <= 0) return sum;
+        const defaultAmount = isIncompleteToday(row, rows) ? 0 : (actualRedemption || 0);
+        return sum + overrideAmount - defaultAmount;
+      }, 0);
+      const futureUnfilled = rows.filter(row => (row[4] == null || isIncompleteToday(row, rows)) && !overrides[row[0]]).length;
+      return { actualTotal, estimateTotal, projectedTotal: actualTotal + estimateTotal, futureUnfilled };
+    }
+
+    function updateTableTotals() {
+      const overrides = getEstimatesFromDom();
+      let runningTotal = 0;
+      const rows = activeActivity().rows;
+      rows.forEach(row => {
+        const [date, , , , actualRedemption] = row;
+        const defaultAmount = isIncompleteToday(row, rows) ? 0 : (actualRedemption || 0);
+        const usedAmount = overrides[date] || defaultAmount;
+        runningTotal += usedAmount;
+        const usedCell = document.querySelector(`[data-used="${date}"]`);
+        const runningCell = document.querySelector(`[data-running="${date}"]`);
+        if (usedCell) usedCell.textContent = money(usedAmount);
+        if (runningCell) runningCell.textContent = money(runningTotal);
+      });
+    }
+
+    function renderTargetCards(amounts) {
+      const container = document.getElementById("target-cards");
+      container.innerHTML = activeActivity().tiers.map(tier => {
+        const currentGap = Math.max(0, tier.threshold - amounts.actualTotal);
+        const projectedGap = Math.max(0, tier.threshold - amounts.projectedTotal);
+        const projectedOver = Math.max(0, amounts.projectedTotal - tier.threshold);
+        const dailyNeed = amounts.futureUnfilled > 0 ? projectedGap / amounts.futureUnfilled : projectedGap;
+        const rewardAtThreshold = Math.min(tier.threshold * tier.rate, CAP);
+        const projectedReward = amounts.projectedTotal >= tier.threshold
+          ? Math.min(amounts.projectedTotal * tier.rate, CAP)
+          : 0;
+        const cardClass = projectedGap <= 0 ? "positive" : "danger";
+        const dailyLabel = projectedOver > 0 ? `超过 ${wan(projectedOver)}` : (amounts.futureUnfilled > 0 ? `${wan(dailyNeed)}/天` : wan(projectedGap));
+        const note = projectedOver > 0
+          ? `按当前输入，预计超过${tier.name}门槛 ${wan(projectedOver)}。`
+          : (amounts.futureUnfilled > 0
+            ? `还剩 ${amounts.futureUnfilled} 天未录入预估，按当前输入计算。`
+            : "未来日期都已录入预估，预计缺口为最终缺口。");
+        return `
+          <div class="panel target-card">
+            <div class="target-head"><strong>${tier.name}目标</strong><span class="pill">奖励 ${(tier.rate * 100).toFixed(1)}%</span></div>
+            <div class="daily-target ${cardClass}">${dailyLabel}</div>
+            <div class="note">${note}</div>
+            <div class="target-meta">
+              <div class="mini"><span class="label">实际还差</span><b>${wan(currentGap)}</b></div>
+              <div class="mini"><span class="label">${projectedOver > 0 ? "预估后超过" : "预估后还差"}</span><b>${wan(projectedOver > 0 ? projectedOver : projectedGap)}</b></div>
+              <div class="mini"><span class="label">门槛奖励</span><b>${wan(rewardAtThreshold)}</b></div>
+              <div class="mini"><span class="label">预计奖励</span><b>${wan(projectedReward)}</b></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function updateMetrics() {
+      const amounts = currentAmounts();
+      updateTableTotals();
+      document.getElementById("actual-total").textContent = wan(amounts.actualTotal);
+      document.getElementById("estimate-total").textContent = wan(amounts.estimateTotal);
+      document.getElementById("projected-total").textContent = wan(amounts.projectedTotal);
+
+      const reached = activeActivity().tiers.filter(tier => amounts.projectedTotal >= tier.threshold).pop();
+      const levelEl = document.getElementById("projected-level");
+      levelEl.textContent = reached ? reached.name : "暂未达档";
+      levelEl.className = `value ${reached ? "positive" : "warning"}`;
+
+      renderTargetCards(amounts);
+    }
+
+    document.getElementById("activity-select").addEventListener("change", event => {
+      activeId = event.target.value;
+      localStorage.setItem(ACTIVE_KEY, activeId);
+      updateHeader();
+      renderTable();
+      updateMetrics();
+    });
+
+    document.getElementById("add-activity").addEventListener("click", () => {
+      const id = document.getElementById("new-activity-id").value.trim();
+      if (!id) {
+        alert("请填写活动 ID。");
+        return;
+      }
+      activities[id] = {
+        id,
+        title: `活动 ${id}`,
+        updatedAt: "未导入接口数据",
+        tiers: DEFAULT_TIERS,
+        rows: [],
+        overrides: {}
+      };
+      activeId = id;
+      localStorage.setItem(ACTIVE_KEY, activeId);
+      saveActivities();
+      updateHeader();
+      renderTable();
+      updateMetrics();
+    });
+
+    document.getElementById("import-response").addEventListener("click", () => {
+      try {
+        const json = JSON.parse(document.getElementById("response-json").value);
+        if (json.code !== 0) throw new Error(json.msg || "接口返回失败");
+        const activity = activeActivity();
+        activity.rows = rowsFromResponse(json, activity.rows);
+        activity.tiers = tiersFromResponse(json, activity.tiers);
+        activity.updatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
+        saveActivities();
+        updateHeader();
+        renderTable();
+        updateMetrics();
+      } catch (error) {
+        alert(`导入失败：${error.message}`);
+      }
+    });
+
+    function applyAutoRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      const minutes = Number(localStorage.getItem(AUTO_REFRESH_KEY) || 0);
+      const select = document.getElementById("auto-refresh");
+      select.value = String(minutes);
+      if (minutes > 0) {
+        refreshTimer = setInterval(() => location.reload(), minutes * 60 * 1000);
+      }
+    }
+
+    document.getElementById("open-settings").addEventListener("click", () => {
+      document.getElementById("settings-modal").classList.add("open");
+    });
+
+    document.getElementById("close-settings").addEventListener("click", () => {
+      document.getElementById("settings-modal").classList.remove("open");
+    });
+
+    document.getElementById("settings-modal").addEventListener("click", event => {
+      if (event.target.id === "settings-modal") event.target.classList.remove("open");
+    });
+
+    document.getElementById("auto-refresh").addEventListener("change", event => {
+      localStorage.setItem(AUTO_REFRESH_KEY, event.target.value);
+      applyAutoRefresh();
+    });
+
+    document.getElementById("copy-refresh-command").addEventListener("click", async () => {
+      const command = "node scripts/local-refresh-server.mjs";
+      try {
+        await navigator.clipboard.writeText(command);
+        alert("已复制本机刷新服务命令。请在项目根目录执行。");
+      } catch {
+        alert(command);
+      }
+    });
+
+    document.getElementById("refresh-now").addEventListener("click", async () => {
+      const button = document.getElementById("refresh-now");
+      button.disabled = true;
+      button.textContent = "刷新中";
+      try {
+        const res = await fetch("http://127.0.0.1:8765/refresh", { method: "POST" });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || "刷新失败");
+        location.reload();
+      } catch (error) {
+        alert(`刷新失败：${error.message}。请先在项目根目录启动：node scripts/local-refresh-server.mjs`);
+      } finally {
+        button.disabled = false;
+        button.textContent = "立即刷新数据";
+      }
+    });
+
+    updateHeader();
+    renderTable();
+    updateMetrics();
+    applyAutoRefresh();
+  </script>
+</body>
+</html>
