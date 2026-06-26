@@ -72,7 +72,7 @@
     }
 
     .kpi-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       margin-bottom: 14px;
     }
 
@@ -298,6 +298,27 @@
       font-size: 18px;
     }
 
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+    }
+
+    .sort-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
     .amount-input {
       width: 148px;
       height: 34px;
@@ -330,6 +351,13 @@
       color: #344054;
       font-size: 14px;
       font-weight: 600;
+    }
+
+    .data-deadline {
+      margin-top: 6px;
+      color: #bd3f13;
+      font-size: 15px;
+      font-weight: 700;
     }
 
     .rule-image {
@@ -376,18 +404,25 @@
         <h1>美团联盟年框媒体激励2026年6月-云瞻-看板</h1>
         <div class="sub">口径：主指标按有效核销订单实付金额计算。接口数据作为默认值；每一天都可以在“预估数据”列手动调整，调整后优先按你的输入计算。</div>
         <div class="activity-time" id="activity-time">活动时间：2026-06-06 00:00:00 - 2026-06-30 23:59:59</div>
+        <div class="data-deadline" id="data-deadline">数据截止时间：2026/6/26 22:40:25</div>
       </div>
       <div class="header-actions">
-        <div class="badge">活动 1199 · 数据截至 2026/6/26 17:58:28</div>
+        <div class="badge">活动 1199 · 数据截至 2026/6/26 22:40:25</div>
+        <button class="button" id="refresh-now">刷新数据</button>
         <button class="button secondary" id="open-settings">设置</button>
       </div>
     </header>
 
     <section class="grid kpi-grid">
       <div class="panel kpi">
-        <div class="label">实际核销累计</div>
+        <div class="label" id="today-label">今日核心指标</div>
+        <div class="value" id="today-total">-</div>
+        <div class="note" id="today-note">按当前活动奖励口径自动切换。</div>
+      </div>
+      <div class="panel kpi">
+        <div class="label" id="actual-label">实际核销累计</div>
         <div class="value" id="actual-total">-</div>
-        <div class="note">只统计接口已经返回的实际核销金额。</div>
+        <div class="note" id="actual-note">只统计接口已经返回的实际核销金额。</div>
       </div>
       <div class="panel kpi">
         <div class="label">手动调整净变化</div>
@@ -395,9 +430,9 @@
         <div class="note">任意日期可手动覆盖；清空后恢复接口默认值。</div>
       </div>
       <div class="panel kpi">
-        <div class="label">预计最终核销</div>
+        <div class="label" id="projected-label">预计最终核销</div>
         <div class="value positive" id="projected-total">-</div>
-        <div class="note">接口默认累计 + 手动调整净变化。</div>
+        <div class="note" id="projected-note">接口默认累计 + 手动调整净变化。</div>
       </div>
       <div class="panel kpi">
         <div class="label">预计最高达成档位</div>
@@ -416,20 +451,16 @@
             <thead>
               <tr>
                 <th>档位</th>
-                <th>门槛金额</th>
-                <th>奖励比例</th>
+                <th>门槛口径</th>
+                <th>奖励方式</th>
                 <th>按门槛计算奖励</th>
-                <th>封顶后奖励</th>
+                <th>预计奖励</th>
               </tr>
             </thead>
-            <tbody>
-              <tr><td>档一</td><td>9,537.85 万</td><td>0.2%</td><td>19.08 万</td><td>19.08 万</td></tr>
-              <tr><td>档二</td><td>10,438.12 万</td><td>0.4%</td><td>41.75 万</td><td>41.75 万</td></tr>
-              <tr><td>档三</td><td>11,788.54 万</td><td>0.5%</td><td>58.94 万</td><td>58.94 万</td></tr>
-            </tbody>
+            <tbody id="reward-body"></tbody>
           </table>
         </div>
-        <div class="note">活动总封顶金额为 60 万元，三个门槛奖励都未超过封顶。</div>
+        <div class="note" id="reward-note"></div>
       </div>
 
       <div class="panel">
@@ -473,11 +504,10 @@
           </div>
         </div>
         <div style="margin-top: 10px;">
-          <button class="button" id="refresh-now">立即刷新数据</button>
           <button class="button secondary" id="import-response">导入接口响应到当前活动</button>
         </div>
         <textarea class="textarea-input" id="response-json" placeholder="把 /ipc/pcActivityData 的完整 JSON 响应粘贴到这里，然后点“导入接口响应到当前活动”。"></textarea>
-        <div class="note">页面自动刷新只是重新加载公开看板文件。真正请求美团接口需要本机脚本读取 `.env` 里的 Cookie 和 mtgsig；公开网页不能安全保存 Cookie。</div>
+        <div class="note" id="auto-refresh-status">页面自动刷新会定时请求本机刷新服务；请先启动 `node scripts/local-refresh-server.mjs`。</div>
       </div>
     </div>
 
@@ -492,7 +522,16 @@
     </div>
 
     <section class="panel">
-      <h2>全部日活动数据</h2>
+      <div class="section-head">
+        <h2>全部日活动数据</h2>
+        <label class="sort-control">
+          日期排序
+          <select class="select-input" id="date-sort">
+            <option value="desc">降序：最新在前</option>
+            <option value="asc">升序：最早在前</option>
+          </select>
+        </label>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -519,14 +558,15 @@
     const STORE_KEY = "meituan_dashboard_activities";
     const ACTIVE_KEY = "meituan_dashboard_active_activity";
     const AUTO_REFRESH_KEY = "meituan_dashboard_auto_refresh_minutes";
+    const DATE_SORT_KEY = "meituan_dashboard_date_sort";
     const CAP = 600000;
     const DEFAULT_TIERS = [
-      { name: "档一", threshold: 95378491, rate: 0.002 },
-      { name: "档二", threshold: 104381246, rate: 0.004 },
-      { name: "档三", threshold: 117885379, rate: 0.005 }
+      { name: "档一", metric: "amount", threshold: 95378491, rewardType: "rate", rate: 0.002 },
+      { name: "档二", metric: "amount", threshold: 104381246, rewardType: "rate", rate: 0.004 },
+      { name: "档三", metric: "amount", threshold: 117885379, rewardType: "rate", rate: 0.005 }
     ];
 
-    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 17:58:28","tiers":[{"name":"档1","threshold":95378491,"rate":0.002},{"name":"档2","threshold":104381246,"rate":0.004},{"name":"档3","threshold":117885379,"rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124455,123601,3426871.17,3397355.95],["2026-06-12",133939,132977,3741008.81,3703258.21],["2026-06-13",151428,148937,4370175.05,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148292,4325171.88,4276935.73],["2026-06-19",132788,131112,4069099,3994453.13],["2026-06-20",136141,134564,4005756.14,3941004.96],["2026-06-21",145772,143861,4227661.85,4153788.27],["2026-06-22",127982,127136,3398402.75,3367518.91],["2026-06-23",131834,130836,3581744.63,3544695.37],["2026-06-24",142504,140589,3891349.16,3824134.12],["2026-06-25",148604,147010,4102190.52,4029942.98],["2026-06-26",103790,89009,2758255.41,2322142.29],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
+    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 22:40:25","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124454,123612,3426748.17,3398731.95],["2026-06-12",133937,132977,3740932.81,3703258.21],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132788,131135,4069099,3997589.48],["2026-06-20",136139,134570,4005542.26,3941249.34],["2026-06-21",145769,143866,4227243.38,4154024.91],["2026-06-22",127979,127137,3398001.85,3367576.01],["2026-06-23",131832,130840,3581243.63,3544982.15],["2026-06-24",142501,140621,3890774.17,3826547.21],["2026-06-25",148595,147244,4101955.82,4047904.25],["2026-06-26",150869,139410,4210895.44,3843792.31],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
 
     let activities = loadActivities();
     let activeId = DEFAULT_ACTIVITY.id;
@@ -571,6 +611,37 @@
 
     function wan(value) {
       return `${money(value / 10000)} 万`;
+    }
+
+    function activeMetric(activity = activeActivity()) {
+      return activity.tiers?.find(tier => tier.metric)?.metric || "amount";
+    }
+
+    function metricName(metric = activeMetric()) {
+      return metric === "orders" ? "有效核销订单量" : "有效核销订单实付金额";
+    }
+
+    function metricUnit(metric = activeMetric()) {
+      return metric === "orders" ? "单" : "元";
+    }
+
+    function metricText(value, metric = activeMetric()) {
+      if (metric === "orders") return `${Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: 0 })} 单`;
+      return wan(value);
+    }
+
+    function rowMetricValue(row, metric = activeMetric()) {
+      return metric === "orders" ? (row[2] || 0) : (row[4] || 0);
+    }
+
+    function todayMetricLabel(metric = activeMetric()) {
+      return metric === "orders" ? "今日核销订单数" : "今日核销 GMV";
+    }
+
+    function todayMetricValue(rows, metric = activeMetric()) {
+      const row = rows.find(item => item[0] === todayYmd());
+      if (!row) return null;
+      return metric === "orders" ? row[2] : row[4];
     }
 
     function intText(value) {
@@ -655,11 +726,29 @@
     function tiersFromResponse(json, fallbackTiers) {
       const stages = json.data?.categoryRewardList?.[0]?.activityStages || [];
       if (!stages.length) return fallbackTiers;
-      return stages.map(stage => ({
-        name: `档${stage.levelId}`,
-        threshold: (stage.finalConsumeOrdersAmount || stage.consumeOrdersAmount || 0) / 100,
-        rate: (stage.perOrderCommission || 0) / 10000
-      })).filter(stage => stage.threshold > 0 && stage.rate > 0);
+      return stages.map(stage => {
+        const amountThreshold = (stage.finalConsumeOrdersAmount || stage.consumeOrdersAmount || 0) / 100;
+        const orderThreshold = stage.finalConsumeOrders || stage.consumeOrders || 0;
+        const rate = (stage.perOrderCommission || 0) / 10000;
+        const perOrderReward = (stage.perOrderReward || 0) / 100;
+        const fixedReward = (stage.extraReward || 0) / 100;
+        if (amountThreshold > 0 && rate > 0) {
+          return { name: `档${stage.levelId}`, metric: "amount", threshold: amountThreshold, rewardType: "rate", rate };
+        }
+        if (orderThreshold > 0 && perOrderReward > 0) {
+          return { name: `档${stage.levelId}`, metric: "orders", threshold: orderThreshold, rewardType: "per_order", perOrderReward };
+        }
+        if ((amountThreshold > 0 || orderThreshold > 0) && fixedReward > 0) {
+          return {
+            name: `档${stage.levelId}`,
+            metric: amountThreshold > 0 ? "amount" : "orders",
+            threshold: amountThreshold > 0 ? amountThreshold : orderThreshold,
+            rewardType: "fixed",
+            fixedReward
+          };
+        }
+        return null;
+      }).filter(Boolean);
     }
 
     function updateHeader() {
@@ -667,6 +756,7 @@
       document.title = `${activity.title}-看板`;
       document.querySelector("h1").textContent = `${activity.title}-看板`;
       document.getElementById("activity-time").textContent = activity.activityTime ? `活动时间：${activity.activityTime}` : "活动时间：未获取";
+      document.getElementById("data-deadline").textContent = activity.updatedAt ? `数据截止时间：${activity.updatedAt}` : "数据截止时间：待刷新";
       const ruleImage = document.getElementById("rule-image");
       if (activity.ruleImage) {
         ruleImage.src = activity.ruleImage;
@@ -674,7 +764,9 @@
       } else {
         ruleImage.style.display = "none";
       }
-      document.querySelector(".badge").textContent = `活动 ${activity.id} · 数据截至 ${activity.updatedAt || "-"}`;
+      document.querySelector(".badge").textContent = activity.updatedAt
+        ? `活动 ${activity.id} · 数据截至 ${activity.updatedAt}`
+        : `活动 ${activity.id} · 数据截至：待刷新`;
       const select = document.getElementById("activity-select");
       select.innerHTML = Object.values(activities).map(item => (
         `<option value="${item.id}" ${item.id === activeId ? "selected" : ""}>${item.id} · ${item.title}</option>`
@@ -683,18 +775,32 @@
 
     function renderTable() {
       const activity = activeActivity();
+      const metric = activeMetric(activity);
       const overrides = activity.overrides || {};
       const body = document.getElementById("daily-body");
       body.innerHTML = "";
+      const sortOrder = localStorage.getItem(DATE_SORT_KEY) || "desc";
+      const rowsForRunning = [...activity.rows].sort((a, b) => a[0].localeCompare(b[0]));
+      const runningByDate = {};
       let runningTotal = 0;
+      rowsForRunning.forEach(row => {
+        const [date] = row;
+        const defaultMetricValue = isIncompleteToday(row, activity.rows) ? 0 : rowMetricValue(row, metric);
+        const usedMetricValue = overrides[date] ? parseAmount(overrides[date]) : defaultMetricValue;
+        runningTotal += usedMetricValue;
+        runningByDate[date] = runningTotal;
+      });
 
-      activity.rows.forEach(row => {
+      const rowsToRender = [...activity.rows].sort((a, b) => (
+        sortOrder === "asc" ? a[0].localeCompare(b[0]) : b[0].localeCompare(a[0])
+      ));
+      rowsToRender.forEach(row => {
         const [date, validOrders, redemptionOrders, actualPayment, actualRedemption] = row;
         const isActual = actualRedemption != null;
         const isTodayPartial = isIncompleteToday(row, activity.rows);
         const overrideValue = overrides[date] || "";
-        const usedAmount = overrideValue ? parseAmount(overrideValue) : (isTodayPartial ? 0 : (actualRedemption || 0));
-        runningTotal += usedAmount;
+        const defaultMetricValue = isTodayPartial ? 0 : rowMetricValue(row, metric);
+        const usedMetricValue = overrideValue ? parseAmount(overrideValue) : defaultMetricValue;
 
         const tr = document.createElement("tr");
         if (!isActual || isTodayPartial) tr.className = "row-future";
@@ -705,9 +811,9 @@
           <td>${intText(redemptionOrders)}</td>
           <td>${actualPayment == null ? "-" : money(actualPayment)}</td>
           <td>${actualRedemption == null ? "-" : money(actualRedemption)}</td>
-          <td><input class="amount-input" id="${inputId(date)}" inputmode="decimal" placeholder="${isTodayPartial ? "输入今日预估" : (isActual ? "默认用接口" : "输入金额")}" value="${overrideValue}"></td>
-          <td data-used="${date}">${money(usedAmount)}</td>
-          <td data-running="${date}">${money(runningTotal)}</td>
+          <td><input class="amount-input" id="${inputId(date)}" inputmode="decimal" placeholder="${isTodayPartial ? `输入今日预估${metricUnit(metric)}` : (isActual ? "默认用接口" : `输入${metricUnit(metric)}`)}" value="${overrideValue}"></td>
+          <td data-used="${date}">${metricText(usedMetricValue, metric)}</td>
+          <td data-running="${date}">${metricText(runningByDate[date] || 0, metric)}</td>
         `;
         body.appendChild(tr);
       });
@@ -724,12 +830,13 @@
     function currentAmounts() {
       const overrides = getEstimatesFromDom();
       const rows = activeActivity().rows;
-      const actualTotal = rows.reduce((sum, row) => sum + (isIncompleteToday(row, rows) ? 0 : (row[4] || 0)), 0);
+      const metric = activeMetric();
+      const actualTotal = rows.reduce((sum, row) => sum + (isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric)), 0);
       const estimateTotal = rows.reduce((sum, row) => {
-        const [date, , , , actualRedemption] = row;
+        const [date] = row;
         const overrideAmount = overrides[date] || 0;
         if (overrideAmount <= 0) return sum;
-        const defaultAmount = isIncompleteToday(row, rows) ? 0 : (actualRedemption || 0);
+        const defaultAmount = isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric);
         return sum + overrideAmount - defaultAmount;
       }, 0);
       const futureUnfilled = rows.filter(row => (row[4] == null || isIncompleteToday(row, rows)) && !overrides[row[0]]).length;
@@ -738,46 +845,104 @@
 
     function updateTableTotals() {
       const overrides = getEstimatesFromDom();
-      let runningTotal = 0;
       const rows = activeActivity().rows;
-      rows.forEach(row => {
-        const [date, , , , actualRedemption] = row;
-        const defaultAmount = isIncompleteToday(row, rows) ? 0 : (actualRedemption || 0);
+      const metric = activeMetric();
+      const runningByDate = {};
+      let runningTotal = 0;
+      [...rows].sort((a, b) => a[0].localeCompare(b[0])).forEach(row => {
+        const [date] = row;
+        const defaultAmount = isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric);
         const usedAmount = overrides[date] || defaultAmount;
         runningTotal += usedAmount;
+        runningByDate[date] = runningTotal;
+      });
+      rows.forEach(row => {
+        const [date] = row;
+        const defaultAmount = isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric);
+        const usedAmount = overrides[date] || defaultAmount;
         const usedCell = document.querySelector(`[data-used="${date}"]`);
         const runningCell = document.querySelector(`[data-running="${date}"]`);
-        if (usedCell) usedCell.textContent = money(usedAmount);
-        if (runningCell) runningCell.textContent = money(runningTotal);
+        if (usedCell) usedCell.textContent = metricText(usedAmount, metric);
+        if (runningCell) runningCell.textContent = metricText(runningByDate[date] || 0, metric);
       });
+    }
+
+    function rewardCap(activity = activeActivity()) {
+      return activity.rewardCap || Infinity;
+    }
+
+    function rewardFor(tier, progress, activity = activeActivity()) {
+      if (progress < tier.threshold) return 0;
+      let reward = 0;
+      if (tier.rewardType === "per_order") reward = progress * (tier.perOrderReward || 0);
+      else if (tier.rewardType === "fixed") reward = tier.fixedReward || 0;
+      else reward = progress * (tier.rate || 0);
+      return Math.min(reward, rewardCap(activity));
+    }
+
+    function rewardRuleText(tier) {
+      if (tier.rewardType === "per_order") return `每单 ${money(tier.perOrderReward || 0)} 元`;
+      if (tier.rewardType === "fixed") return `固定奖励 ${money(tier.fixedReward || 0)} 元`;
+      return `${((tier.rate || 0) * 100).toFixed(2).replace(/\.?0+$/, "")}%`;
+    }
+
+    function renderRewardTable(amounts) {
+      const activity = activeActivity();
+      const body = document.getElementById("reward-body");
+      if (!activity.tiers.length) {
+        body.innerHTML = `<tr><td colspan="5">接口暂未返回档位规则，请刷新活动数据或查看活动规则图确认。</td></tr>`;
+        document.getElementById("reward-note").textContent = "当前活动没有可计算的档位字段，页面不会用其他活动的档位代替。";
+        return;
+      }
+      body.innerHTML = activity.tiers.map(tier => {
+        const thresholdReward = rewardFor(tier, tier.threshold, activity);
+        const projectedReward = rewardFor(tier, amounts.projectedTotal, activity);
+        return `
+          <tr>
+            <td>${tier.name}</td>
+            <td>${metricName(tier.metric)}达到 ${metricText(tier.threshold, tier.metric)}</td>
+            <td>${rewardRuleText(tier)}</td>
+            <td>${wan(thresholdReward)}</td>
+            <td>${wan(projectedReward)}</td>
+          </tr>
+        `;
+      }).join("");
+      const cap = rewardCap(activity);
+      document.getElementById("reward-note").textContent = Number.isFinite(cap)
+        ? `当前活动奖励封顶为 ${wan(cap)}，预计奖励已按封顶计算。`
+        : "当前活动未读取到封顶金额，预计奖励按接口档位规则计算。";
     }
 
     function renderTargetCards(amounts) {
       const container = document.getElementById("target-cards");
+      const activity = activeActivity();
+      const metric = activeMetric(activity);
+      if (!activity.tiers.length) {
+        container.innerHTML = `<div class="panel target-card"><div class="target-head"><strong>档位目标</strong><span class="pill">未读取到</span></div><div class="daily-target warning">待刷新</div><div class="note">当前活动接口暂未返回档位门槛和奖励字段，未使用其他活动规则代替。</div></div>`;
+        return;
+      }
       container.innerHTML = activeActivity().tiers.map(tier => {
         const currentGap = Math.max(0, tier.threshold - amounts.actualTotal);
         const projectedGap = Math.max(0, tier.threshold - amounts.projectedTotal);
         const projectedOver = Math.max(0, amounts.projectedTotal - tier.threshold);
         const dailyNeed = amounts.futureUnfilled > 0 ? projectedGap / amounts.futureUnfilled : projectedGap;
-        const rewardAtThreshold = Math.min(tier.threshold * tier.rate, CAP);
-        const projectedReward = amounts.projectedTotal >= tier.threshold
-          ? Math.min(amounts.projectedTotal * tier.rate, CAP)
-          : 0;
+        const rewardAtThreshold = rewardFor(tier, tier.threshold, activity);
+        const projectedReward = rewardFor(tier, amounts.projectedTotal, activity);
         const cardClass = projectedGap <= 0 ? "positive" : "danger";
-        const dailyLabel = projectedOver > 0 ? `超过 ${wan(projectedOver)}` : (amounts.futureUnfilled > 0 ? `${wan(dailyNeed)}/天` : wan(projectedGap));
+        const dailyLabel = projectedOver > 0 ? `超过 ${metricText(projectedOver, metric)}` : (amounts.futureUnfilled > 0 ? `${metricText(dailyNeed, metric)}/天` : metricText(projectedGap, metric));
         const note = projectedOver > 0
-          ? `按当前输入，预计超过${tier.name}门槛 ${wan(projectedOver)}。`
+          ? `按当前输入，预计超过${tier.name}门槛 ${metricText(projectedOver, metric)}。`
           : (amounts.futureUnfilled > 0
             ? `还剩 ${amounts.futureUnfilled} 天未录入预估，按当前输入计算。`
             : "未来日期都已录入预估，预计缺口为最终缺口。");
         return `
           <div class="panel target-card">
-            <div class="target-head"><strong>${tier.name}目标</strong><span class="pill">奖励 ${(tier.rate * 100).toFixed(1)}%</span></div>
+            <div class="target-head"><strong>${tier.name}目标</strong><span class="pill">${rewardRuleText(tier)}</span></div>
             <div class="daily-target ${cardClass}">${dailyLabel}</div>
             <div class="note">${note}</div>
             <div class="target-meta">
-              <div class="mini"><span class="label">实际还差</span><b>${wan(currentGap)}</b></div>
-              <div class="mini"><span class="label">${projectedOver > 0 ? "预估后超过" : "预估后还差"}</span><b>${wan(projectedOver > 0 ? projectedOver : projectedGap)}</b></div>
+              <div class="mini"><span class="label">实际还差</span><b>${metricText(currentGap, metric)}</b></div>
+              <div class="mini"><span class="label">${projectedOver > 0 ? "预估后超过" : "预估后还差"}</span><b>${metricText(projectedOver > 0 ? projectedOver : projectedGap, metric)}</b></div>
               <div class="mini"><span class="label">门槛奖励</span><b>${wan(rewardAtThreshold)}</b></div>
               <div class="mini"><span class="label">预计奖励</span><b>${wan(projectedReward)}</b></div>
             </div>
@@ -788,16 +953,28 @@
 
     function updateMetrics() {
       const amounts = currentAmounts();
+      const metric = activeMetric();
       updateTableTotals();
-      document.getElementById("actual-total").textContent = wan(amounts.actualTotal);
-      document.getElementById("estimate-total").textContent = wan(amounts.estimateTotal);
-      document.getElementById("projected-total").textContent = wan(amounts.projectedTotal);
+      document.getElementById("actual-label").textContent = `实际${metricName(metric)}累计`;
+      document.getElementById("actual-note").textContent = `只统计接口已经返回的${metricName(metric)}。`;
+      document.getElementById("projected-label").textContent = `预计最终${metricName(metric)}`;
+      document.getElementById("projected-note").textContent = "接口默认累计 + 手动调整净变化。";
+      const todayValue = todayMetricValue(activeActivity().rows, metric);
+      document.getElementById("today-label").textContent = todayMetricLabel(metric);
+      document.getElementById("today-total").textContent = todayValue == null ? "-" : metricText(todayValue, metric);
+      document.getElementById("today-note").textContent = metric === "orders"
+        ? "当前活动按订单数门槛和每单奖励计算。"
+        : "当前活动按核销 GMV 门槛和比例奖励计算。";
+      document.getElementById("actual-total").textContent = metricText(amounts.actualTotal, metric);
+      document.getElementById("estimate-total").textContent = metricText(amounts.estimateTotal, metric);
+      document.getElementById("projected-total").textContent = metricText(amounts.projectedTotal, metric);
 
       const reached = activeActivity().tiers.filter(tier => amounts.projectedTotal >= tier.threshold).pop();
       const levelEl = document.getElementById("projected-level");
-      levelEl.textContent = reached ? reached.name : "暂未达档";
+      levelEl.textContent = activeActivity().tiers.length ? (reached ? reached.name : "暂未达档") : "未读取到档位";
       levelEl.className = `value ${reached ? "positive" : "warning"}`;
 
+      renderRewardTable(amounts);
       renderTargetCards(amounts);
     }
 
@@ -805,6 +982,12 @@
       activeId = event.target.value;
       localStorage.setItem(ACTIVE_KEY, activeId);
       updateHeader();
+      renderTable();
+      updateMetrics();
+    });
+
+    document.getElementById("date-sort").addEventListener("change", event => {
+      localStorage.setItem(DATE_SORT_KEY, event.target.value);
       renderTable();
       updateMetrics();
     });
@@ -820,7 +1003,7 @@
         title: `活动 ${id}`,
         activityTime: "",
         ruleImage: "",
-        updatedAt: "未导入接口数据",
+        updatedAt: "",
         tiers: DEFAULT_TIERS,
         rows: [],
         overrides: {}
@@ -849,16 +1032,6 @@
         alert(`导入失败：${error.message}`);
       }
     });
-
-    function applyAutoRefresh() {
-      if (refreshTimer) clearInterval(refreshTimer);
-      const minutes = Number(localStorage.getItem(AUTO_REFRESH_KEY) || 0);
-      const select = document.getElementById("auto-refresh");
-      select.value = String(minutes);
-      if (minutes > 0) {
-        refreshTimer = setInterval(() => location.reload(), minutes * 60 * 1000);
-      }
-    }
 
     document.getElementById("open-settings").addEventListener("click", () => {
       document.getElementById("settings-modal").classList.add("open");
@@ -902,35 +1075,69 @@
       }
     });
 
+    async function refreshCurrentActivity({ silent = false } = {}) {
+      const activityId = encodeURIComponent(activeActivity().id);
+      const activity = activeActivity();
+      const res = await fetch(`http://127.0.0.1:8765/refresh?activityId=${activityId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: activity.title,
+          activityTime: activity.activityTime || "",
+          ruleImage: activity.ruleImage || "",
+          rows: activity.rows || []
+        })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || "刷新失败");
+      activity.updatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
+      saveActivities();
+      updateHeader();
+      if (!silent) setTimeout(() => location.reload(), 300);
+      else location.reload();
+    }
+
+    function setAutoRefreshStatus(text) {
+      const status = document.getElementById("auto-refresh-status");
+      if (status) status.textContent = text;
+    }
+
+    function applyAutoRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      const minutes = Number(localStorage.getItem(AUTO_REFRESH_KEY) || 0);
+      const select = document.getElementById("auto-refresh");
+      select.value = String(minutes);
+      if (minutes > 0) {
+        setAutoRefreshStatus(`已开启自动刷新：每 ${minutes} 分钟请求一次本机刷新服务。`);
+        refreshTimer = setInterval(async () => {
+          try {
+            setAutoRefreshStatus(`自动刷新中：${new Date().toLocaleString("zh-CN", { hour12: false })}`);
+            await refreshCurrentActivity({ silent: true });
+          } catch (error) {
+            setAutoRefreshStatus(`自动刷新失败：${error.message}。请确认本机服务已启动：node scripts/local-refresh-server.mjs`);
+          }
+        }, minutes * 60 * 1000);
+      } else {
+        setAutoRefreshStatus("自动刷新已关闭。开启后会定时请求本机刷新服务。");
+      }
+    }
+
     document.getElementById("refresh-now").addEventListener("click", async () => {
       const button = document.getElementById("refresh-now");
       button.disabled = true;
       button.textContent = "刷新中";
       try {
-        const activityId = encodeURIComponent(activeActivity().id);
-        const activity = activeActivity();
-        const res = await fetch(`http://127.0.0.1:8765/refresh?activityId=${activityId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: activity.title,
-            activityTime: activity.activityTime || "",
-            ruleImage: activity.ruleImage || "",
-            rows: activity.rows || []
-          })
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.message || "刷新失败");
-        location.reload();
+        await refreshCurrentActivity();
       } catch (error) {
         alert(`刷新失败：${error.message}。请先在项目根目录启动：node scripts/local-refresh-server.mjs`);
       } finally {
         button.disabled = false;
-        button.textContent = "立即刷新数据";
+        button.textContent = "刷新数据";
       }
     });
 
     updateHeader();
+    document.getElementById("date-sort").value = localStorage.getItem(DATE_SORT_KEY) || "desc";
     renderTable();
     updateMetrics();
     applyAutoRefresh();
