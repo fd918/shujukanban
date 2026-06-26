@@ -116,6 +116,9 @@ git push origin main
 
 注意：GitHub 自动推送需要本机命令行 GitHub 凭证可用。网页里登录 GitHub 不等于命令行 `git push` 已登录。
 
+公开 GitHub Pages 上的“刷新页面”只会重新加载已发布到 GitHub 的最新静态数据；真正请求美团接口的刷新只在本机后台服务里执行。不要把 Cookie、请求标头或 mtgsig 放到公开网页里。
+
 ## 安全注意
 
 `.env` 中包含 Cookie 和 mtgsig，不能上传到 GitHub，也不能发给别人。
+当前公开仓库不会提交 `.env`、完整请求标头、手动输入保存文件或日志；但看板页面中的活动标题、活动规则图片、每日订单量、GMV、快照趋势等业务数据会公开展示。

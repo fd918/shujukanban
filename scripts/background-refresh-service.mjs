@@ -8,7 +8,9 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const configPath = resolve(root, "data/watch-config.json");
 const overridesPath = resolve(root, "data/manual-overrides.json");
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
+const manualRefreshIntervalMs = 60 * 1000;
 let running = false;
+let lastManualRefreshAt = 0;
 
 function nowText() {
   return new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
@@ -114,6 +116,12 @@ function readBody(req) {
 
 async function runManualRefresh(activityId, meta = {}) {
   if (running) throw new Error("已有刷新任务正在运行，请稍后再试。");
+  const now = Date.now();
+  const waitMs = manualRefreshIntervalMs - (now - lastManualRefreshAt);
+  if (waitMs > 0) {
+    throw new Error(`刷新太频繁，请 ${Math.ceil(waitMs / 1000)} 秒后再试。`);
+  }
+  lastManualRefreshAt = now;
   running = true;
   try {
     const env = {
