@@ -72,7 +72,7 @@
     }
 
     .kpi-grid {
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       margin-bottom: 14px;
     }
 
@@ -404,10 +404,10 @@
         <h1>美团联盟年框媒体激励2026年6月-云瞻-看板</h1>
         <div class="sub">口径：主指标按有效核销订单实付金额计算。接口数据作为默认值；每一天都可以在“预估数据”列手动调整，调整后优先按你的输入计算。</div>
         <div class="activity-time" id="activity-time">活动时间：2026-06-06 00:00:00 - 2026-06-30 23:59:59</div>
-        <div class="data-deadline" id="data-deadline">数据截止时间：2026/6/26 22:42:05</div>
+        <div class="data-deadline" id="data-deadline">数据截止时间：2026/6/26 23:43:01</div>
       </div>
       <div class="header-actions">
-        <div class="badge">活动 1199 · 数据截至 2026/6/26 22:42:05</div>
+        <div class="badge">活动 1199 · 数据截至 2026/6/26 23:43:01</div>
         <button class="button" id="refresh-now">刷新数据</button>
         <button class="button secondary" id="open-settings">设置</button>
       </div>
@@ -418,6 +418,11 @@
         <div class="label" id="today-label">今日核心指标</div>
         <div class="value" id="today-total">-</div>
         <div class="note" id="today-note">按当前活动奖励口径自动切换。</div>
+      </div>
+      <div class="panel kpi">
+        <div class="label">今日有效 GMV</div>
+        <div class="value" id="today-valid-gmv">-</div>
+        <div class="note">接口当天有效订单实付金额。</div>
       </div>
       <div class="panel kpi">
         <div class="label" id="actual-label">实际核销累计</div>
@@ -566,7 +571,7 @@
       { name: "档三", metric: "amount", threshold: 117885379, rewardType: "rate", rate: 0.005 }
     ];
 
-    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 22:42:05","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124454,123612,3426748.17,3398731.95],["2026-06-12",133937,132977,3740932.81,3703258.21],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132788,131135,4069099,3997589.48],["2026-06-20",136139,134570,4005542.26,3941249.34],["2026-06-21",145769,143866,4227243.38,4154024.91],["2026-06-22",127979,127137,3398001.85,3367576.01],["2026-06-23",131832,130840,3581243.63,3544982.15],["2026-06-24",142501,140621,3890774.17,3826547.21],["2026-06-25",148595,147244,4101955.82,4047904.25],["2026-06-26",151014,139578,4215321.1,3849339.1],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
+    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 23:43:01","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124454,123614,3426748.17,3400854.95],["2026-06-12",133937,132977,3740932.81,3703258.21],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132788,131137,4069099,3998131.48],["2026-06-20",136139,134570,4005542.26,3941249.34],["2026-06-21",145769,143866,4227243.38,4154024.91],["2026-06-22",127977,127137,3397733.43,3367576.01],["2026-06-23",131831,130840,3581194.73,3544982.15],["2026-06-24",142500,140622,3890762.67,3826561.61],["2026-06-25",148592,147258,4101655.34,4048326.41],["2026-06-26",155043,145168,4346097.67,4026831.92],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
 
     let activities = loadActivities();
     let activeId = DEFAULT_ACTIVITY.id;
@@ -584,6 +589,8 @@
           title: DEFAULT_ACTIVITY.title,
           activityTime: DEFAULT_ACTIVITY.activityTime,
           ruleImage: DEFAULT_ACTIVITY.ruleImage,
+          updatedAt: DEFAULT_ACTIVITY.updatedAt,
+          rewardCap: DEFAULT_ACTIVITY.rewardCap,
           rows: DEFAULT_ACTIVITY.rows,
           tiers: DEFAULT_ACTIVITY.tiers,
           overrides: savedDefault.overrides || DEFAULT_ACTIVITY.overrides || {}
@@ -642,6 +649,11 @@
       const row = rows.find(item => item[0] === todayYmd());
       if (!row) return null;
       return metric === "orders" ? row[2] : row[4];
+    }
+
+    function todayValidGmv(rows) {
+      const row = rows.find(item => item[0] === todayYmd());
+      return row ? row[3] : null;
     }
 
     function intText(value) {
@@ -962,6 +974,8 @@
       const todayValue = todayMetricValue(activeActivity().rows, metric);
       document.getElementById("today-label").textContent = todayMetricLabel(metric);
       document.getElementById("today-total").textContent = todayValue == null ? "-" : metricText(todayValue, metric);
+      const todayGmv = todayValidGmv(activeActivity().rows);
+      document.getElementById("today-valid-gmv").textContent = todayGmv == null ? "-" : wan(todayGmv);
       document.getElementById("today-note").textContent = metric === "orders"
         ? "当前活动按订单数门槛和每单奖励计算。"
         : "当前活动按核销 GMV 门槛和比例奖励计算。";

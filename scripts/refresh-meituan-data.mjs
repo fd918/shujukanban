@@ -244,7 +244,7 @@ async function buildRuleImage(headers, activityId) {
   const tempDir = mkdtempSync(resolve(tmpdir(), `meituan-rule-${activityId}-`));
   const htmlFile = resolve(tempDir, `activity-rule-${activityId}.html`);
   const imageFile = resolve(root, "assets", `activity-rule-${activityId}.png`);
-  const height = Math.max(1600, Math.min(4200, 900 + Math.ceil(activityDesc.length / 2.6)));
+  const height = Math.max(1250, Math.min(2700, 1050 + Math.ceil(activityDesc.length / 8)));
   const ruleHtml = `<!doctype html><html><head><meta charset="utf-8"><style>
     html,body{margin:0;background:#f5f7fb;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:#202124;}
     .page{box-sizing:border-box;width:1600px;padding:28px 24px 34px;background:#f5f7fb;}

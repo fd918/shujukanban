@@ -76,6 +76,14 @@ logs/background-refresh-error.log
 
 双击即可打开本地看板页面。
 
+后台服务控制入口：
+
+```text
+~/Desktop/美团看板服务.command
+```
+
+双击后可以选择查看状态、启动服务、停止服务、重启服务，或打开本地看板。
+
 ## 对外访问
 
 推荐用 GitHub Pages 对外展示静态看板。后台服务刷新后会尝试执行：
