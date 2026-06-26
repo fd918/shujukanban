@@ -152,9 +152,10 @@ function replaceBetween(source, startMarker, endMarker, replacement) {
 
 async function main() {
   const env = loadEnv();
-  ["MEITUAN_ACTIVITY_ID"].forEach(key => assertEnv(env, key));
-
-  const activityId = Number(env.MEITUAN_ACTIVITY_ID);
+  const activityId = Number(process.argv[2] || env.MEITUAN_ACTIVITY_ID);
+  if (!Number.isFinite(activityId) || activityId <= 0) {
+    throw new Error("缺少活动 ID。请使用：node scripts/refresh-meituan-data.mjs 1199");
+  }
   const url = "https://media.meituan.com/ipc/pcActivityData?yodaReady=h5&csecplatform=4&csecversion=4.2.4";
   const response = await fetch(url, {
     method: "POST",

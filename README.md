@@ -9,11 +9,11 @@
 ## 刷新接口数据
 
 1. 复制 `.env.example` 为 `.env`。
-2. 在 `.env` 中填写活动 ID、Cookie 和 mtgsig。
+2. 在 `.env` 中填写请求标头文件位置。
 3. 在项目根目录执行：
 
 ```bash
-node scripts/refresh-meituan-data.mjs
+node scripts/refresh-meituan-data.mjs 1199
 ```
 
 脚本会全量刷新接口返回的每日数据，并保留看板里手动输入的覆盖值。

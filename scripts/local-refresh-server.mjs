@@ -16,7 +16,7 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function runRefresh() {
+function runRefresh(activityId) {
   return new Promise((resolvePromise, reject) => {
     if (running) {
       reject(new Error("已有刷新任务正在运行。"));
@@ -24,7 +24,9 @@ function runRefresh() {
     }
     running = true;
     let output = "";
-    const child = spawn("node", ["scripts/refresh-meituan-data.mjs"], {
+    const args = ["scripts/refresh-meituan-data.mjs"];
+    if (activityId) args.push(String(activityId));
+    const child = spawn("node", args, {
       cwd: root,
       shell: true
     });
@@ -47,12 +49,14 @@ createServer(async (req, res) => {
     send(res, 200, { ok: true });
     return;
   }
-  if (req.method !== "POST" || req.url !== "/refresh") {
+  const url = new URL(req.url, "http://127.0.0.1");
+  if (req.method !== "POST" || url.pathname !== "/refresh") {
     send(res, 404, { ok: false, message: "只支持 POST /refresh" });
     return;
   }
   try {
-    const message = await runRefresh();
+    const activityId = url.searchParams.get("activityId");
+    const message = await runRefresh(activityId);
     send(res, 200, { ok: true, message });
   } catch (error) {
     send(res, 500, { ok: false, message: error.message });

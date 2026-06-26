@@ -345,7 +345,7 @@
         <div class="sub">口径：主指标按有效核销订单实付金额计算。接口数据作为默认值；每一天都可以在“预估数据”列手动调整，调整后优先按你的输入计算。</div>
       </div>
       <div class="header-actions">
-        <div class="badge">活动 1294 · 数据截至 2026/6/26 17:34:44</div>
+        <div class="badge">活动 1294 · 数据截至 2026/6/26 17:39:52</div>
         <button class="button secondary" id="open-settings">设置</button>
       </div>
     </header>
@@ -490,7 +490,7 @@
       { name: "档三", threshold: 117885379, rate: 0.005 }
     ];
 
-    const DEFAULT_ACTIVITY = {"id":"1294","title":"活动 1294","updatedAt":"2026/6/26 17:34:44","tiers":[{"name":"档一","threshold":95378491,"rate":0.002},{"name":"档二","threshold":104381246,"rate":0.004},{"name":"档三","threshold":117885379,"rate":0.005}],"rows":[["2026-06-19",97227,95370,3111875.83,3050362.61],["2026-06-20",98994,97137,3055210.95,2995684.51],["2026-06-21",106346,104316,3242572.01,3180774.03]],"overrides":{}};
+    const DEFAULT_ACTIVITY = {"id":"1294","title":"活动 1294","updatedAt":"2026/6/26 17:39:52","tiers":[{"name":"档一","threshold":95378491,"rate":0.002},{"name":"档二","threshold":104381246,"rate":0.004},{"name":"档三","threshold":117885379,"rate":0.005}],"rows":[["2026-06-19",97227,95370,3111875.83,3050362.61],["2026-06-20",98994,97137,3055210.95,2995684.51],["2026-06-21",106346,104316,3242572.01,3180774.03]],"overrides":{}};
 
     let activities = loadActivities();
     let activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ACTIVITY.id;
@@ -840,7 +840,8 @@
       button.disabled = true;
       button.textContent = "刷新中";
       try {
-        const res = await fetch("http://127.0.0.1:8765/refresh", { method: "POST" });
+        const activityId = encodeURIComponent(activeActivity().id);
+        const res = await fetch(`http://127.0.0.1:8765/refresh?activityId=${activityId}`, { method: "POST" });
         const data = await res.json();
         if (!data.ok) throw new Error(data.message || "刷新失败");
         location.reload();
