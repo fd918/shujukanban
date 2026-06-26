@@ -40,6 +40,8 @@ node scripts/background-refresh-service.mjs
 - `activityIds`：后台需要记录小时快照的活动 ID 列表。
 - `autoPush`：是否刷新后自动提交并推送到 GitHub。
 
+刷新间隔由 `intervalMinutes` 控制，和快照文件本身没有绑定。也可以在看板“设置”里的“后台定时刷新”直接改为 10、20、30 或 60 分钟；修改后后台服务会按新间隔继续运行。
+
 每次刷新成功后，会写入小时快照：
 
 ```text
@@ -115,6 +117,7 @@ git push origin main
 ```
 
 注意：GitHub 自动推送需要本机命令行 GitHub 凭证可用。网页里登录 GitHub 不等于命令行 `git push` 已登录。
+当前配置已开启自动推送：本机后台服务刷新成功后，会自动提交公开文件并推送到 GitHub，GitHub Pages 构建完成后，公网看板会自动显示最新发布数据。
 
 公开 GitHub Pages 上的“刷新页面”只会重新加载已发布到 GitHub 的最新静态数据；真正请求美团接口的刷新只在本机后台服务里执行。不要把 Cookie、请求标头或 mtgsig 放到公开网页里。
 

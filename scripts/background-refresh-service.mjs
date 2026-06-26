@@ -11,6 +11,7 @@ const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 const manualRefreshIntervalMs = 60 * 1000;
 let running = false;
 let lastManualRefreshAt = 0;
+let refreshTimer = null;
 
 function nowText() {
   return new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
@@ -61,6 +62,23 @@ function rememberActivity(activityId, { primary = false } = {}) {
     activityIds: ids,
     primaryActivityId: primary ? id : (config.primaryActivityId || id)
   };
+  writeJson(configPath, next);
+  return next;
+}
+
+function normalizeConfigUpdate(update = {}) {
+  const current = readConfig();
+  const interval = Number(update.intervalMinutes);
+  const next = {
+    ...current
+  };
+  if (Number.isFinite(interval) && interval >= 1) next.intervalMinutes = Math.round(interval);
+  if (typeof update.autoPush === "boolean") next.autoPush = update.autoPush;
+  if (Array.isArray(update.activityIds)) {
+    next.activityIds = [...new Set(update.activityIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0))].sort((a, b) => a - b);
+  }
+  const primary = Number(update.primaryActivityId);
+  if (Number.isFinite(primary) && primary > 0) next.primaryActivityId = primary;
   writeJson(configPath, next);
   return next;
 }
@@ -176,6 +194,22 @@ function startRefreshServer() {
       return;
     }
 
+    if (url.pathname === "/config") {
+      if (req.method === "GET") {
+        sendJson(res, 200, { ok: true, config: readConfig() });
+        return;
+      }
+      if (req.method === "POST") {
+        const body = await readBody(req);
+        const config = normalizeConfigUpdate(body);
+        scheduleNextRun();
+        sendJson(res, 200, { ok: true, config });
+        return;
+      }
+      sendJson(res, 404, { ok: false, message: "只支持 GET/POST /config" });
+      return;
+    }
+
     if (req.method !== "POST" || url.pathname !== "/refresh") {
       sendJson(res, 404, { ok: false, message: "只支持 POST /refresh" });
       return;
@@ -237,11 +271,17 @@ async function runOnce() {
     running = false;
     const next = new Date(Date.now() + readConfig().intervalMinutes * 60 * 1000).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
     console.log(`[${nowText()}] 本轮结束。下次刷新：${next}`);
+    scheduleNextRun();
   }
+}
+
+function scheduleNextRun() {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  const interval = Math.max(1, readConfig().intervalMinutes);
+  refreshTimer = setTimeout(runOnce, interval * 60 * 1000);
 }
 
 const config = readConfig();
 console.log(`[${nowText()}] 美团看板后台服务启动，每 ${config.intervalMinutes} 分钟刷新一次。`);
 startRefreshServer();
 runOnce();
-setInterval(runOnce, Math.max(1, config.intervalMinutes) * 60 * 1000);
