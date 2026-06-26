@@ -338,6 +338,23 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #f8fafc;
+      cursor: zoom-in;
+    }
+
+    .image-modal-panel {
+      width: min(1500px, 96vw);
+      max-height: 92vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+    }
+
+    .image-modal-panel img {
+      display: block;
+      width: 100%;
+      height: auto;
     }
 
     @media (max-width: 980px) {
@@ -361,7 +378,7 @@
         <div class="activity-time" id="activity-time">活动时间：2026-06-06 00:00:00 - 2026-06-30 23:59:59</div>
       </div>
       <div class="header-actions">
-        <div class="badge">活动 1199 · 数据截至 2026/6/26 17:53:07</div>
+        <div class="badge">活动 1199 · 数据截至 2026/6/26 17:58:28</div>
         <button class="button secondary" id="open-settings">设置</button>
       </div>
     </header>
@@ -464,6 +481,16 @@
       </div>
     </div>
 
+    <div class="modal" id="rule-modal">
+      <div class="image-modal-panel">
+        <div class="modal-head">
+          <h2>活动规则</h2>
+          <button class="button secondary" id="close-rule-modal">关闭</button>
+        </div>
+        <img id="rule-modal-image" src="" alt="活动规则放大图">
+      </div>
+    </div>
+
     <section class="panel">
       <h2>全部日活动数据</h2>
       <div class="table-wrap">
@@ -499,10 +526,10 @@
       { name: "档三", threshold: 117885379, rate: 0.005 }
     ];
 
-    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 17:53:07","tiers":[{"name":"档1","threshold":95378491,"rate":0.002},{"name":"档2","threshold":104381246,"rate":0.004},{"name":"档3","threshold":117885379,"rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124455,123601,3426871.17,3397355.95],["2026-06-12",133939,132977,3741008.81,3703258.21],["2026-06-13",151428,148937,4370175.05,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148292,4325171.88,4276935.73],["2026-06-19",132788,131112,4069099,3994453.13],["2026-06-20",136141,134564,4005756.14,3941004.96],["2026-06-21",145772,143861,4227661.85,4153788.27],["2026-06-22",127982,127136,3398402.75,3367518.91],["2026-06-23",131834,130836,3581744.63,3544695.37],["2026-06-24",142504,140589,3891349.16,3824134.12],["2026-06-25",148605,147000,4102222.12,4029166.73],["2026-06-26",102545,88188,2723590.76,2300718.09],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
+    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/26 17:58:28","tiers":[{"name":"档1","threshold":95378491,"rate":0.002},{"name":"档2","threshold":104381246,"rate":0.004},{"name":"档3","threshold":117885379,"rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121925,3339594.3,3317473.35],["2026-06-09",121428,120676,3394781.15,3368033.11],["2026-06-10",121586,119894,3325886.03,3274713.94],["2026-06-11",124455,123601,3426871.17,3397355.95],["2026-06-12",133939,132977,3741008.81,3703258.21],["2026-06-13",151428,148937,4370175.05,4285891.74],["2026-06-14",147374,144961,4234809.66,4150734.95],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131840,130996,3578525.4,3545900.25],["2026-06-17",131129,129526,3580598.76,3523822.39],["2026-06-18",149163,148292,4325171.88,4276935.73],["2026-06-19",132788,131112,4069099,3994453.13],["2026-06-20",136141,134564,4005756.14,3941004.96],["2026-06-21",145772,143861,4227661.85,4153788.27],["2026-06-22",127982,127136,3398402.75,3367518.91],["2026-06-23",131834,130836,3581744.63,3544695.37],["2026-06-24",142504,140589,3891349.16,3824134.12],["2026-06-25",148604,147010,4102190.52,4029942.98],["2026-06-26",103790,89009,2758255.41,2322142.29],["2026-06-27",null,null,null,null],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
 
     let activities = loadActivities();
-    let activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ACTIVITY.id;
+    let activeId = DEFAULT_ACTIVITY.id;
     let refreshTimer = null;
 
     function loadActivities() {
@@ -843,6 +870,21 @@
 
     document.getElementById("settings-modal").addEventListener("click", event => {
       if (event.target.id === "settings-modal") event.target.classList.remove("open");
+    });
+
+    document.getElementById("rule-image").addEventListener("click", () => {
+      const activity = activeActivity();
+      if (!activity.ruleImage) return;
+      document.getElementById("rule-modal-image").src = activity.ruleImage;
+      document.getElementById("rule-modal").classList.add("open");
+    });
+
+    document.getElementById("close-rule-modal").addEventListener("click", () => {
+      document.getElementById("rule-modal").classList.remove("open");
+    });
+
+    document.getElementById("rule-modal").addEventListener("click", event => {
+      if (event.target.id === "rule-modal") event.target.classList.remove("open");
     });
 
     document.getElementById("auto-refresh").addEventListener("change", event => {

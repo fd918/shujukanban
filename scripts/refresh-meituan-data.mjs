@@ -5,6 +5,15 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const envPath = resolve(root, ".env");
 const htmlPath = resolve(root, "meituan-dashboard-preview.html");
+const ACTIVITY_META = {
+  1199: {
+    title: "美团联盟年框媒体激励2026年6月-云瞻",
+    activityTime: "2026-06-06 00:00:00 - 2026-06-30 23:59:59",
+    ruleImage: "./assets/activity-rule-1199.png",
+    start: "2026-06-06",
+    end: "2026-06-30"
+  }
+};
 
 function loadEnv() {
   if (!existsSync(envPath)) {
@@ -189,22 +198,23 @@ async function main() {
 
   let html = readFileSync(htmlPath, "utf8");
   const existing = existingDefaultActivity(html);
+  const meta = ACTIVITY_META[activityId] || {};
   const fallbackRows = process.env.MEITUAN_FALLBACK_ROWS_JSON
     ? JSON.parse(process.env.MEITUAN_FALLBACK_ROWS_JSON)
     : (existing.rows || []);
-  const rows = buildRows(json, env.MEITUAN_ACTIVITY_START, env.MEITUAN_ACTIVITY_END, fallbackRows);
+  const rows = buildRows(json, env.MEITUAN_ACTIVITY_START || meta.start, env.MEITUAN_ACTIVITY_END || meta.end, fallbackRows);
   const tiers = buildTiers(json);
   writeFileSync(resolve(root, `meituan-activity-${activityId}-latest.json`), JSON.stringify(json, null, 2));
 
-  const title = process.env.MEITUAN_ACTIVITY_TITLE || env.MEITUAN_ACTIVITY_TITLE || existing.title || `活动 ${activityId}`;
+  const title = process.env.MEITUAN_ACTIVITY_TITLE || env.MEITUAN_ACTIVITY_TITLE || meta.title || existing.title || `活动 ${activityId}`;
   html = html.replace(/<title>.*?<\/title>/, `<title>${title}-看板</title>`);
   html = html.replace(/<h1>.*?<\/h1>/, `<h1>${title}-看板</h1>`);
   html = html.replace(/活动 \d+ · 数据截至 .*?<\/div>/, `活动 ${activityId} · 数据截至 ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}</div>`);
   const activityBlock = {
     id: String(activityId),
     title,
-    activityTime: process.env.MEITUAN_ACTIVITY_TIME || existing.activityTime || "",
-    ruleImage: process.env.MEITUAN_RULE_IMAGE || existing.ruleImage || "",
+    activityTime: process.env.MEITUAN_ACTIVITY_TIME || meta.activityTime || existing.activityTime || "",
+    ruleImage: process.env.MEITUAN_RULE_IMAGE || meta.ruleImage || existing.ruleImage || "",
     updatedAt: new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }),
     tiers: tiers.length ? tiers : [
       { name: "档一", threshold: 95378491, rate: 0.002 },
