@@ -29,6 +29,59 @@ function assertEnv(env, key) {
   }
 }
 
+function parseRawHeaders(text) {
+  const headers = {};
+  text.split(/\r?\n/).forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || /^POST\s+/i.test(trimmed) || /^GET\s+/i.test(trimmed)) return;
+    const index = trimmed.indexOf(":");
+    if (index < 0) return;
+    const key = trimmed.slice(0, index).trim();
+    const value = trimmed.slice(index + 1).trim();
+    if (!key || !value) return;
+    const lower = key.toLowerCase();
+    if (["host", "connection", "content-length", "accept-encoding"].includes(lower)) return;
+    headers[key] = value;
+  });
+  return headers;
+}
+
+function requestHeaders(env) {
+  if (env.MEITUAN_HEADERS_FILE) {
+    const headersPath = resolve(root, env.MEITUAN_HEADERS_FILE);
+    if (!existsSync(headersPath)) {
+      throw new Error(`未找到请求标头文件：${env.MEITUAN_HEADERS_FILE}。请新建该文件并粘贴 F12 里的完整请求标头。`);
+    }
+    const parsed = parseRawHeaders(readFileSync(headersPath, "utf8"));
+    if (!parsed.Cookie) throw new Error("请求标头文件中没有 Cookie。");
+    if (!parsed.mtgsig) throw new Error("请求标头文件中没有 mtgsig。");
+    return {
+      "Accept": parsed.Accept || "application/json, text/plain, */*",
+      "Accept-Language": parsed["Accept-Language"] || "zh-CN,zh;q=0.9,en;q=0.8",
+      "Content-Type": "application/json",
+      "Cookie": parsed.Cookie,
+      "Origin": parsed.Origin || "https://media.meituan.com",
+      "Referer": parsed.Referer || "https://media.meituan.com/pc/index.html",
+      "User-Agent": parsed["User-Agent"] || "Mozilla/5.0",
+      "mtgsig": parsed.mtgsig,
+      "sec-ch-ua": parsed["sec-ch-ua"],
+      "sec-ch-ua-mobile": parsed["sec-ch-ua-mobile"],
+      "sec-ch-ua-platform": parsed["sec-ch-ua-platform"]
+    };
+  }
+  ["MEITUAN_COOKIE", "MEITUAN_MTGSIG"].forEach(key => assertEnv(env, key));
+  return {
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    "Content-Type": "application/json",
+    "Cookie": env.MEITUAN_COOKIE,
+    "Origin": "https://media.meituan.com",
+    "Referer": "https://media.meituan.com/pc/index.html",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "mtgsig": env.MEITUAN_MTGSIG
+  };
+}
+
 function ymdFromSeconds(seconds) {
   return new Date(seconds * 1000).toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
 }
@@ -98,22 +151,13 @@ function replaceBetween(source, startMarker, endMarker, replacement) {
 
 async function main() {
   const env = loadEnv();
-  ["MEITUAN_ACTIVITY_ID", "MEITUAN_COOKIE", "MEITUAN_MTGSIG"].forEach(key => assertEnv(env, key));
+  ["MEITUAN_ACTIVITY_ID"].forEach(key => assertEnv(env, key));
 
   const activityId = Number(env.MEITUAN_ACTIVITY_ID);
   const url = "https://media.meituan.com/ipc/pcActivityData?yodaReady=h5&csecplatform=4&csecversion=4.2.4";
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Accept": "application/json, text/plain, */*",
-      "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-      "Content-Type": "application/json",
-      "Cookie": env.MEITUAN_COOKIE,
-      "Origin": "https://media.meituan.com",
-      "Referer": "https://media.meituan.com/pc/index.html",
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "mtgsig": env.MEITUAN_MTGSIG
-    },
+    headers: requestHeaders(env),
     body: JSON.stringify({ activityId })
   });
 
