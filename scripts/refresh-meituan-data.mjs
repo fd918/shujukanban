@@ -292,12 +292,13 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
   mkdirSync(dataDir, { recursive: true });
   const now = new Date();
   const today = now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
-  const hour = new Intl.DateTimeFormat("zh-CN", {
+  const hourText = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Shanghai",
     hour: "2-digit",
     hour12: false
   }).format(now);
-  const dateHour = `${today} ${hour}:00`;
+  const hour = Number(hourText);
+  const dateHour = `${today} ${String(hour).padStart(2, "0")}:00`;
   const todayRow = rows.find(row => row[0] === today) || [];
   const metric = tiers.find(tier => tier.metric)?.metric || "amount";
   const actualRows = rows.filter(row => row[4] != null);
@@ -310,7 +311,7 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
     title,
     metric,
     date: today,
-    hour: Number(hour),
+    hour,
     dateHour,
     recordedAt: updatedAt,
     todayValidOrders: todayRow[1] ?? null,
