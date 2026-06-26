@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = resolve(new URL("..", import.meta.url).pathname);
+const root = fileURLToPath(new URL("..", import.meta.url));
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 let running = false;
 
@@ -24,11 +24,16 @@ function runRefresh() {
     }
     running = true;
     let output = "";
-    const child = spawn(process.execPath, ["scripts/refresh-meituan-data.mjs"], {
-      cwd: root
+    const child = spawn("node", ["scripts/refresh-meituan-data.mjs"], {
+      cwd: root,
+      shell: true
     });
     child.stdout.on("data", chunk => { output += chunk.toString(); });
     child.stderr.on("data", chunk => { output += chunk.toString(); });
+    child.on("error", error => {
+      running = false;
+      reject(new Error(`无法启动刷新脚本：${error.message}`));
+    });
     child.on("exit", code => {
       running = false;
       if (code === 0) resolvePromise(output.trim());
