@@ -352,7 +352,10 @@ async function runOnce() {
   running = true;
   const config = readConfig();
   try {
-    const ordered = [...config.activityIds];
+    const primary = Number(config.primaryActivityId);
+    const ids = [...config.activityIds];
+    const ordered = ids.filter(id => Number(id) !== primary);
+    if (ids.some(id => Number(id) === primary)) ordered.push(primary);
     if (!ordered.length) {
       console.log(`[${nowText()}] 没有开启自动刷新的活动，跳过本轮。`);
       return;

@@ -1,8 +1,9 @@
 {
-  "intervalMinutes": 30,
+  "intervalMinutes": 10,
   "primaryActivityId": 1199,
   "activityIds": [
-    1199
+    1199,
+    1326
   ],
   "autoPush": true
 }
