@@ -72,10 +72,15 @@ function saveActivity(activity = {}) {
   if (!id) return readJson(savedActivitiesPath, {});
   const saved = readJson(savedActivitiesPath, {});
   const previous = saved[id] || {};
+  const incomingTitle = String(activity.title || "").trim();
+  const placeholderTitle = `活动 ${id}`;
+  const title = incomingTitle && (incomingTitle !== placeholderTitle || !previous.title)
+    ? incomingTitle
+    : (previous.title || incomingTitle || placeholderTitle);
   saved[id] = {
     ...previous,
     id,
-    title: activity.title || previous.title || `活动 ${id}`,
+    title,
     activityTime: activity.activityTime || previous.activityTime || "",
     ruleImage: activity.ruleImage || previous.ruleImage || "",
     updatedAt: activity.updatedAt || previous.updatedAt || "",
@@ -178,13 +183,9 @@ async function runManualRefresh(activityId, meta = {}) {
     const output = await runCommand(process.execPath, args, { env });
     saveActivity({
       id: String(activityId),
-      title: meta.title || `活动 ${activityId}`,
-      activityTime: meta.activityTime || "",
-      ruleImage: meta.ruleImage || "",
-      rows: Array.isArray(meta.rows) ? meta.rows : [],
       recordSnapshot: Boolean(meta.recordSnapshot)
     });
-    if (meta.recordSnapshot) rememberActivity(activityId, { primary: true });
+    if (meta.recordSnapshot) rememberActivity(activityId);
     console.log(`[${nowText()}] 页面手动刷新成功：${output}`);
     return output;
   } finally {

@@ -225,6 +225,57 @@
       font-size: 14px;
     }
 
+    .activity-manager {
+      grid-column: 1 / -1;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .activity-manager-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .activity-manager-head strong {
+      font-size: 14px;
+    }
+
+    .activity-manager table {
+      font-size: 12px;
+    }
+
+    .activity-manager th,
+    .activity-manager td {
+      padding: 10px 8px;
+      vertical-align: middle;
+    }
+
+    .activity-title-cell {
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: left;
+    }
+
+    .button.small {
+      height: 30px;
+      padding: 0 9px;
+      font-size: 12px;
+    }
+
+    .row-actions {
+      display: inline-flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
     .text-input,
     .select-input {
       width: 100%;
@@ -398,7 +449,7 @@
         <div class="activity-time" id="activity-time">活动时间：2026-06-06 00:00:00 - 2026-06-30 23:59:59</div>
       </div>
       <div class="header-actions">
-        <div class="badge">活动 1199 · 数据截至 2026/6/27 14:26:53</div>
+        <div class="badge">活动 1199 · 数据截至 2026/6/27 14:54:26</div>
         <button class="button" id="refresh-now">刷新数据</button>
         <button class="button secondary" id="open-settings">设置</button>
       </div>
@@ -502,6 +553,27 @@
             <label>新增</label>
             <button class="button" id="add-activity">新增并切换</button>
           </div>
+          <div class="activity-manager local-only">
+            <div class="activity-manager-head">
+              <strong>活动管理</strong>
+              <span class="note" id="activity-manager-note">后台刷新只会记录勾选的活动；默认展示决定打开看板时优先显示哪个活动。</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>活动 ID</th>
+                    <th>活动标题</th>
+                    <th>后台刷新</th>
+                    <th>默认展示</th>
+                    <th>上次刷新时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="activity-manager-body"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <div class="note" id="auto-refresh-status">页面自动刷新会定时请求后台看板服务；请确认桌面“美团看板服务.command”处于运行状态。</div>
       </div>
@@ -563,14 +635,21 @@
       { name: "档三", metric: "amount", threshold: 117885379, rewardType: "rate", rate: 0.005 }
     ];
 
-    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/27 14:26:53","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121926,3339594.3,3317474.5],["2026-06-09",121427,120676,3394675.95,3368033.11],["2026-06-10",121575,119894,3325788.74,3276861.64],["2026-06-11",124445,123615,3426585.86,3401062.95],["2026-06-12",133930,132996,3740802.28,3706144.71],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147374,144963,4234809.66,4150905.2],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131839,130997,3578524.39,3546439.35],["2026-06-17",131122,129526,3580398.56,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132736,131141,4067535.86,3998992.52],["2026-06-20",136136,134580,4004946.36,3941628],["2026-06-21",145767,143875,4227173.88,4154527.54],["2026-06-22",127971,127142,3397483.84,3367670.33],["2026-06-23",131831,130846,3581194.73,3545198.79],["2026-06-24",142492,140652,3890149.07,3828193.51],["2026-06-25",148536,147299,4099887.1,4051043.4],["2026-06-26",155904,154165,4374218.66,4294930.75],["2026-06-27",85794,70463,2346319,1920938.62],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
+    const DEFAULT_ACTIVITY = {"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","updatedAt":"2026/6/27 14:54:26","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148838,146694,4356435.93,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121926,3339594.3,3317474.5],["2026-06-09",121427,120676,3394675.95,3368033.11],["2026-06-10",121575,119894,3325788.74,3276861.64],["2026-06-11",124445,123615,3426585.86,3401062.95],["2026-06-12",133930,132996,3740802.28,3706144.71],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147370,144963,4234625.66,4150905.2],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131839,130997,3578524.39,3546439.35],["2026-06-17",131122,129526,3580398.56,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132736,131141,4067535.86,3998992.52],["2026-06-20",136136,134580,4004946.36,3941628],["2026-06-21",145767,143875,4227173.88,4154527.54],["2026-06-22",127971,127142,3397483.84,3367670.33],["2026-06-23",131831,130846,3581194.73,3545198.79],["2026-06-24",142491,140652,3890128.48,3828193.51],["2026-06-25",148536,147301,4099887.1,4051440.9],["2026-06-26",155903,154181,4374182.46,4295933.88],["2026-06-27",89270,74630,2439403.88,2031216.56],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]],"overrides":{}};
 
-    const HOURLY_SNAPSHOTS = {"1199":[{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":22,"dateHour":"2026-06-26 22:00","recordedAt":"2026/6/26 22:58:46","todayValidOrders":152230,"todayRedemptionOrders":141091,"todayActualPayment":4256428.93,"todayRedemptionAmount":3901332.1,"cumulativeRedemptionOrders":2836672,"cumulativeRedemptionAmount":79459876.84999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":23,"dateHour":"2026-06-26 23:00","recordedAt":"2026/6/26 23:51:42","todayValidOrders":155548,"todayRedemptionOrders":145919,"todayActualPayment":4361707.46,"todayRedemptionAmount":4050527.83,"cumulativeRedemptionOrders":2841521,"cumulativeRedemptionAmount":79610164.75999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":23,"slotMinute":30,"dateHour":"2026-06-26 23:30","recordedAt":"2026/6/26 23:59:32","todayValidOrders":155986,"todayRedemptionOrders":146623,"todayActualPayment":4376467.96,"todayRedemptionAmount":4073010.26,"cumulativeRedemptionOrders":2842231,"cumulativeRedemptionAmount":79632997.00999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":0,"slotMinute":0,"dateHour":"2026-06-27 00:00","recordedAt":"2026/6/27 00:29:36","todayValidOrders":1381,"todayRedemptionOrders":7,"todayActualPayment":44057.24,"todayRedemptionAmount":755.93,"cumulativeRedemptionOrders":2844842,"cumulativeRedemptionAmount":79712170.11999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":0,"slotMinute":30,"dateHour":"2026-06-27 00:30","recordedAt":"2026/6/27 00:56:58","todayValidOrders":2601,"todayRedemptionOrders":493,"todayActualPayment":80937.77,"todayRedemptionAmount":15297.99,"cumulativeRedemptionOrders":2846937,"cumulativeRedemptionAmount":79772771.67999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":1,"slotMinute":0,"dateHour":"2026-06-27 01:00","recordedAt":"2026/6/27 01:29:26","todayValidOrders":3639,"todayRedemptionOrders":1780,"todayActualPayment":113153.98,"todayRedemptionAmount":53528.35,"cumulativeRedemptionOrders":2849066,"cumulativeRedemptionAmount":79834326.35999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":1,"slotMinute":30,"dateHour":"2026-06-27 01:30","recordedAt":"2026/6/27 01:59:46","todayValidOrders":4468,"todayRedemptionOrders":2781,"todayActualPayment":139554.09,"todayRedemptionAmount":84587.51,"cumulativeRedemptionOrders":2850659,"cumulativeRedemptionAmount":79881227.44999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":2,"slotMinute":0,"dateHour":"2026-06-27 02:00","recordedAt":"2026/6/27 02:28:03","todayValidOrders":5096,"todayRedemptionOrders":3536,"todayActualPayment":158525.85,"todayRedemptionAmount":109584.76,"cumulativeRedemptionOrders":2851840,"cumulativeRedemptionAmount":79918414.46},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":2,"slotMinute":30,"dateHour":"2026-06-27 02:30","recordedAt":"2026/6/27 02:58:27","todayValidOrders":5712,"todayRedemptionOrders":4145,"todayActualPayment":178142.65,"todayRedemptionAmount":128242.69,"cumulativeRedemptionOrders":2852757,"cumulativeRedemptionAmount":79946662.58999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":3,"slotMinute":0,"dateHour":"2026-06-27 03:00","recordedAt":"2026/6/27 03:28:51","todayValidOrders":6136,"todayRedemptionOrders":4720,"todayActualPayment":191853.65,"todayRedemptionAmount":146393.1,"cumulativeRedemptionOrders":2853588,"cumulativeRedemptionAmount":79971219.67999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":3,"slotMinute":30,"dateHour":"2026-06-27 03:30","recordedAt":"2026/6/27 03:59:15","todayValidOrders":6498,"todayRedemptionOrders":5148,"todayActualPayment":208352.44,"todayRedemptionAmount":164249.24,"cumulativeRedemptionOrders":2854176,"cumulativeRedemptionAmount":79993630.26999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":4,"slotMinute":0,"dateHour":"2026-06-27 04:00","recordedAt":"2026/6/27 04:29:39","todayValidOrders":6773,"todayRedemptionOrders":5498,"todayActualPayment":216147.22,"todayRedemptionAmount":177629.17,"cumulativeRedemptionOrders":2854642,"cumulativeRedemptionAmount":80010711.67999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":4,"slotMinute":30,"dateHour":"2026-06-27 04:30","recordedAt":"2026/6/27 04:56:41","todayValidOrders":6971,"todayRedemptionOrders":5791,"todayActualPayment":221221.1,"todayRedemptionAmount":185962.47,"cumulativeRedemptionOrders":2854961,"cumulativeRedemptionAmount":80019756.35999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":5,"slotMinute":0,"dateHour":"2026-06-27 05:00","recordedAt":"2026/6/27 05:27:01","todayValidOrders":7179,"todayRedemptionOrders":6054,"todayActualPayment":226488.41,"todayRedemptionAmount":193224.47,"cumulativeRedemptionOrders":2855224,"cumulativeRedemptionAmount":80027018.35999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":5,"slotMinute":30,"dateHour":"2026-06-27 05:30","recordedAt":"2026/6/27 05:57:21","todayValidOrders":7411,"todayRedemptionOrders":6276,"todayActualPayment":232434.77,"todayRedemptionAmount":199139.9,"cumulativeRedemptionOrders":2855450,"cumulativeRedemptionAmount":80033081.69},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":6,"slotMinute":0,"dateHour":"2026-06-27 06:00","recordedAt":"2026/6/27 06:27:41","todayValidOrders":7775,"todayRedemptionOrders":6509,"todayActualPayment":241258.21,"todayRedemptionAmount":205096.73,"cumulativeRedemptionOrders":2855686,"cumulativeRedemptionAmount":80039096.99},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":6,"slotMinute":30,"dateHour":"2026-06-27 06:30","recordedAt":"2026/6/27 06:58:01","todayValidOrders":8188,"todayRedemptionOrders":6853,"todayActualPayment":251365.33,"todayRedemptionAmount":213602.27,"cumulativeRedemptionOrders":2856051,"cumulativeRedemptionAmount":80048135.29999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":7,"slotMinute":0,"dateHour":"2026-06-27 07:00","recordedAt":"2026/6/27 07:28:21","todayValidOrders":8829,"todayRedemptionOrders":7262,"todayActualPayment":267436.66,"todayRedemptionAmount":223557.31,"cumulativeRedemptionOrders":2856486,"cumulativeRedemptionAmount":80058959.11},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":7,"slotMinute":30,"dateHour":"2026-06-27 07:30","recordedAt":"2026/6/27 07:58:41","todayValidOrders":9728,"todayRedemptionOrders":7818,"todayActualPayment":289927.35,"todayRedemptionAmount":237590.59,"cumulativeRedemptionOrders":2857081,"cumulativeRedemptionAmount":80073935.5},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":8,"slotMinute":0,"dateHour":"2026-06-27 08:00","recordedAt":"2026/6/27 08:29:01","todayValidOrders":10942,"todayRedemptionOrders":8531,"todayActualPayment":320188.6,"todayRedemptionAmount":255870.95,"cumulativeRedemptionOrders":2857827,"cumulativeRedemptionAmount":80093165.38},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":8,"slotMinute":30,"dateHour":"2026-06-27 08:30","recordedAt":"2026/6/27 08:59:21","todayValidOrders":12375,"todayRedemptionOrders":9504,"todayActualPayment":356076.95,"todayRedemptionAmount":278860.67,"cumulativeRedemptionOrders":2858832,"cumulativeRedemptionAmount":80117930.07999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":9,"slotMinute":0,"dateHour":"2026-06-27 09:00","recordedAt":"2026/6/27 09:27:29","todayValidOrders":13958,"todayRedemptionOrders":10564,"todayActualPayment":400008.6,"todayRedemptionAmount":305502.72,"cumulativeRedemptionOrders":2859910,"cumulativeRedemptionAmount":80145183.52},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":9,"slotMinute":30,"dateHour":"2026-06-27 09:30","recordedAt":"2026/6/27 09:55:44","todayValidOrders":15905,"todayRedemptionOrders":11830,"todayActualPayment":447818.18,"todayRedemptionAmount":337600.09,"cumulativeRedemptionOrders":2861177,"cumulativeRedemptionAmount":80177742.89},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":10,"slotMinute":0,"dateHour":"2026-06-27 10:00","recordedAt":"2026/6/27 10:25:51","todayValidOrders":19746,"todayRedemptionOrders":13365,"todayActualPayment":554982.54,"todayRedemptionAmount":374353.53,"cumulativeRedemptionOrders":2862731,"cumulativeRedemptionAmount":80215223.28},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":10,"slotMinute":30,"dateHour":"2026-06-27 10:30","recordedAt":"2026/6/27 10:55:59","todayValidOrders":26589,"todayRedemptionOrders":15656,"todayActualPayment":741301.12,"todayRedemptionAmount":431418.2,"cumulativeRedemptionOrders":2865072,"cumulativeRedemptionAmount":80274596.21000001},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":11,"slotMinute":0,"dateHour":"2026-06-27 11:00","recordedAt":"2026/6/27 11:26:06","todayValidOrders":38644,"todayRedemptionOrders":20086,"todayActualPayment":1064855.88,"todayRedemptionAmount":554511.35,"cumulativeRedemptionOrders":2869566,"cumulativeRedemptionAmount":80402027},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":11,"slotMinute":30,"dateHour":"2026-06-27 11:30","recordedAt":"2026/6/27 11:56:14","todayValidOrders":50871,"todayRedemptionOrders":28096,"todayActualPayment":1396061.57,"todayRedemptionAmount":769435.71,"cumulativeRedemptionOrders":2877665,"cumulativeRedemptionAmount":80620557.42000002},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":12,"slotMinute":0,"dateHour":"2026-06-27 12:00","recordedAt":"2026/6/27 12:26:21","todayValidOrders":61468,"todayRedemptionOrders":39174,"todayActualPayment":1694130.41,"todayRedemptionAmount":1065648.36,"cumulativeRedemptionOrders":2888883,"cumulativeRedemptionAmount":80922596.83},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":12,"slotMinute":30,"dateHour":"2026-06-27 12:30","recordedAt":"2026/6/27 12:56:29","todayValidOrders":69674,"todayRedemptionOrders":49541,"todayActualPayment":1916411.92,"todayRedemptionAmount":1355781.26,"cumulativeRedemptionOrders":2899312,"cumulativeRedemptionAmount":81215312.79000004},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":13,"slotMinute":0,"dateHour":"2026-06-27 13:00","recordedAt":"2026/6/27 13:26:38","todayValidOrders":76119,"todayRedemptionOrders":58473,"todayActualPayment":2087792.75,"todayRedemptionAmount":1598852.17,"cumulativeRedemptionOrders":2908300,"cumulativeRedemptionAmount":81462296.43},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":13,"slotMinute":30,"dateHour":"2026-06-27 13:30","recordedAt":"2026/6/27 13:56:46","todayValidOrders":81401,"todayRedemptionOrders":65134,"todayActualPayment":2227789.55,"todayRedemptionAmount":1780337.66,"cumulativeRedemptionOrders":2914993,"cumulativeRedemptionAmount":81645302.90000002},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":14,"slotMinute":0,"dateHour":"2026-06-27 14:00","recordedAt":"2026/6/27 14:26:53","todayValidOrders":85794,"todayRedemptionOrders":70463,"todayActualPayment":2346319,"todayRedemptionAmount":1920938.62,"cumulativeRedemptionOrders":2920351,"cumulativeRedemptionAmount":81787605.33000003}]};
+    const HOURLY_SNAPSHOTS = {"1199":[{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":22,"dateHour":"2026-06-26 22:00","recordedAt":"2026/6/26 22:58:46","todayValidOrders":152230,"todayRedemptionOrders":141091,"todayActualPayment":4256428.93,"todayRedemptionAmount":3901332.1,"cumulativeRedemptionOrders":2836672,"cumulativeRedemptionAmount":79459876.84999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":23,"dateHour":"2026-06-26 23:00","recordedAt":"2026/6/26 23:51:42","todayValidOrders":155548,"todayRedemptionOrders":145919,"todayActualPayment":4361707.46,"todayRedemptionAmount":4050527.83,"cumulativeRedemptionOrders":2841521,"cumulativeRedemptionAmount":79610164.75999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-26","hour":23,"slotMinute":30,"dateHour":"2026-06-26 23:30","recordedAt":"2026/6/26 23:59:32","todayValidOrders":155986,"todayRedemptionOrders":146623,"todayActualPayment":4376467.96,"todayRedemptionAmount":4073010.26,"cumulativeRedemptionOrders":2842231,"cumulativeRedemptionAmount":79632997.00999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":0,"slotMinute":0,"dateHour":"2026-06-27 00:00","recordedAt":"2026/6/27 00:29:36","todayValidOrders":1381,"todayRedemptionOrders":7,"todayActualPayment":44057.24,"todayRedemptionAmount":755.93,"cumulativeRedemptionOrders":2844842,"cumulativeRedemptionAmount":79712170.11999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":0,"slotMinute":30,"dateHour":"2026-06-27 00:30","recordedAt":"2026/6/27 00:56:58","todayValidOrders":2601,"todayRedemptionOrders":493,"todayActualPayment":80937.77,"todayRedemptionAmount":15297.99,"cumulativeRedemptionOrders":2846937,"cumulativeRedemptionAmount":79772771.67999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":1,"slotMinute":0,"dateHour":"2026-06-27 01:00","recordedAt":"2026/6/27 01:29:26","todayValidOrders":3639,"todayRedemptionOrders":1780,"todayActualPayment":113153.98,"todayRedemptionAmount":53528.35,"cumulativeRedemptionOrders":2849066,"cumulativeRedemptionAmount":79834326.35999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":1,"slotMinute":30,"dateHour":"2026-06-27 01:30","recordedAt":"2026/6/27 01:59:46","todayValidOrders":4468,"todayRedemptionOrders":2781,"todayActualPayment":139554.09,"todayRedemptionAmount":84587.51,"cumulativeRedemptionOrders":2850659,"cumulativeRedemptionAmount":79881227.44999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":2,"slotMinute":0,"dateHour":"2026-06-27 02:00","recordedAt":"2026/6/27 02:28:03","todayValidOrders":5096,"todayRedemptionOrders":3536,"todayActualPayment":158525.85,"todayRedemptionAmount":109584.76,"cumulativeRedemptionOrders":2851840,"cumulativeRedemptionAmount":79918414.46},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":2,"slotMinute":30,"dateHour":"2026-06-27 02:30","recordedAt":"2026/6/27 02:58:27","todayValidOrders":5712,"todayRedemptionOrders":4145,"todayActualPayment":178142.65,"todayRedemptionAmount":128242.69,"cumulativeRedemptionOrders":2852757,"cumulativeRedemptionAmount":79946662.58999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":3,"slotMinute":0,"dateHour":"2026-06-27 03:00","recordedAt":"2026/6/27 03:28:51","todayValidOrders":6136,"todayRedemptionOrders":4720,"todayActualPayment":191853.65,"todayRedemptionAmount":146393.1,"cumulativeRedemptionOrders":2853588,"cumulativeRedemptionAmount":79971219.67999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":3,"slotMinute":30,"dateHour":"2026-06-27 03:30","recordedAt":"2026/6/27 03:59:15","todayValidOrders":6498,"todayRedemptionOrders":5148,"todayActualPayment":208352.44,"todayRedemptionAmount":164249.24,"cumulativeRedemptionOrders":2854176,"cumulativeRedemptionAmount":79993630.26999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":4,"slotMinute":0,"dateHour":"2026-06-27 04:00","recordedAt":"2026/6/27 04:29:39","todayValidOrders":6773,"todayRedemptionOrders":5498,"todayActualPayment":216147.22,"todayRedemptionAmount":177629.17,"cumulativeRedemptionOrders":2854642,"cumulativeRedemptionAmount":80010711.67999999},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":4,"slotMinute":30,"dateHour":"2026-06-27 04:30","recordedAt":"2026/6/27 04:56:41","todayValidOrders":6971,"todayRedemptionOrders":5791,"todayActualPayment":221221.1,"todayRedemptionAmount":185962.47,"cumulativeRedemptionOrders":2854961,"cumulativeRedemptionAmount":80019756.35999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":5,"slotMinute":0,"dateHour":"2026-06-27 05:00","recordedAt":"2026/6/27 05:27:01","todayValidOrders":7179,"todayRedemptionOrders":6054,"todayActualPayment":226488.41,"todayRedemptionAmount":193224.47,"cumulativeRedemptionOrders":2855224,"cumulativeRedemptionAmount":80027018.35999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":5,"slotMinute":30,"dateHour":"2026-06-27 05:30","recordedAt":"2026/6/27 05:57:21","todayValidOrders":7411,"todayRedemptionOrders":6276,"todayActualPayment":232434.77,"todayRedemptionAmount":199139.9,"cumulativeRedemptionOrders":2855450,"cumulativeRedemptionAmount":80033081.69},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":6,"slotMinute":0,"dateHour":"2026-06-27 06:00","recordedAt":"2026/6/27 06:27:41","todayValidOrders":7775,"todayRedemptionOrders":6509,"todayActualPayment":241258.21,"todayRedemptionAmount":205096.73,"cumulativeRedemptionOrders":2855686,"cumulativeRedemptionAmount":80039096.99},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":6,"slotMinute":30,"dateHour":"2026-06-27 06:30","recordedAt":"2026/6/27 06:58:01","todayValidOrders":8188,"todayRedemptionOrders":6853,"todayActualPayment":251365.33,"todayRedemptionAmount":213602.27,"cumulativeRedemptionOrders":2856051,"cumulativeRedemptionAmount":80048135.29999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":7,"slotMinute":0,"dateHour":"2026-06-27 07:00","recordedAt":"2026/6/27 07:28:21","todayValidOrders":8829,"todayRedemptionOrders":7262,"todayActualPayment":267436.66,"todayRedemptionAmount":223557.31,"cumulativeRedemptionOrders":2856486,"cumulativeRedemptionAmount":80058959.11},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":7,"slotMinute":30,"dateHour":"2026-06-27 07:30","recordedAt":"2026/6/27 07:58:41","todayValidOrders":9728,"todayRedemptionOrders":7818,"todayActualPayment":289927.35,"todayRedemptionAmount":237590.59,"cumulativeRedemptionOrders":2857081,"cumulativeRedemptionAmount":80073935.5},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":8,"slotMinute":0,"dateHour":"2026-06-27 08:00","recordedAt":"2026/6/27 08:29:01","todayValidOrders":10942,"todayRedemptionOrders":8531,"todayActualPayment":320188.6,"todayRedemptionAmount":255870.95,"cumulativeRedemptionOrders":2857827,"cumulativeRedemptionAmount":80093165.38},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":8,"slotMinute":30,"dateHour":"2026-06-27 08:30","recordedAt":"2026/6/27 08:59:21","todayValidOrders":12375,"todayRedemptionOrders":9504,"todayActualPayment":356076.95,"todayRedemptionAmount":278860.67,"cumulativeRedemptionOrders":2858832,"cumulativeRedemptionAmount":80117930.07999998},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":9,"slotMinute":0,"dateHour":"2026-06-27 09:00","recordedAt":"2026/6/27 09:27:29","todayValidOrders":13958,"todayRedemptionOrders":10564,"todayActualPayment":400008.6,"todayRedemptionAmount":305502.72,"cumulativeRedemptionOrders":2859910,"cumulativeRedemptionAmount":80145183.52},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":9,"slotMinute":30,"dateHour":"2026-06-27 09:30","recordedAt":"2026/6/27 09:55:44","todayValidOrders":15905,"todayRedemptionOrders":11830,"todayActualPayment":447818.18,"todayRedemptionAmount":337600.09,"cumulativeRedemptionOrders":2861177,"cumulativeRedemptionAmount":80177742.89},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":10,"slotMinute":0,"dateHour":"2026-06-27 10:00","recordedAt":"2026/6/27 10:25:51","todayValidOrders":19746,"todayRedemptionOrders":13365,"todayActualPayment":554982.54,"todayRedemptionAmount":374353.53,"cumulativeRedemptionOrders":2862731,"cumulativeRedemptionAmount":80215223.28},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":10,"slotMinute":30,"dateHour":"2026-06-27 10:30","recordedAt":"2026/6/27 10:55:59","todayValidOrders":26589,"todayRedemptionOrders":15656,"todayActualPayment":741301.12,"todayRedemptionAmount":431418.2,"cumulativeRedemptionOrders":2865072,"cumulativeRedemptionAmount":80274596.21000001},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":11,"slotMinute":0,"dateHour":"2026-06-27 11:00","recordedAt":"2026/6/27 11:26:06","todayValidOrders":38644,"todayRedemptionOrders":20086,"todayActualPayment":1064855.88,"todayRedemptionAmount":554511.35,"cumulativeRedemptionOrders":2869566,"cumulativeRedemptionAmount":80402027},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":11,"slotMinute":30,"dateHour":"2026-06-27 11:30","recordedAt":"2026/6/27 11:56:14","todayValidOrders":50871,"todayRedemptionOrders":28096,"todayActualPayment":1396061.57,"todayRedemptionAmount":769435.71,"cumulativeRedemptionOrders":2877665,"cumulativeRedemptionAmount":80620557.42000002},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":12,"slotMinute":0,"dateHour":"2026-06-27 12:00","recordedAt":"2026/6/27 12:26:21","todayValidOrders":61468,"todayRedemptionOrders":39174,"todayActualPayment":1694130.41,"todayRedemptionAmount":1065648.36,"cumulativeRedemptionOrders":2888883,"cumulativeRedemptionAmount":80922596.83},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":12,"slotMinute":30,"dateHour":"2026-06-27 12:30","recordedAt":"2026/6/27 12:56:29","todayValidOrders":69674,"todayRedemptionOrders":49541,"todayActualPayment":1916411.92,"todayRedemptionAmount":1355781.26,"cumulativeRedemptionOrders":2899312,"cumulativeRedemptionAmount":81215312.79000004},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":13,"slotMinute":0,"dateHour":"2026-06-27 13:00","recordedAt":"2026/6/27 13:26:38","todayValidOrders":76119,"todayRedemptionOrders":58473,"todayActualPayment":2087792.75,"todayRedemptionAmount":1598852.17,"cumulativeRedemptionOrders":2908300,"cumulativeRedemptionAmount":81462296.43},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":13,"slotMinute":30,"dateHour":"2026-06-27 13:30","recordedAt":"2026/6/27 13:56:46","todayValidOrders":81401,"todayRedemptionOrders":65134,"todayActualPayment":2227789.55,"todayRedemptionAmount":1780337.66,"cumulativeRedemptionOrders":2914993,"cumulativeRedemptionAmount":81645302.90000002},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":14,"slotMinute":0,"dateHour":"2026-06-27 14:00","recordedAt":"2026/6/27 14:26:53","todayValidOrders":85794,"todayRedemptionOrders":70463,"todayActualPayment":2346319,"todayRedemptionAmount":1920938.62,"cumulativeRedemptionOrders":2920351,"cumulativeRedemptionAmount":81787605.33000003},{"activityId":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","metric":"amount","date":"2026-06-27","hour":14,"slotMinute":30,"dateHour":"2026-06-27 14:30","recordedAt":"2026/6/27 14:54:26","todayValidOrders":89270,"todayRedemptionOrders":74630,"todayActualPayment":2439403.88,"todayRedemptionAmount":2031216.56,"cumulativeRedemptionOrders":2924536,"cumulativeRedemptionAmount":81899283.90000002}]};
 
-    const SAVED_ACTIVITIES = {"1199":{"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","recordSnapshot":true,"overrides":{},"updatedAt":"2026/6/27 14:26:53","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148839,146694,4356453.33,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121926,3339594.3,3317474.5],["2026-06-09",121427,120676,3394675.95,3368033.11],["2026-06-10",121575,119894,3325788.74,3276861.64],["2026-06-11",124445,123615,3426585.86,3401062.95],["2026-06-12",133930,132996,3740802.28,3706144.71],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147374,144963,4234809.66,4150905.2],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131839,130997,3578524.39,3546439.35],["2026-06-17",131122,129526,3580398.56,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132736,131141,4067535.86,3998992.52],["2026-06-20",136136,134580,4004946.36,3941628],["2026-06-21",145767,143875,4227173.88,4154527.54],["2026-06-22",127971,127142,3397483.84,3367670.33],["2026-06-23",131831,130846,3581194.73,3545198.79],["2026-06-24",142492,140652,3890149.07,3828193.51],["2026-06-25",148536,147299,4099887.1,4051043.4],["2026-06-26",155904,154165,4374218.66,4294930.75],["2026-06-27",85794,70463,2346319,1920938.62],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]]}};
+    const SAVED_ACTIVITIES = {"1199":{"id":"1199","title":"美团联盟年框媒体激励2026年6月-云瞻","activityTime":"2026-06-06 00:00:00 - 2026-06-30 23:59:59","ruleImage":"./assets/activity-rule-1199.png","recordSnapshot":true,"overrides":{},"updatedAt":"2026/6/27 14:54:26","rewardCap":600000,"tiers":[{"name":"档1","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档2","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档3","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[["2026-06-06",148838,146694,4356435.93,4284576.83],["2026-06-07",144047,141899,4133954.17,4062849.69],["2026-06-08",122645,121926,3339594.3,3317474.5],["2026-06-09",121427,120676,3394675.95,3368033.11],["2026-06-10",121575,119894,3325788.74,3276861.64],["2026-06-11",124445,123615,3426585.86,3401062.95],["2026-06-12",133930,132996,3740802.28,3706144.71],["2026-06-13",151427,148937,4370116.66,4285891.74],["2026-06-14",147370,144963,4234625.66,4150905.2],["2026-06-15",130666,129772,3526113.84,3483297.03],["2026-06-16",131839,130997,3578524.39,3546439.35],["2026-06-17",131122,129526,3580398.56,3523822.39],["2026-06-18",149163,148293,4325171.88,4277122.73],["2026-06-19",132736,131141,4067535.86,3998992.52],["2026-06-20",136136,134580,4004946.36,3941628],["2026-06-21",145767,143875,4227173.88,4154527.54],["2026-06-22",127971,127142,3397483.84,3367670.33],["2026-06-23",131831,130846,3581194.73,3545198.79],["2026-06-24",142491,140652,3890128.48,3828193.51],["2026-06-25",148536,147301,4099887.1,4051440.9],["2026-06-26",155903,154181,4374182.46,4295933.88],["2026-06-27",89270,74630,2439403.88,2031216.56],["2026-06-28",null,null,null,null],["2026-06-29",null,null,null,null],["2026-06-30",null,null,null,null]]},"1294":{"id":"1294","title":"活动 1294","activityTime":"","ruleImage":"","updatedAt":"","rewardCap":null,"tiers":[{"name":"档一","metric":"amount","threshold":95378491,"rewardType":"rate","rate":0.002},{"name":"档二","metric":"amount","threshold":104381246,"rewardType":"rate","rate":0.004},{"name":"档三","metric":"amount","threshold":117885379,"rewardType":"rate","rate":0.005}],"rows":[],"overrides":{},"recordSnapshot":false},"1326":{"id":"1326","title":"活动 1326","activityTime":"2026-06-27 00:00:00 - 2026-06-28 23:59:59","ruleImage":"./assets/activity-rule-1326.png","updatedAt":"2026/6/27 14:48:20","rewardCap":null,"tiers":[{"name":"档1","metric":"orders","threshold":4000,"rewardType":"per_order","perOrderReward":0.3},{"name":"档2","metric":"orders","threshold":20000,"rewardType":"per_order","perOrderReward":0.4}],"rows":[["2026-06-27",58489,49229,1710737.33,1425902.81],["2026-06-28",null,null,null,null]],"overrides":{},"recordSnapshot":false}};
 
     let activities = loadActivities();
-    let activeId = DEFAULT_ACTIVITY.id;
+    let activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ACTIVITY.id;
+    if (!activities[activeId]) activeId = DEFAULT_ACTIVITY.id;
+    let serviceConfig = {
+      intervalMinutes: 30,
+      primaryActivityId: Number(DEFAULT_ACTIVITY.id),
+      activityIds: [Number(DEFAULT_ACTIVITY.id)],
+      autoPush: true
+    };
     let refreshTimer = null;
 
     function loadActivities() {
@@ -639,6 +718,10 @@
           };
         });
         saveActivities();
+        const primaryId = String(serviceConfig.primaryActivityId || "");
+        if (primaryId && activities[primaryId] && !localStorage.getItem(ACTIVE_KEY)) {
+          activeId = primaryId;
+        }
         updateHeader();
         renderTable();
         updateMetrics();
@@ -658,6 +741,37 @@
       } catch {
         // 浏览器本地仍会保存；服务恢复后再次新增或刷新会同步。
       }
+    }
+
+    async function saveServiceConfig(update) {
+      serviceConfig = {
+        ...serviceConfig,
+        ...update
+      };
+      if (Array.isArray(update.activityIds)) {
+        serviceConfig.activityIds = [...new Set(update.activityIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0))].sort((a, b) => a - b);
+      }
+      if (update.primaryActivityId) serviceConfig.primaryActivityId = Number(update.primaryActivityId);
+      renderActivityManager();
+      if (isPublicPage()) return;
+      const response = await fetch(`${SERVICE_URL}/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(update)
+      });
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.message || "保存配置失败");
+      serviceConfig = data.config;
+      renderActivityManager();
+    }
+
+    function switchActivity(id) {
+      if (!activities[id]) return;
+      activeId = String(id);
+      localStorage.setItem(ACTIVE_KEY, activeId);
+      updateHeader();
+      renderTable();
+      updateMetrics();
     }
 
     async function loadSavedOverrides() {
@@ -697,6 +811,15 @@
 
     function activeActivity() {
       return activities[activeId] || activities[DEFAULT_ACTIVITY.id];
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
     function money(value) {
@@ -869,8 +992,31 @@
         : `活动 ${activity.id} · 数据截至：待刷新`;
       const select = document.getElementById("activity-select");
       select.innerHTML = Object.values(activities).map(item => (
-        `<option value="${item.id}" ${item.id === activeId ? "selected" : ""}>${item.id} · ${item.title}</option>`
+        `<option value="${escapeHtml(item.id)}" ${item.id === activeId ? "selected" : ""}>${escapeHtml(item.id)} · ${escapeHtml(item.title)}</option>`
       )).join("");
+      renderActivityManager();
+    }
+
+    function renderActivityManager() {
+      const body = document.getElementById("activity-manager-body");
+      if (!body) return;
+      const watchedIds = new Set((serviceConfig.activityIds || []).map(id => String(id)));
+      const primaryId = String(serviceConfig.primaryActivityId || DEFAULT_ACTIVITY.id);
+      const items = Object.values(activities).sort((a, b) => Number(a.id) - Number(b.id));
+      body.innerHTML = items.map(item => {
+        const isWatched = watchedIds.has(String(item.id)) || Boolean(item.recordSnapshot);
+        const isPrimary = String(item.id) === primaryId;
+        return `
+          <tr>
+            <td>${escapeHtml(item.id)}</td>
+            <td class="activity-title-cell" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</td>
+            <td><label class="checkbox-line"><input type="checkbox" data-watch-activity="${escapeHtml(item.id)}" ${isWatched ? "checked" : ""}> 纳入</label></td>
+            <td>${isPrimary ? "<span class=\"positive\">当前默认</span>" : `<button class="button secondary small" data-default-activity="${escapeHtml(item.id)}">设为默认</button>`}</td>
+            <td>${escapeHtml(item.updatedAt || "未刷新")}</td>
+            <td><span class="row-actions"><button class="button secondary small" data-switch-activity="${escapeHtml(item.id)}">切换</button><button class="button small" data-refresh-activity="${escapeHtml(item.id)}">刷新</button></span></td>
+          </tr>
+        `;
+      }).join("");
     }
 
     function renderTable() {
@@ -1081,11 +1227,7 @@
     }
 
     document.getElementById("activity-select").addEventListener("change", event => {
-      activeId = event.target.value;
-      localStorage.setItem(ACTIVE_KEY, activeId);
-      updateHeader();
-      renderTable();
-      updateMetrics();
+      switchActivity(event.target.value);
     });
 
     document.getElementById("date-sort").addEventListener("change", event => {
@@ -1094,7 +1236,7 @@
       updateMetrics();
     });
 
-    document.getElementById("add-activity").addEventListener("click", () => {
+    document.getElementById("add-activity").addEventListener("click", async () => {
       const id = document.getElementById("new-activity-id").value.trim();
       if (!id) {
         alert("请填写活动 ID。");
@@ -1111,16 +1253,63 @@
         overrides: {},
         recordSnapshot: document.getElementById("new-activity-record-snapshot").checked
       };
-      activeId = id;
-      localStorage.setItem(ACTIVE_KEY, activeId);
+      switchActivity(id);
       saveActivities();
-      saveActivityToService(activities[id]);
+      await saveActivityToService(activities[id]);
+      if (activities[id].recordSnapshot) {
+        await saveServiceConfig({
+          activityIds: [...new Set([...(serviceConfig.activityIds || []), Number(id)])]
+        });
+      }
       updateHeader();
       renderTable();
       updateMetrics();
       alert(activities[id].recordSnapshot
         ? "已新增并切换活动。点击“刷新数据”后，该活动会纳入后台定时快照。"
         : "已新增并切换活动。点击“刷新数据”只会拉取当前数据，不会纳入后台定时快照。");
+    });
+
+    document.getElementById("activity-manager-body").addEventListener("click", async event => {
+      const switchId = event.target.dataset.switchActivity;
+      const defaultId = event.target.dataset.defaultActivity;
+      const refreshId = event.target.dataset.refreshActivity;
+      try {
+        if (switchId) {
+          switchActivity(switchId);
+          return;
+        }
+        if (defaultId) {
+          switchActivity(defaultId);
+          await saveServiceConfig({ primaryActivityId: Number(defaultId) });
+          return;
+        }
+        if (refreshId) {
+          switchActivity(refreshId);
+          await refreshCurrentActivity();
+        }
+      } catch (error) {
+        alert(`操作失败：${error.message}`);
+      }
+    });
+
+    document.getElementById("activity-manager-body").addEventListener("change", async event => {
+      const id = event.target.dataset.watchActivity;
+      if (!id) return;
+      const ids = new Set((serviceConfig.activityIds || []).map(item => Number(item)));
+      if (event.target.checked) ids.add(Number(id));
+      else ids.delete(Number(id));
+      activities[id].recordSnapshot = event.target.checked;
+      saveActivities();
+      await saveActivityToService(activities[id]);
+      try {
+        await saveServiceConfig({ activityIds: [...ids] });
+      } catch (error) {
+        event.target.checked = !event.target.checked;
+        activities[id].recordSnapshot = event.target.checked;
+        saveActivities();
+        renderActivityManager();
+        alert(`保存后台刷新设置失败：${error.message}`);
+      }
     });
 
     document.getElementById("open-settings").addEventListener("click", () => {
@@ -1161,17 +1350,11 @@
         return;
       }
       try {
-        const response = await fetch(`${SERVICE_URL}/config`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            intervalMinutes: Number(event.target.value),
-            autoPush: true
-          })
+        await saveServiceConfig({
+          intervalMinutes: Number(event.target.value),
+          autoPush: true
         });
-        const data = await response.json();
-        if (!data.ok) throw new Error(data.message || "保存失败");
-        setAutoRefreshStatus(`后台定时刷新已改为每 ${data.config.intervalMinutes} 分钟，刷新后会自动推送到 GitHub。`);
+        setAutoRefreshStatus(`后台定时刷新已改为每 ${serviceConfig.intervalMinutes} 分钟，刷新后会自动推送到 GitHub。`);
       } catch (error) {
         setAutoRefreshStatus(`保存后台刷新间隔失败：${error.message}。请确认“美团看板服务.command”正在运行。`);
       }
@@ -1263,14 +1446,14 @@
         const response = await fetch(`${SERVICE_URL}/config`);
         const data = await response.json();
         if (data.ok && data.config) {
-          intervalSelect.value = String(data.config.intervalMinutes || 30);
-          if (!data.config.autoPush) {
-            await fetch(`${SERVICE_URL}/config`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ autoPush: true })
-            });
+          serviceConfig = data.config;
+          intervalSelect.value = String(serviceConfig.intervalMinutes || 30);
+          const primaryId = String(serviceConfig.primaryActivityId || "");
+          if (primaryId && activities[primaryId] && !localStorage.getItem(ACTIVE_KEY)) {
+            switchActivity(primaryId);
           }
+          if (!serviceConfig.autoPush) await saveServiceConfig({ autoPush: true });
+          renderActivityManager();
         }
       } catch {
         setAutoRefreshStatus("未连接到后台看板服务，暂不能读取后台定时刷新间隔。");

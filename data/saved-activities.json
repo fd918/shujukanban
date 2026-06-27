@@ -6,7 +6,7 @@
     "ruleImage": "./assets/activity-rule-1199.png",
     "recordSnapshot": true,
     "overrides": {},
-    "updatedAt": "2026/6/27 14:26:53",
+    "updatedAt": "2026/6/27 14:54:26",
     "rewardCap": 600000,
     "tiers": [
       {
@@ -34,9 +34,9 @@
     "rows": [
       [
         "2026-06-06",
-        148839,
+        148838,
         146694,
-        4356453.33,
+        4356435.93,
         4284576.83
       ],
       [
@@ -90,9 +90,9 @@
       ],
       [
         "2026-06-14",
-        147374,
+        147370,
         144963,
-        4234809.66,
+        4234625.66,
         4150905.2
       ],
       [
@@ -160,31 +160,31 @@
       ],
       [
         "2026-06-24",
-        142492,
+        142491,
         140652,
-        3890149.07,
+        3890128.48,
         3828193.51
       ],
       [
         "2026-06-25",
         148536,
-        147299,
+        147301,
         4099887.1,
-        4051043.4
+        4051440.9
       ],
       [
         "2026-06-26",
-        155904,
-        154165,
-        4374218.66,
-        4294930.75
+        155903,
+        154181,
+        4374182.46,
+        4295933.88
       ],
       [
         "2026-06-27",
-        85794,
-        70463,
-        2346319,
-        1920938.62
+        89270,
+        74630,
+        2439403.88,
+        2031216.56
       ],
       [
         "2026-06-28",
@@ -208,5 +208,81 @@
         null
       ]
     ]
+  },
+  "1294": {
+    "id": "1294",
+    "title": "活动 1294",
+    "activityTime": "",
+    "ruleImage": "",
+    "updatedAt": "",
+    "rewardCap": null,
+    "tiers": [
+      {
+        "name": "档一",
+        "metric": "amount",
+        "threshold": 95378491,
+        "rewardType": "rate",
+        "rate": 0.002
+      },
+      {
+        "name": "档二",
+        "metric": "amount",
+        "threshold": 104381246,
+        "rewardType": "rate",
+        "rate": 0.004
+      },
+      {
+        "name": "档三",
+        "metric": "amount",
+        "threshold": 117885379,
+        "rewardType": "rate",
+        "rate": 0.005
+      }
+    ],
+    "rows": [],
+    "overrides": {},
+    "recordSnapshot": false
+  },
+  "1326": {
+    "id": "1326",
+    "title": "活动 1326",
+    "activityTime": "2026-06-27 00:00:00 - 2026-06-28 23:59:59",
+    "ruleImage": "./assets/activity-rule-1326.png",
+    "updatedAt": "2026/6/27 14:48:20",
+    "rewardCap": null,
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.3
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 20000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.4
+      }
+    ],
+    "rows": [
+      [
+        "2026-06-27",
+        58489,
+        49229,
+        1710737.33,
+        1425902.81
+      ],
+      [
+        "2026-06-28",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
+    "overrides": {},
+    "recordSnapshot": false
   }
 }
