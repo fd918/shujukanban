@@ -974,13 +974,72 @@
       return Math.min(1440, Math.max(30, hour * 60 + slotMinute + 30));
     }
 
+    function dateOffset(date, offset) {
+      const target = new Date(`${date}T00:00:00+08:00`);
+      target.setDate(target.getDate() + offset);
+      return target.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+    }
+
+    function isCompleteSnapshotDay(snapshots) {
+      if (!snapshots.length) return false;
+      return snapshotElapsedMinutes(snapshots[snapshots.length - 1]) >= 1380;
+    }
+
+    function completeSnapshotDates(snapshots, beforeDate) {
+      const dates = [...new Set(snapshots.map(item => item.date).filter(itemDate => itemDate < beforeDate))].sort();
+      return dates.filter(itemDate => isCompleteSnapshotDay(snapshots.filter(item => item.date === itemDate)));
+    }
+
+    function forecastFromReference(latest, referenceSnapshots, metric, date, label) {
+      const latestValue = snapshotMetricValue(latest, metric);
+      const referenceFinal = referenceSnapshots[referenceSnapshots.length - 1];
+      const currentElapsed = snapshotElapsedMinutes(latest);
+      const referenceAtSameProgress = referenceSnapshots
+        .filter(item => snapshotElapsedMinutes(item) <= currentElapsed)
+        .pop() || referenceSnapshots[0];
+      const finalValue = snapshotMetricValue(referenceFinal, metric);
+      const progressValue = snapshotMetricValue(referenceAtSameProgress, metric);
+      if (latestValue > 0 && finalValue > 0 && progressValue > 0) {
+        const progressRatio = Math.min(1, progressValue / finalValue);
+        return {
+          value: Math.max(latestValue, latestValue / progressRatio),
+          note: `预估来源：${label}同时间进度曲线；最新快照 ${latest.dateHour}。`
+        };
+      }
+      return null;
+    }
+
+    function averageHistoricalMetric(rows, metric, beforeDate) {
+      const values = rows
+        .filter(row => row[0] < beforeDate && row[4] != null && !isIncompleteToday(row, rows))
+        .map(row => rowMetricValue(row, metric))
+        .filter(value => value > 0);
+      if (!values.length) return null;
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
     function forecastToday(rows, metric = activeMetric(), date = metricDisplayDate(rows)) {
       const current = todayMetricValue(rows, metric, date);
+      const overrides = getEstimatesFromDom();
+      if (overrides[date] > 0) {
+        return {
+          value: overrides[date],
+          note: `预估来源：手动输入 ${date} 的预估数据。`
+        };
+      }
+
       const snapshots = (HOURLY_SNAPSHOTS[String(activeActivity().id)] || [])
         .filter(item => item && item.date && snapshotMetricValue(item, metric) != null)
         .sort((a, b) => String(a.dateHour).localeCompare(String(b.dateHour)));
       const todaySnapshots = snapshots.filter(item => item.date === date);
       if (!todaySnapshots.length) {
+        const averageValue = averageHistoricalMetric(rows, metric, date);
+        if (averageValue != null) {
+          return {
+            value: averageValue,
+            note: `预估来源：${date} 暂无快照，按历史完整日平均值预估。`
+          };
+        }
         return {
           value: current,
           note: current == null ? `暂无 ${date} 接口数据和快照。` : `暂无 ${date} 快照，先显示当前接口值。`
@@ -988,31 +1047,37 @@
       }
 
       const latest = todaySnapshots[todaySnapshots.length - 1];
-      const latestValue = snapshotMetricValue(latest, metric);
-      const previousDates = [...new Set(snapshots.map(item => item.date).filter(itemDate => itemDate < date))].sort();
-      const previousDate = previousDates[previousDates.length - 1];
-      if (previousDate) {
-        const previousSnapshots = snapshots.filter(item => item.date === previousDate);
-        const previousFinal = previousSnapshots[previousSnapshots.length - 1];
-        const currentElapsed = snapshotElapsedMinutes(latest);
-        const previousAtSameProgress = previousSnapshots
-          .filter(item => snapshotElapsedMinutes(item) <= currentElapsed)
-          .pop() || previousSnapshots[0];
-        const previousFinalValue = snapshotMetricValue(previousFinal, metric);
-        const previousProgressValue = snapshotMetricValue(previousAtSameProgress, metric);
-        if (previousFinalValue > 0 && previousProgressValue > 0) {
-          const progressRatio = Math.min(1, previousProgressValue / previousFinalValue);
-          return {
-            value: Math.max(latestValue, latestValue / progressRatio),
-            note: `按 ${previousDate} 同时间进度曲线预估 ${date}，最新快照 ${latest.dateHour}。`
-          };
-        }
+      const completeDates = completeSnapshotDates(snapshots, date);
+      const preferredDates = [
+        { date: dateOffset(date, -1), label: "前一日" },
+        { date: dateOffset(date, -2), label: "前两日" },
+        { date: dateOffset(date, -7), label: "上周同日" }
+      ];
+      for (const item of preferredDates) {
+        if (!completeDates.includes(item.date)) continue;
+        const forecast = forecastFromReference(latest, snapshots.filter(snapshot => snapshot.date === item.date), metric, date, `${item.label} ${item.date} `);
+        if (forecast) return forecast;
+      }
+
+      const recentCompleteDate = completeDates[completeDates.length - 1];
+      if (recentCompleteDate) {
+        const forecast = forecastFromReference(latest, snapshots.filter(snapshot => snapshot.date === recentCompleteDate), metric, date, `最近完整日 ${recentCompleteDate} `);
+        if (forecast) return forecast;
+      }
+
+      const averageValue = averageHistoricalMetric(rows, metric, date);
+      if (averageValue != null) {
+        return {
+          value: Math.max(snapshotMetricValue(latest, metric) || 0, averageValue),
+          note: `预估来源：完整快照不足，按历史完整日平均值预估；最新快照 ${latest.dateHour}。`
+        };
       }
 
       const progressRatio = Math.min(1, snapshotElapsedMinutes(latest) / 1440);
+      const latestValue = snapshotMetricValue(latest, metric);
       return {
         value: Math.max(latestValue, latestValue / progressRatio),
-        note: `历史曲线不足，按 ${date} 时间进度粗估，最新快照 ${latest.dateHour}。`
+        note: `预估来源：历史数据不足，按 ${date} 时间进度粗估；最新快照 ${latest.dateHour}。`
       };
     }
 
