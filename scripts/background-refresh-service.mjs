@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ const savedActivitiesPath = resolve(root, "data/saved-activities.json");
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 const manualRefreshIntervalMs = 60 * 1000;
 let running = false;
-let lastManualRefreshAt = 0;
+const lastManualRefreshAtByActivity = new Map();
 let refreshTimer = null;
 
 function nowText() {
@@ -131,7 +131,10 @@ function runCommand(command, args, options = {}) {
 
 async function refreshActivity(activityId) {
   const output = await runCommand(process.execPath, ["scripts/refresh-meituan-data.mjs", String(activityId)], {
-    env: process.env
+    env: {
+      ...process.env,
+      MEITUAN_RECORD_SNAPSHOT: "true"
+    }
   });
   console.log(`[${nowText()}] ${output}`);
 }
@@ -140,7 +143,7 @@ function sendJson(res, status, body) {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type"
   });
   res.end(JSON.stringify(body));
@@ -163,11 +166,13 @@ function readBody(req) {
 async function runManualRefresh(activityId, meta = {}) {
   if (running) throw new Error("已有刷新任务正在运行，请稍后再试。");
   const now = Date.now();
-  const waitMs = manualRefreshIntervalMs - (now - lastManualRefreshAt);
+  const id = String(activityId || "").trim();
+  const previousRefreshAt = lastManualRefreshAtByActivity.get(id) || 0;
+  const waitMs = manualRefreshIntervalMs - (now - previousRefreshAt);
   if (waitMs > 0) {
     throw new Error(`刷新太频繁，请 ${Math.ceil(waitMs / 1000)} 秒后再试。`);
   }
-  lastManualRefreshAt = now;
+  lastManualRefreshAtByActivity.set(id, now);
   running = true;
   try {
     const env = {
@@ -191,6 +196,37 @@ async function runManualRefresh(activityId, meta = {}) {
   } finally {
     running = false;
   }
+}
+
+function deleteActivity(activityId) {
+  const id = String(activityId || "").trim();
+  if (!id) throw new Error("缺少 activityId");
+  const saved = readJson(savedActivitiesPath, {});
+  if (!saved[id]) throw new Error(`没有找到活动 ${id}`);
+  if (Object.keys(saved).length <= 1) throw new Error("至少需要保留一个活动。");
+
+  delete saved[id];
+  writeJson(savedActivitiesPath, saved);
+
+  const overrides = readJson(overridesPath, {});
+  delete overrides[id];
+  writeJson(overridesPath, overrides);
+
+  rmSync(resolve(root, "data", `hourly-snapshots-${id}.json`), { force: true });
+  rmSync(resolve(root, "assets", `activity-rule-${id}.png`), { force: true });
+  rmSync(resolve(root, `meituan-activity-${id}-latest.json`), { force: true });
+
+  const config = readConfig();
+  const remainingIds = Object.keys(saved).map(value => Number(value)).filter(value => Number.isFinite(value));
+  let primaryActivityId = Number(config.primaryActivityId);
+  if (primaryActivityId === Number(id)) {
+    primaryActivityId = remainingIds.includes(1199) ? 1199 : remainingIds[0];
+  }
+  const nextConfig = normalizeConfigUpdate({
+    activityIds: (config.activityIds || []).filter(value => Number(value) !== Number(id)),
+    primaryActivityId
+  });
+  return { activities: saved, config: nextConfig };
 }
 
 function startRefreshServer() {
@@ -232,13 +268,23 @@ function startRefreshServer() {
         sendJson(res, 200, { ok: true, activities: readJson(savedActivitiesPath, {}) });
         return;
       }
+      if (req.method === "DELETE") {
+        try {
+          const result = deleteActivity(url.searchParams.get("activityId"));
+          scheduleNextRun();
+          sendJson(res, 200, { ok: true, ...result });
+        } catch (error) {
+          sendJson(res, 400, { ok: false, message: error.message });
+        }
+        return;
+      }
       if (req.method === "POST") {
         const body = await readBody(req);
         const activities = saveActivity(body.activity || {});
         sendJson(res, 200, { ok: true, activities });
         return;
       }
-      sendJson(res, 404, { ok: false, message: "只支持 GET/POST /activities" });
+      sendJson(res, 404, { ok: false, message: "只支持 GET/POST/DELETE /activities" });
       return;
     }
 
@@ -306,10 +352,11 @@ async function runOnce() {
   running = true;
   const config = readConfig();
   try {
-    const ids = [...config.activityIds];
-    if (config.primaryActivityId && !ids.includes(Number(config.primaryActivityId))) ids.push(Number(config.primaryActivityId));
-    const ordered = ids.filter(id => id !== Number(config.primaryActivityId));
-    if (config.primaryActivityId) ordered.push(Number(config.primaryActivityId));
+    const ordered = [...config.activityIds];
+    if (!ordered.length) {
+      console.log(`[${nowText()}] 没有开启自动刷新的活动，跳过本轮。`);
+      return;
+    }
     console.log(`[${nowText()}] 开始后台刷新：${ordered.join(", ")}`);
     for (const id of ordered) await refreshActivity(id);
     if (config.autoPush) await pushPublicFiles();

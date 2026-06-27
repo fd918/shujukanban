@@ -441,7 +441,10 @@ async function main() {
     ";\n\n    const HOURLY_SNAPSHOTS = ",
     `${jsString(activityBlock)}`
   );
-  writeHourlySnapshot(activityId, title, rows, activityBlock.tiers, updatedAt);
+  const shouldRecordSnapshot = process.env.MEITUAN_RECORD_SNAPSHOT == null
+    ? true
+    : process.env.MEITUAN_RECORD_SNAPSHOT === "true";
+  if (shouldRecordSnapshot) writeHourlySnapshot(activityId, title, rows, activityBlock.tiers, updatedAt);
   const hourlySnapshots = readJson(resolve(root, "data", `hourly-snapshots-${activityId}.json`), []);
   html = replaceBetween(
     html,
