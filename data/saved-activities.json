@@ -6,7 +6,7 @@
     "ruleImage": "./assets/activity-rule-1199.png",
     "recordSnapshot": true,
     "overrides": {},
-    "updatedAt": "2026/6/27 14:54:26",
+    "updatedAt": "2026/6/27 14:55:06",
     "rewardCap": 600000,
     "tiers": [
       {
@@ -181,10 +181,10 @@
       ],
       [
         "2026-06-27",
-        89270,
-        74630,
-        2439403.88,
-        2031216.56
+        89375,
+        74717,
+        2442026.2,
+        2033456.97
       ],
       [
         "2026-06-28",
@@ -211,35 +211,50 @@
   },
   "1294": {
     "id": "1294",
-    "title": "活动 1294",
-    "activityTime": "",
-    "ruleImage": "",
-    "updatedAt": "",
+    "title": "美团外卖6月19日-6月21日冲锋激励",
+    "activityTime": "2026-06-19 00:00:00 - 2026-06-21 23:59:59",
+    "ruleImage": "./assets/activity-rule-1294.png",
+    "updatedAt": "2026/6/27 14:54:47",
     "rewardCap": null,
     "tiers": [
       {
-        "name": "档一",
-        "metric": "amount",
-        "threshold": 95378491,
-        "rewardType": "rate",
-        "rate": 0.002
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.3
       },
       {
-        "name": "档二",
-        "metric": "amount",
-        "threshold": 104381246,
-        "rewardType": "rate",
-        "rate": 0.004
-      },
-      {
-        "name": "档三",
-        "metric": "amount",
-        "threshold": 117885379,
-        "rewardType": "rate",
-        "rate": 0.005
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.4
       }
     ],
-    "rows": [],
+    "rows": [
+      [
+        "2026-06-19",
+        97226,
+        95373,
+        3111855.73,
+        3050509.12
+      ],
+      [
+        "2026-06-20",
+        98993,
+        97152,
+        3055179.95,
+        2996418.74
+      ],
+      [
+        "2026-06-21",
+        106345,
+        104327,
+        3242540.41,
+        3181324.6
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },

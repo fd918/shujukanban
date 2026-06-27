@@ -292,6 +292,20 @@ function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function findStringByKey(source, keys) {
+  if (!source || typeof source !== "object") return "";
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  for (const value of Object.values(source)) {
+    if (!value || typeof value !== "object") continue;
+    const found = findStringByKey(value, keys);
+    if (found) return found;
+  }
+  return "";
+}
+
 function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
   const dataDir = resolve(root, "data");
   mkdirSync(dataDir, { recursive: true });
@@ -394,7 +408,8 @@ async function main() {
   const detailActivityTime = detailData.activityStartTime && detailData.activityEndTime
     ? `${formatDateTime(detailData.activityStartTime)} - ${formatDateTime(detailData.activityEndTime)}`
     : "";
-  const title = detailData.activityName || process.env.MEITUAN_ACTIVITY_TITLE || env.MEITUAN_ACTIVITY_TITLE || meta.title || (sameActivity ? existing.title : "") || `活动 ${activityId}`;
+  const interfaceTitle = findStringByKey(detailData, ["activityName", "activityTitle", "activityDescTitle", "title"]);
+  const title = interfaceTitle || process.env.MEITUAN_ACTIVITY_TITLE || env.MEITUAN_ACTIVITY_TITLE || meta.title || (sameActivity ? existing.title : "") || `活动 ${activityId}`;
   const updatedAt = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
   html = html.replace(/<title>.*?<\/title>/, `<title>${title}-看板</title>`);
   html = html.replace(/<h1>.*?<\/h1>/, `<h1>${title}-看板</h1>`);
