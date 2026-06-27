@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const configPath = resolve(root, "data/watch-config.json");
 const overridesPath = resolve(root, "data/manual-overrides.json");
+const savedActivitiesPath = resolve(root, "data/saved-activities.json");
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 const manualRefreshIntervalMs = 60 * 1000;
 let running = false;
@@ -64,6 +65,28 @@ function rememberActivity(activityId, { primary = false } = {}) {
   };
   writeJson(configPath, next);
   return next;
+}
+
+function saveActivity(activity = {}) {
+  const id = String(activity.id || "").trim();
+  if (!id) return readJson(savedActivitiesPath, {});
+  const saved = readJson(savedActivitiesPath, {});
+  const previous = saved[id] || {};
+  saved[id] = {
+    ...previous,
+    id,
+    title: activity.title || previous.title || `活动 ${id}`,
+    activityTime: activity.activityTime || previous.activityTime || "",
+    ruleImage: activity.ruleImage || previous.ruleImage || "",
+    updatedAt: activity.updatedAt || previous.updatedAt || "",
+    rewardCap: activity.rewardCap ?? previous.rewardCap ?? null,
+    tiers: Array.isArray(activity.tiers) && activity.tiers.length ? activity.tiers : (previous.tiers || []),
+    rows: Array.isArray(activity.rows) && activity.rows.length ? activity.rows : (previous.rows || []),
+    overrides: previous.overrides || activity.overrides || {},
+    recordSnapshot: activity.recordSnapshot ?? previous.recordSnapshot ?? false
+  };
+  writeJson(savedActivitiesPath, saved);
+  return saved;
 }
 
 function normalizeConfigUpdate(update = {}) {
@@ -147,11 +170,20 @@ async function runManualRefresh(activityId, meta = {}) {
       MEITUAN_ACTIVITY_TITLE: meta.title || "",
       MEITUAN_ACTIVITY_TIME: meta.activityTime || "",
       MEITUAN_RULE_IMAGE: meta.ruleImage || "",
-      MEITUAN_FALLBACK_ROWS_JSON: JSON.stringify(meta.rows || [])
+      MEITUAN_FALLBACK_ROWS_JSON: JSON.stringify(meta.rows || []),
+      MEITUAN_RECORD_SNAPSHOT: meta.recordSnapshot ? "true" : "false"
     };
     const args = ["scripts/refresh-meituan-data.mjs"];
     if (activityId) args.push(String(activityId));
     const output = await runCommand(process.execPath, args, { env });
+    saveActivity({
+      id: String(activityId),
+      title: meta.title || `活动 ${activityId}`,
+      activityTime: meta.activityTime || "",
+      ruleImage: meta.ruleImage || "",
+      rows: Array.isArray(meta.rows) ? meta.rows : [],
+      recordSnapshot: Boolean(meta.recordSnapshot)
+    });
     if (meta.recordSnapshot) rememberActivity(activityId, { primary: true });
     console.log(`[${nowText()}] 页面手动刷新成功：${output}`);
     return output;
@@ -191,6 +223,21 @@ function startRefreshServer() {
         return;
       }
       sendJson(res, 404, { ok: false, message: "只支持 GET/POST /overrides" });
+      return;
+    }
+
+    if (url.pathname === "/activities") {
+      if (req.method === "GET") {
+        sendJson(res, 200, { ok: true, activities: readJson(savedActivitiesPath, {}) });
+        return;
+      }
+      if (req.method === "POST") {
+        const body = await readBody(req);
+        const activities = saveActivity(body.activity || {});
+        sendJson(res, 200, { ok: true, activities });
+        return;
+      }
+      sendJson(res, 404, { ok: false, message: "只支持 GET/POST /activities" });
       return;
     }
 

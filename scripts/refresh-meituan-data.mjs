@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const envPath = resolve(root, ".env");
 const htmlPath = resolve(root, "meituan-dashboard-preview.html");
+const savedActivitiesPath = resolve(root, "data/saved-activities.json");
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const ACTIVITY_META = {
   1199: {
@@ -287,6 +288,10 @@ function readJson(path, fallback) {
   }
 }
 
+function writeJson(path, value) {
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
 function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
   const dataDir = resolve(root, "data");
   mkdirSync(dataDir, { recursive: true });
@@ -394,7 +399,7 @@ async function main() {
   html = html.replace(/<title>.*?<\/title>/, `<title>${title}-看板</title>`);
   html = html.replace(/<h1>.*?<\/h1>/, `<h1>${title}-看板</h1>`);
   html = html.replace(/活动 \d+ · 数据截至 .*?<\/div>/, `活动 ${activityId} · 数据截至 ${updatedAt}</div>`);
-  html = html.replace(/<div class="data-deadline" id="data-deadline">.*?<\/div>/, `<div class="data-deadline" id="data-deadline">数据截止时间：${updatedAt}</div>`);
+  html = html.replace(/\n\s*<div class="data-deadline" id="data-deadline">.*?<\/div>/, "");
   const activityBlock = {
     id: String(activityId),
     title,
@@ -406,6 +411,15 @@ async function main() {
     rows,
     overrides: sameActivity ? (existing.overrides || {}) : {}
   };
+  const savedActivities = readJson(savedActivitiesPath, {});
+  const savedActivity = savedActivities[String(activityId)] || {};
+  savedActivities[String(activityId)] = {
+    ...savedActivity,
+    ...activityBlock,
+    overrides: savedActivity.overrides || activityBlock.overrides || {},
+    recordSnapshot: savedActivity.recordSnapshot ?? process.env.MEITUAN_RECORD_SNAPSHOT === "true"
+  };
+  writeJson(savedActivitiesPath, savedActivities);
   html = replaceBetween(
     html,
     "    const DEFAULT_ACTIVITY = ",
@@ -417,8 +431,14 @@ async function main() {
   html = replaceBetween(
     html,
     "    const HOURLY_SNAPSHOTS = ",
-    ";\n\n    let activities",
+    ";\n\n    const SAVED_ACTIVITIES = ",
     `${jsString({ [String(activityId)]: hourlySnapshots })}`
+  );
+  html = replaceBetween(
+    html,
+    "    const SAVED_ACTIVITIES = ",
+    ";\n\n    let activities",
+    `${jsString(savedActivities)}`
   );
   writeFileSync(htmlPath, html);
 
