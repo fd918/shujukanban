@@ -11,8 +11,10 @@ const savedActivitiesPath = resolve(root, "data/saved-activities.json");
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 const manualRefreshIntervalMs = 60 * 1000;
 let running = false;
+let activityListSyncRunning = false;
 const lastManualRefreshAtByActivity = new Map();
 let refreshTimer = null;
+let activityListSyncTimer = null;
 
 function nowText() {
   return new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
@@ -137,6 +139,32 @@ async function refreshActivity(activityId) {
     }
   });
   console.log(`[${nowText()}] ${output}`);
+}
+
+async function syncActivityList() {
+  if (running) {
+    console.log(`[${nowText()}] 活动数据刷新正在运行，全量活动同步延后 5 分钟。`);
+    if (activityListSyncTimer) clearTimeout(activityListSyncTimer);
+    activityListSyncTimer = setTimeout(syncActivityList, 5 * 60 * 1000);
+    return;
+  }
+  if (activityListSyncRunning) {
+    console.log(`[${nowText()}] 活动列表同步仍在运行，跳过本轮。`);
+    return;
+  }
+  activityListSyncRunning = true;
+  try {
+    const output = await runCommand(process.execPath, ["scripts/sync-meituan-activities.mjs"], {
+      env: process.env
+    });
+    console.log(`[${nowText()}] ${output}`);
+    if (readConfig().autoPush) await pushPublicFiles();
+  } catch (error) {
+    console.error(`[${nowText()}] 活动列表同步失败：${error.message}`);
+  } finally {
+    activityListSyncRunning = false;
+    scheduleNextActivityListSync();
+  }
 }
 
 function sendJson(res, status, body) {
@@ -379,7 +407,25 @@ function scheduleNextRun() {
   refreshTimer = setTimeout(runOnce, interval * 60 * 1000);
 }
 
+function nextActivityListSyncAt() {
+  const now = new Date();
+  const candidates = [9, 21].map(hour => {
+    const date = new Date(now);
+    date.setHours(hour, 0, 0, 0);
+    if (date <= now) date.setDate(date.getDate() + 1);
+    return date;
+  });
+  return candidates.sort((a, b) => a - b)[0];
+}
+
+function scheduleNextActivityListSync() {
+  if (activityListSyncTimer) clearTimeout(activityListSyncTimer);
+  const next = nextActivityListSyncAt();
+  activityListSyncTimer = setTimeout(syncActivityList, Math.max(1000, next.getTime() - Date.now()));
+  console.log(`[${nowText()}] 下次全量活动同步：${next.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}`);
+}
+
 const config = readConfig();
 console.log(`[${nowText()}] 美团看板后台服务启动，每 ${config.intervalMinutes} 分钟刷新一次。`);
 startRefreshServer();
-runOnce();
+runOnce().finally(() => syncActivityList());
