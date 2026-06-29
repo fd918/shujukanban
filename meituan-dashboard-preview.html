@@ -695,6 +695,11 @@
         <div class="note" id="today-forecast-note">等待快照数据。</div>
       </div>
       <div class="panel kpi">
+        <div class="label">当前档次</div>
+        <div class="value" id="current-tier">-</div>
+        <div class="note" id="current-tier-note">按当前活动门槛口径计算。</div>
+      </div>
+      <div class="panel kpi">
         <div class="label" id="actual-label">实际核销累计</div>
         <div class="value" id="actual-total">-</div>
         <div class="note" id="actual-note">只统计接口已经返回的实际核销金额。</div>
@@ -749,10 +754,11 @@
             <div class="activity-manager-head">
               <div class="activity-manager-title">
                 <strong>活动管理</strong>
-                <span class="note" id="activity-manager-note">活动列表每天 9:00 和 21:00 自动同步；全开/全关只作用于当前分组和搜索结果。</span>
+                <span class="note" id="activity-manager-note">活动列表每天 9:00 和 21:00 自动同步；全开/全关/全刷只作用于当前分组、分类和搜索结果。</span>
               </div>
               <div class="activity-manager-actions local-only">
                 <button class="button small" id="enable-group-refresh">全开</button>
+                <button class="button secondary small" id="refresh-filtered-activities">全刷</button>
               </div>
             </div>
             <div class="activity-tabs" id="activity-tabs">
@@ -760,6 +766,7 @@
               <button class="activity-tab" data-activity-group="upcoming">未开始</button>
               <button class="activity-tab" data-activity-group="ended">已结束</button>
             </div>
+            <div class="activity-tabs category-tabs" id="category-tabs"></div>
             <div class="table-wrap">
               <table class="activity-table">
                 <colgroup>
@@ -824,6 +831,18 @@
             <input class="text-input" id="custom-refresh-interval" inputmode="numeric" placeholder="例如 45">
           </div>
           <div class="field local-only">
+            <label>新增分类名称</label>
+            <input class="text-input" id="new-category-name" placeholder="例如 酒店">
+          </div>
+          <div class="field local-only">
+            <label>分类标题关键词</label>
+            <input class="text-input" id="new-category-keywords" placeholder="多个关键词用逗号分隔，例如 酒店,团购">
+          </div>
+          <div class="field local-only">
+            <label>新增分类</label>
+            <button class="button secondary" id="add-category">新增分类</button>
+          </div>
+          <div class="field local-only">
             <label>新增</label>
             <button class="button" id="add-activity">新增</button>
           </div>
@@ -880,6 +899,8 @@
     const ACTIVE_KEY = "meituan_dashboard_active_activity";
     const DATE_SORT_KEY = "meituan_dashboard_date_sort";
     const ACTIVITY_GROUP_KEY = "meituan_dashboard_activity_group";
+    const ACTIVITY_CATEGORY_KEY = "meituan_dashboard_activity_category";
+    const CATEGORY_STORE_KEY = "meituan_dashboard_activity_categories";
     const SERVICE_URL = "http://127.0.0.1:8765";
     const CAP = 600000;
     const DEFAULT_TIERS = [
@@ -898,12 +919,22 @@
     let activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ACTIVITY.id;
     if (!activities[activeId]) activeId = DEFAULT_ACTIVITY.id;
     let activityGroup = localStorage.getItem(ACTIVITY_GROUP_KEY) || "ongoing";
+    let activityCategory = localStorage.getItem(ACTIVITY_CATEGORY_KEY) || "all";
     let serviceConfig = {
       intervalMinutes: 30,
       primaryActivityId: Number(DEFAULT_ACTIVITY.id),
       activityIds: [Number(DEFAULT_ACTIVITY.id)],
       autoPush: true
     };
+
+    const DEFAULT_CATEGORIES = [
+      { id: "waimai", name: "外卖", keywords: ["外卖", "甄选好店", "冲锋"] },
+      { id: "niankuang", name: "年框", keywords: ["年框"] },
+      { id: "maiyao", name: "买药", keywords: ["买药", "医药", "药"] },
+      { id: "shuiguo", name: "水果", keywords: ["水果", "榴莲", "车厘子"] },
+      { id: "xianhua", name: "鲜花", keywords: ["鲜花", "花束"] },
+      { id: "meizhuang", name: "美妆", keywords: ["美妆", "屈臣氏", "丝芙兰"] }
+    ];
 
     function loadActivities() {
       try {
@@ -955,6 +986,35 @@
 
     function saveActivities() {
       localStorage.setItem(STORE_KEY, JSON.stringify(activities));
+    }
+
+    function loadCategories() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(CATEGORY_STORE_KEY) || "[]");
+        return [...DEFAULT_CATEGORIES, ...saved]
+          .filter(item => item && item.name && Array.isArray(item.keywords))
+          .map((item, index) => ({
+            id: item.id || `custom-${index}`,
+            name: String(item.name).trim(),
+            keywords: item.keywords.map(keyword => String(keyword).trim()).filter(Boolean)
+          }));
+      } catch {
+        return DEFAULT_CATEGORIES;
+      }
+    }
+
+    function saveCustomCategory(category) {
+      const saved = JSON.parse(localStorage.getItem(CATEGORY_STORE_KEY) || "[]");
+      saved.push(category);
+      localStorage.setItem(CATEGORY_STORE_KEY, JSON.stringify(saved));
+    }
+
+    function activityMatchesCategory(activity, categoryId = activityCategory) {
+      if (!categoryId || categoryId === "all") return true;
+      const category = loadCategories().find(item => item.id === categoryId);
+      if (!category) return true;
+      const title = String(activity.title || "").toLowerCase();
+      return category.keywords.some(keyword => title.includes(keyword.toLowerCase()));
     }
 
     function forgetActivity(id) {
@@ -1126,6 +1186,69 @@
       }
     }
 
+    async function refreshActivityById(id) {
+      const activity = activities[String(id)];
+      if (!activity) throw new Error(`找不到活动 ${id}`);
+      const response = await fetch(`${SERVICE_URL}/refresh?activityId=${encodeURIComponent(id)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: activity.title,
+          activityTime: activity.activityTime || "",
+          ruleImage: activity.ruleImage || "",
+          rows: activity.rows || [],
+          recordSnapshot: Boolean(activity.recordSnapshot)
+        })
+      });
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.message || "刷新失败");
+      return data.message || "刷新成功";
+    }
+
+    async function refreshFilteredActivities() {
+      if (isPublicPage()) {
+        reloadWithoutCache();
+        return;
+      }
+      const button = document.getElementById("refresh-filtered-activities");
+      const { groupItems } = filteredActivityItems();
+      if (!groupItems.length) {
+        alert("当前分组和分类下没有可刷新的活动。");
+        return;
+      }
+      if (groupItems.length > 20) {
+        const confirmed = confirm(`将按当前筛选结果依次刷新 ${groupItems.length} 个活动。\n\n刷新期间请不要关闭看板服务，确认继续吗？`);
+        if (!confirmed) return;
+      }
+      button.disabled = true;
+      const previousText = button.textContent;
+      let success = 0;
+      const failed = [];
+      try {
+        for (const item of groupItems) {
+          button.textContent = `${success + failed.length + 1}/${groupItems.length}`;
+          try {
+            await refreshActivityById(item.id);
+            success += 1;
+          } catch (error) {
+            failed.push(`${item.id}：${error.message}`);
+          }
+        }
+        await loadSavedActivitiesFromService();
+        updateHeader();
+        renderTable();
+        updateMetrics();
+        renderActivityManager();
+        const message = failed.length
+          ? `批量刷新完成：成功 ${success} 个，失败 ${failed.length} 个。\n\n${failed.slice(0, 8).join("\n")}${failed.length > 8 ? "\n..." : ""}`
+          : `批量刷新完成：成功 ${success} 个。`;
+        alert(message);
+      } finally {
+        button.disabled = false;
+        button.textContent = previousText;
+      }
+    }
+
     function switchActivity(id) {
       if (!activities[id]) return;
       activeId = String(id);
@@ -1230,6 +1353,10 @@
       return metric === "orders" ? "有效核销订单量" : "有效核销订单实付金额";
     }
 
+    function metricKpiName(metric = activeMetric()) {
+      return metric === "orders" ? "有效核销订单量" : "有效核销 GMV";
+    }
+
     function metricUnit(metric = activeMetric()) {
       return metric === "orders" ? "单" : "元";
     }
@@ -1327,9 +1454,9 @@
       return values.reduce((sum, value) => sum + value, 0) / values.length;
     }
 
-    function forecastToday(rows, metric = activeMetric(), date = metricDisplayDate(rows)) {
+    function forecastToday(rows, metric = activeMetric(), date = metricDisplayDate(rows), overrideMap = getEstimatesFromDom()) {
       const current = todayMetricValue(rows, metric, date);
-      const overrides = getEstimatesFromDom();
+      const overrides = overrideMap || {};
       if (overrides[date] > 0) {
         return {
           value: overrides[date],
@@ -1414,6 +1541,18 @@
 
     function isIncompleteToday(row, rows) {
       return row[4] != null && row[0] === todayYmd() && row[0] === latestActualDate(rows);
+    }
+
+    function estimatedMetricForRow(row, rows, metric, overrides) {
+      const [date] = row;
+      const overrideAmount = overrides[date] || 0;
+      if (overrideAmount > 0) return { value: overrideAmount, source: "手动预估" };
+      if (row[4] != null && !isIncompleteToday(row, rows)) {
+        return { value: rowMetricValue(row, metric), source: "接口默认" };
+      }
+      const forecast = forecastToday(rows, metric, date, overrides);
+      const value = Number(forecast.value || 0);
+      return { value, source: value > 0 ? "自动预估" : "未返回" };
     }
 
     function getEstimatesFromDom() {
@@ -1513,14 +1652,31 @@
       });
     }
 
+    function renderCategoryTabs(items) {
+      const container = document.getElementById("category-tabs");
+      if (!container) return;
+      const categories = loadCategories();
+      const allCount = items.length;
+      const buttons = [
+        `<button class="activity-tab ${activityCategory === "all" ? "active" : ""}" data-activity-category="all">全部 ${allCount}</button>`,
+        ...categories.map(category => {
+          const count = items.filter(item => activityMatchesCategory(item, category.id)).length;
+          return `<button class="activity-tab ${activityCategory === category.id ? "active" : ""}" data-activity-category="${escapeHtml(category.id)}">${escapeHtml(category.name)} ${count}</button>`;
+        })
+      ];
+      container.innerHTML = buttons.join("");
+    }
+
     function filteredActivityItems() {
       const keyword = (document.getElementById("activity-search")?.value || "").trim().toLowerCase();
       const allItems = Object.values(activities)
         .filter(item => !keyword || String(item.id).includes(keyword) || String(item.title || "").toLowerCase().includes(keyword))
         .sort((a, b) => Number(a.id) - Number(b.id));
+      const categoryItems = allItems.filter(item => activityMatchesCategory(item));
       return {
         allItems,
-        groupItems: allItems.filter(item => activityStatusGroup(item) === activityGroup)
+        categoryItems,
+        groupItems: categoryItems.filter(item => activityStatusGroup(item) === activityGroup)
       };
     }
 
@@ -1531,6 +1687,7 @@
       const primaryId = String(serviceConfig.primaryActivityId || DEFAULT_ACTIVITY.id);
       const { allItems, groupItems } = filteredActivityItems();
       renderActivityTabs(allItems);
+      renderCategoryTabs(allItems);
       syncGroupRefreshButton(groupItems);
       body.innerHTML = groupItems.map(item => {
         const isWatched = watchedIds.has(String(item.id)) || Boolean(item.recordSnapshot);
@@ -1563,8 +1720,7 @@
       let runningTotal = 0;
       rowsForRunning.forEach(row => {
         const [date] = row;
-        const defaultMetricValue = isIncompleteToday(row, activity.rows) ? 0 : rowMetricValue(row, metric);
-        const usedMetricValue = overrides[date] ? parseAmount(overrides[date]) : defaultMetricValue;
+        const usedMetricValue = estimatedMetricForRow(row, activity.rows, metric, overrides).value;
         runningTotal += usedMetricValue;
         runningByDate[date] = runningTotal;
       });
@@ -1577,14 +1733,14 @@
         const isActual = actualRedemption != null;
         const isTodayPartial = isIncompleteToday(row, activity.rows);
         const overrideValue = overrides[date] || "";
-        const defaultMetricValue = isTodayPartial ? 0 : rowMetricValue(row, metric);
-        const usedMetricValue = overrideValue ? parseAmount(overrideValue) : defaultMetricValue;
+        const estimate = estimatedMetricForRow(row, activity.rows, metric, overrides);
+        const usedMetricValue = estimate.value;
 
         const tr = document.createElement("tr");
         if (!isActual || isTodayPartial) tr.className = "row-future";
         tr.innerHTML = `
           <td>${date}</td>
-          <td>${isTodayPartial ? "今日未完整" : (isActual ? "接口默认" : "未返回")}</td>
+          <td>${isTodayPartial ? (overrideValue ? "手动预估" : "今日未完整") : (isActual ? "接口默认" : estimate.source)}</td>
           <td>${intText(validOrders)}</td>
           <td>${intText(redemptionOrders)}</td>
           <td>${actualPayment == null ? "-" : money(actualPayment)}</td>
@@ -1611,15 +1767,11 @@
       const rows = activeActivity().rows;
       const metric = activeMetric();
       const actualTotal = rows.reduce((sum, row) => sum + (isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric)), 0);
-      const estimateTotal = rows.reduce((sum, row) => {
-        const [date] = row;
-        const overrideAmount = overrides[date] || 0;
-        if (overrideAmount <= 0) return sum;
-        const defaultAmount = isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric);
-        return sum + overrideAmount - defaultAmount;
+      const projectedTotal = rows.reduce((sum, row) => {
+        return sum + estimatedMetricForRow(row, rows, metric, overrides).value;
       }, 0);
       const futureUnfilled = rows.filter(row => (row[4] == null || isIncompleteToday(row, rows)) && !overrides[row[0]]).length;
-      return { actualTotal, estimateTotal, projectedTotal: actualTotal + estimateTotal, futureUnfilled };
+      return { actualTotal, projectedTotal, futureUnfilled };
     }
 
     function updateTableTotals() {
@@ -1630,15 +1782,13 @@
       let runningTotal = 0;
       [...rows].sort((a, b) => a[0].localeCompare(b[0])).forEach(row => {
         const [date] = row;
-        const defaultAmount = isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric);
-        const usedAmount = overrides[date] || defaultAmount;
+        const usedAmount = estimatedMetricForRow(row, rows, metric, overrides).value;
         runningTotal += usedAmount;
         runningByDate[date] = runningTotal;
       });
       rows.forEach(row => {
         const [date] = row;
-        const defaultAmount = isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric);
-        const usedAmount = overrides[date] || defaultAmount;
+        const usedAmount = estimatedMetricForRow(row, rows, metric, overrides).value;
         const usedCell = document.querySelector(`[data-used="${date}"]`);
         const runningCell = document.querySelector(`[data-running="${date}"]`);
         if (usedCell) usedCell.textContent = metricText(usedAmount, metric);
@@ -1713,7 +1863,7 @@
         const note = projectedOver > 0
           ? `按当前输入，预计超过${tier.name}门槛 ${metricText(projectedOver, metric)}。`
           : (amounts.futureUnfilled > 0
-            ? `还剩 ${amounts.futureUnfilled} 天未录入预估，按当前输入计算。`
+            ? `还有 ${amounts.futureUnfilled} 天使用自动预估，可在下方手动调整。`
             : "未来日期都已录入预估，预计缺口为最终缺口。");
         return `
           <div class="panel target-card">
@@ -1731,14 +1881,43 @@
       }).join("");
     }
 
+    function currentTierInfo(activity, actualTotal) {
+      const tiers = [...(activity.tiers || [])].sort((a, b) => Number(a.threshold || 0) - Number(b.threshold || 0));
+      const reached = tiers.filter(tier => actualTotal >= tier.threshold).pop();
+      if (reached) {
+        const next = tiers.find(tier => actualTotal < tier.threshold);
+        return {
+          label: reached.name,
+          note: next
+            ? `当前激励：${rewardRuleText(reached)}；距${next.name}还差 ${metricText(next.threshold - actualTotal, activeMetric(activity))}。`
+            : `当前激励：${rewardRuleText(reached)}；已达到最高档。`
+        };
+      }
+      const first = tiers[0];
+      if (!first) {
+        return {
+          label: "未读取",
+          note: "当前活动接口暂未返回可计算的档位和激励规则。"
+        };
+      }
+      return {
+        label: "未达档",
+        note: `首档门槛：${metricText(first.threshold, activeMetric(activity))}；激励：${rewardRuleText(first)}。`
+      };
+    }
+
     function updateMetrics() {
       const amounts = currentAmounts();
       const metric = activeMetric();
+      const activity = activeActivity();
       updateTableTotals();
-      document.getElementById("actual-label").textContent = `实际${metricName(metric)}累计`;
-      document.getElementById("actual-note").textContent = `只统计接口已经返回的${metricName(metric)}。`;
-      document.getElementById("projected-label").textContent = `预计最终${metricName(metric)}`;
-      document.getElementById("projected-note").textContent = "接口默认累计 + 手动输入预估。";
+      document.getElementById("actual-label").textContent = `实际${metricKpiName(metric)}累计`;
+      document.getElementById("actual-note").textContent = `只统计接口已经返回的${metricKpiName(metric)}。`;
+      document.getElementById("projected-label").textContent = `预计最终${metricKpiName(metric)}`;
+      document.getElementById("projected-note").textContent = "接口默认累计 + 手动输入预估 + 未返回日期自动预估。";
+      const tierInfo = currentTierInfo(activity, amounts.actualTotal);
+      document.getElementById("current-tier").textContent = tierInfo.label;
+      document.getElementById("current-tier-note").textContent = tierInfo.note;
       const displayDate = metricDisplayDate(activeActivity().rows);
       const todayValue = todayMetricValue(activeActivity().rows, metric, displayDate);
       document.getElementById("today-label").textContent = todayMetricLabel(metric, displayDate);
@@ -1775,7 +1954,35 @@
       renderActivityManager();
     });
 
+    document.getElementById("category-tabs").addEventListener("click", event => {
+      const category = event.target.dataset.activityCategory;
+      if (!category) return;
+      activityCategory = category;
+      localStorage.setItem(ACTIVITY_CATEGORY_KEY, category);
+      renderActivityManager();
+    });
+
     document.getElementById("enable-group-refresh").addEventListener("click", toggleCurrentGroupAutoRefresh);
+    document.getElementById("refresh-filtered-activities").addEventListener("click", refreshFilteredActivities);
+
+    document.getElementById("add-category").addEventListener("click", () => {
+      const nameInput = document.getElementById("new-category-name");
+      const keywordInput = document.getElementById("new-category-keywords");
+      const name = nameInput.value.trim();
+      const keywords = keywordInput.value.split(/[,，]/).map(item => item.trim()).filter(Boolean);
+      if (!name || !keywords.length) {
+        alert("请填写分类名称和至少一个标题关键词。");
+        return;
+      }
+      const id = `custom-${Date.now()}`;
+      saveCustomCategory({ id, name, keywords });
+      activityCategory = id;
+      localStorage.setItem(ACTIVITY_CATEGORY_KEY, id);
+      nameInput.value = "";
+      keywordInput.value = "";
+      renderActivityManager();
+      setAutoRefreshStatus(`已新增分类“${name}”，匹配标题关键词：${keywords.join("、")}。`);
+    });
 
     document.getElementById("add-activity").addEventListener("click", async () => {
       const id = document.getElementById("new-activity-id").value.trim();
