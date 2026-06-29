@@ -10,9 +10,14 @@ const overridesPath = resolve(root, "data/manual-overrides.json");
 const savedActivitiesPath = resolve(root, "data/saved-activities.json");
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 const manualRefreshIntervalMs = 60 * 1000;
-let running = false;
+const refreshTimeoutMs = Number(process.env.MEITUAN_REFRESH_TIMEOUT_MS || 120000);
+let refreshInFlight = null;
+let autoRefreshRunning = false;
+let autoRefreshRequested = false;
+let manualQueueRunning = false;
 let activityListSyncRunning = false;
 const lastManualRefreshAtByActivity = new Map();
+const manualRefreshQueue = [];
 let refreshTimer = null;
 let activityListSyncTimer = null;
 
@@ -115,24 +120,58 @@ function normalizeConfigUpdate(update = {}) {
 
 function runCommand(command, args, options = {}) {
   return new Promise((resolvePromise, reject) => {
+    const { timeoutMs = 0, ...spawnOptions } = options;
     const child = spawn(command, args, {
       cwd: root,
       shell: false,
-      ...options
+      ...spawnOptions
     });
     let output = "";
+    let settled = false;
+    let timer = null;
+    if (timeoutMs > 0) {
+      timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        child.kill("SIGTERM");
+        reject(new Error(`命令超时 ${Math.round(timeoutMs / 1000)} 秒，已跳过。`));
+      }, timeoutMs);
+    }
     child.stdout?.on("data", chunk => { output += chunk.toString(); });
     child.stderr?.on("data", chunk => { output += chunk.toString(); });
-    child.on("error", reject);
+    child.on("error", error => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      reject(error);
+    });
     child.on("exit", code => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
       if (code === 0) resolvePromise(output.trim());
       else reject(new Error(output.trim() || `${command} 退出码 ${code}`));
     });
   });
 }
 
+async function runRefreshExclusive(label, task) {
+  while (refreshInFlight) {
+    await refreshInFlight.catch(() => {});
+  }
+  const current = (async () => {
+    console.log(`[${nowText()}] 开始刷新任务：${label}`);
+    return task();
+  })();
+  refreshInFlight = current.finally(() => {
+    if (refreshInFlight === current) refreshInFlight = null;
+  });
+  return current;
+}
+
 async function refreshActivity(activityId) {
   const output = await runCommand(process.execPath, ["scripts/refresh-meituan-data.mjs", String(activityId)], {
+    timeoutMs: refreshTimeoutMs,
     env: {
       ...process.env,
       MEITUAN_RECORD_SNAPSHOT: "true"
@@ -142,7 +181,7 @@ async function refreshActivity(activityId) {
 }
 
 async function syncActivityList() {
-  if (running) {
+  if (refreshInFlight || autoRefreshRunning || manualQueueRunning) {
     console.log(`[${nowText()}] 活动数据刷新正在运行，全量活动同步延后 5 分钟。`);
     if (activityListSyncTimer) clearTimeout(activityListSyncTimer);
     activityListSyncTimer = setTimeout(syncActivityList, 5 * 60 * 1000);
@@ -191,8 +230,40 @@ function readBody(req) {
   });
 }
 
+function enqueueManualRefresh(activityId, meta = {}) {
+  return new Promise((resolvePromise, reject) => {
+    manualRefreshQueue.push({ activityId, meta, resolvePromise, reject });
+    processManualQueue();
+  });
+}
+
+async function processManualQueue() {
+  if (manualQueueRunning) return;
+  manualQueueRunning = true;
+  try {
+    while (manualRefreshQueue.length) {
+      if (autoRefreshRequested || autoRefreshRunning) break;
+      const job = manualRefreshQueue.shift();
+      try {
+        const message = await runManualRefreshNow(job.activityId, job.meta);
+        job.resolvePromise(message);
+      } catch (error) {
+        job.reject(error);
+      }
+    }
+  } finally {
+    manualQueueRunning = false;
+    if (manualRefreshQueue.length && !autoRefreshRequested && !autoRefreshRunning) {
+      setTimeout(processManualQueue, 1000);
+    }
+  }
+}
+
 async function runManualRefresh(activityId, meta = {}) {
-  if (running) throw new Error("已有刷新任务正在运行，请稍后再试。");
+  return enqueueManualRefresh(activityId, meta);
+}
+
+async function runManualRefreshNow(activityId, meta = {}) {
   const now = Date.now();
   const id = String(activityId || "").trim();
   const previousRefreshAt = lastManualRefreshAtByActivity.get(id) || 0;
@@ -201,8 +272,7 @@ async function runManualRefresh(activityId, meta = {}) {
     throw new Error(`刷新太频繁，请 ${Math.ceil(waitMs / 1000)} 秒后再试。`);
   }
   lastManualRefreshAtByActivity.set(id, now);
-  running = true;
-  try {
+  return runRefreshExclusive(`页面手动刷新 ${id}`, async () => {
     const env = {
       ...process.env,
       MEITUAN_ACTIVITY_TITLE: meta.title || "",
@@ -213,7 +283,7 @@ async function runManualRefresh(activityId, meta = {}) {
     };
     const args = ["scripts/refresh-meituan-data.mjs"];
     if (activityId) args.push(String(activityId));
-    const output = await runCommand(process.execPath, args, { env });
+    const output = await runCommand(process.execPath, args, { env, timeoutMs: refreshTimeoutMs });
     saveActivity({
       id: String(activityId),
       recordSnapshot: Boolean(meta.recordSnapshot)
@@ -221,9 +291,7 @@ async function runManualRefresh(activityId, meta = {}) {
     if (meta.recordSnapshot) rememberActivity(activityId);
     console.log(`[${nowText()}] 页面手动刷新成功：${output}`);
     return output;
-  } finally {
-    running = false;
-  }
+  });
 }
 
 function deleteActivity(activityId) {
@@ -373,11 +441,12 @@ async function pushPublicFiles() {
 }
 
 async function runOnce() {
-  if (running) {
+  if (autoRefreshRunning) {
     console.log(`[${nowText()}] 上一次刷新仍在运行，跳过本轮。`);
     return;
   }
-  running = true;
+  autoRefreshRequested = true;
+  autoRefreshRunning = true;
   const config = readConfig();
   try {
     const primary = Number(config.primaryActivityId);
@@ -389,15 +458,23 @@ async function runOnce() {
       return;
     }
     console.log(`[${nowText()}] 开始后台刷新：${ordered.join(", ")}`);
-    for (const id of ordered) await refreshActivity(id);
+    for (const id of ordered) {
+      try {
+        await runRefreshExclusive(`后台自动刷新 ${id}`, () => refreshActivity(id));
+      } catch (error) {
+        console.error(`[${nowText()}] 已跳过活动 ${id}：${error.message}`);
+      }
+    }
     if (config.autoPush) await pushPublicFiles();
   } catch (error) {
     console.error(`[${nowText()}] 后台刷新失败：${error.message}`);
   } finally {
-    running = false;
+    autoRefreshRunning = false;
+    autoRefreshRequested = false;
     const next = new Date(Date.now() + readConfig().intervalMinutes * 60 * 1000).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
     console.log(`[${nowText()}] 本轮结束。下次刷新：${next}`);
     scheduleNextRun();
+    processManualQueue();
   }
 }
 
