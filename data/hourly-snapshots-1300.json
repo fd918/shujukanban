@@ -87,12 +87,28 @@
     "hour": 14,
     "slotMinute": 0,
     "dateHour": "2026-06-29 14:00",
-    "recordedAt": "2026/6/29 14:23:52",
-    "todayValidOrders": 5953,
-    "todayRedemptionOrders": 5203,
-    "todayActualPayment": 130285.91,
-    "todayRedemptionAmount": 114062.51,
-    "cumulativeRedemptionOrders": 55641,
-    "cumulativeRedemptionAmount": 1322360.37
+    "recordedAt": "2026/6/29 14:26:48",
+    "todayValidOrders": 5976,
+    "todayRedemptionOrders": 5230,
+    "todayActualPayment": 130767.16,
+    "todayRedemptionAmount": 114728.28,
+    "cumulativeRedemptionOrders": 55668,
+    "cumulativeRedemptionAmount": 1323026.1400000001
+  },
+  {
+    "activityId": "1300",
+    "title": "美团外卖6月23日-6月30日甄选好店企业媒体激励活动",
+    "metric": "orders",
+    "date": "2026-06-29",
+    "hour": 14,
+    "slotMinute": 30,
+    "dateHour": "2026-06-29 14:30",
+    "recordedAt": "2026/6/29 14:34:54",
+    "todayValidOrders": 6033,
+    "todayRedemptionOrders": 5283,
+    "todayActualPayment": 131973.16,
+    "todayRedemptionAmount": 115843.39,
+    "cumulativeRedemptionOrders": 55721,
+    "cumulativeRedemptionAmount": 1324141.25
   }
 ]
