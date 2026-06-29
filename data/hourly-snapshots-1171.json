@@ -167,11 +167,27 @@
     "hour": 16,
     "slotMinute": 30,
     "dateHour": "2026-06-29 16:30",
-    "recordedAt": "2026/6/29 16:42:22",
+    "recordedAt": "2026/6/29 16:53:02",
     "todayValidOrders": null,
     "todayRedemptionOrders": null,
     "todayActualPayment": null,
     "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 23,
+    "cumulativeRedemptionAmount": 6731
+  },
+  {
+    "activityId": "1171",
+    "title": "暑期早鸟订酒店团购媒体激励-2026年6月",
+    "metric": "amount",
+    "date": "2026-06-29",
+    "hour": 22,
+    "slotMinute": 0,
+    "dateHour": "2026-06-29 22:00",
+    "recordedAt": "2026/6/29 22:01:48",
+    "todayValidOrders": 2,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 508,
+    "todayRedemptionAmount": 0,
     "cumulativeRedemptionOrders": 23,
     "cumulativeRedemptionAmount": 6731
   }

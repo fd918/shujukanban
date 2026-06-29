@@ -167,12 +167,28 @@
     "hour": 16,
     "slotMinute": 30,
     "dateHour": "2026-06-29 16:30",
-    "recordedAt": "2026/6/29 16:42:44",
-    "todayValidOrders": 605,
-    "todayRedemptionOrders": 476,
-    "todayActualPayment": 91735.34,
-    "todayRedemptionAmount": 73091.57,
-    "cumulativeRedemptionOrders": 8639,
-    "cumulativeRedemptionAmount": 1285611.05
+    "recordedAt": "2026/6/29 16:53:24",
+    "todayValidOrders": 618,
+    "todayRedemptionOrders": 488,
+    "todayActualPayment": 93654.05,
+    "todayRedemptionAmount": 74618.21,
+    "cumulativeRedemptionOrders": 8651,
+    "cumulativeRedemptionAmount": 1287137.69
+  },
+  {
+    "activityId": "1311",
+    "title": "美团联盟代理类媒体拉新玩法考核-2期",
+    "metric": "orders",
+    "date": "2026-06-29",
+    "hour": 22,
+    "slotMinute": 0,
+    "dateHour": "2026-06-29 22:00",
+    "recordedAt": "2026/6/29 22:02:08",
+    "todayValidOrders": 1166,
+    "todayRedemptionOrders": 1030,
+    "todayActualPayment": 173716.86,
+    "todayRedemptionAmount": 153659.91,
+    "cumulativeRedemptionOrders": 9210,
+    "cumulativeRedemptionAmount": 1368861.39
   }
 ]
