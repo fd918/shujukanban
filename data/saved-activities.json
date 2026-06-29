@@ -11,11 +11,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-15.png",
+    "updatedAt": "2026/6/29 14:14:52",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 8000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 15000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2024-11-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-11-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-11-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-11-19",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-11-20",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -31,11 +89,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-16.png",
+    "updatedAt": "2026/6/29 14:14:55",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 1500,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 3500,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      }
+    ],
+    "rows": [
+      [
+        "2024-12-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-08",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -51,11 +167,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-17.png",
+    "updatedAt": "2026/6/29 14:14:58",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2024-12-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-19",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -71,11 +252,104 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-18.png",
+    "updatedAt": "2026/6/29 14:15:02",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 300,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      }
+    ],
+    "rows": [
+      [
+        "2024-12-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-25",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2024-12-31",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-01-01",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -111,11 +385,55 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-24.png",
+    "updatedAt": "2026/6/29 14:15:05",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 300,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-03-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-08",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -131,11 +449,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-25.png",
+    "updatedAt": "2026/6/29 14:15:08",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 200,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      }
+    ],
+    "rows": [
+      [
+        "2025-03-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-09",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -151,11 +520,321 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-31.png",
+    "updatedAt": "2026/6/29 14:15:11",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-03-20",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-21",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-25",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-28",
+        1,
+        1,
+        74.87,
+        0
+      ],
+      [
+        "2025-03-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-03-30",
+        1,
+        1,
+        44.61,
+        0
+      ],
+      [
+        "2025-03-31",
+        1,
+        1,
+        22.4,
+        0
+      ],
+      [
+        "2025-04-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-06",
+        2,
+        2,
+        106.49,
+        0
+      ],
+      [
+        "2025-04-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-10",
+        1,
+        1,
+        64.91,
+        0
+      ],
+      [
+        "2025-04-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-13",
+        1,
+        1,
+        34.88,
+        0
+      ],
+      [
+        "2025-04-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-16",
+        1,
+        1,
+        23.71,
+        0
+      ],
+      [
+        "2025-04-17",
+        1,
+        1,
+        65.8,
+        0
+      ],
+      [
+        "2025-04-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-19",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-20",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-21",
+        1,
+        1,
+        70,
+        0
+      ],
+      [
+        "2025-04-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-25",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-27",
+        1,
+        1,
+        44.29,
+        0
+      ],
+      [
+        "2025-04-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-30",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -171,11 +850,132 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-33.png",
+    "updatedAt": "2026/6/29 14:15:14",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 9000,
+        "rewardType": "fixed",
+        "fixedReward": 1000
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 15000,
+        "rewardType": "fixed",
+        "fixedReward": 5000
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "fixed",
+        "fixedReward": 10000
+      }
+    ],
+    "rows": [
+      [
+        "2025-04-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-09",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -191,11 +991,48 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-34.png",
+    "updatedAt": "2026/6/29 14:15:16",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      }
+    ],
+    "rows": [
+      [
+        "2025-04-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-30",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -211,11 +1048,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-35.png",
+    "updatedAt": "2026/6/29 14:15:19",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      }
+    ],
+    "rows": [
+      [
+        "2025-04-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-01",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -231,11 +1098,82 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-36.png",
+    "updatedAt": "2026/6/29 14:15:22",
     "rewardCap": null,
     "tiers": [],
-    "rows": [],
+    "rows": [
+      [
+        "2025-04-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-04-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-08",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -251,11 +1189,48 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-37.png",
+    "updatedAt": "2026/6/29 14:15:25",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-05-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-11",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -271,11 +1246,55 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-38.png",
+    "updatedAt": "2026/6/29 14:15:28",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-05-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-11",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -291,11 +1310,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-39.png",
+    "updatedAt": "2026/6/29 14:15:31",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "fixed",
+        "fixedReward": 700
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 10000,
+        "rewardType": "fixed",
+        "fixedReward": 1300
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 50000,
+        "rewardType": "fixed",
+        "fixedReward": 6000
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "fixed",
+        "fixedReward": 13000
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 250000,
+        "rewardType": "fixed",
+        "fixedReward": 33000
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "fixed",
+        "fixedReward": 67000
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 1000000,
+        "rewardType": "fixed",
+        "fixedReward": 130000
+      },
+      {
+        "name": "档8",
+        "metric": "orders",
+        "threshold": 1500000,
+        "rewardType": "fixed",
+        "fixedReward": 200000
+      }
+    ],
+    "rows": [
+      [
+        "2025-05-17",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -311,11 +1395,55 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-40.png",
+    "updatedAt": "2026/6/29 14:15:34",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-05-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-19",
+        2,
+        2,
+        75.3,
+        0
+      ],
+      [
+        "2025-05-20",
+        3,
+        3,
+        1099.4,
+        0
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -331,11 +1459,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-41.png",
+    "updatedAt": "2026/6/29 14:15:37",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      }
+    ],
+    "rows": [
+      [
+        "2025-05-17",
+        4,
+        4,
+        428,
+        0
+      ],
+      [
+        "2025-05-18",
+        4,
+        4,
+        546,
+        0
+      ],
+      [
+        "2025-05-19",
+        30,
+        30,
+        3662.22,
+        0
+      ],
+      [
+        "2025-05-20",
+        194,
+        194,
+        23693.77,
+        0
+      ],
+      [
+        "2025-05-21",
+        25,
+        25,
+        2986,
+        0
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -351,11 +1537,97 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-43.png",
+    "updatedAt": "2026/6/29 14:15:39",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-05-19",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-20",
+        1,
+        1,
+        63.68,
+        0
+      ],
+      [
+        "2025-05-21",
+        2,
+        2,
+        411.1,
+        0
+      ],
+      [
+        "2025-05-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-25",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-28",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -371,11 +1643,229 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-44.png",
+    "updatedAt": "2026/6/29 14:15:42",
     "rewardCap": null,
     "tiers": [],
-    "rows": [],
+    "rows": [
+      [
+        "2025-05-20",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-21",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-25",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-29",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-05-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-31",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-06",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-06-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-19",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -391,11 +1881,166 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-48.png",
+    "updatedAt": "2026/6/29 14:15:45",
     "rewardCap": null,
     "tiers": [],
-    "rows": [],
+    "rows": [
+      [
+        "2025-05-28",
+        2,
+        2,
+        6585,
+        0
+      ],
+      [
+        "2025-05-29",
+        1,
+        1,
+        2190,
+        0
+      ],
+      [
+        "2025-05-30",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-05-31",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-02",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-06-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-18",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -411,11 +2056,166 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-50.png",
+    "updatedAt": "2026/6/29 14:15:48",
     "rewardCap": null,
     "tiers": [],
-    "rows": [],
+    "rows": [
+      [
+        "2025-05-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-31",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-08",
+        1,
+        1,
+        31.2,
+        0
+      ],
+      [
+        "2025-06-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-13",
+        1,
+        1,
+        41.9,
+        0
+      ],
+      [
+        "2025-06-14",
+        2,
+        2,
+        47,
+        0
+      ],
+      [
+        "2025-06-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-17",
+        1,
+        1,
+        820,
+        0
+      ],
+      [
+        "2025-06-18",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -431,11 +2231,166 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-51.png",
+    "updatedAt": "2026/6/29 14:15:51",
     "rewardCap": null,
     "tiers": [],
-    "rows": [],
+    "rows": [
+      [
+        "2025-05-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-05-31",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-18",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -451,11 +2406,55 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-52.png",
+    "updatedAt": "2026/6/29 14:15:54",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 8000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 12000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 20000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-04",
+        4,
+        4,
+        197.75,
+        0
+      ],
+      [
+        "2025-06-05",
+        1,
+        1,
+        28.2,
+        0
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -471,11 +2470,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-53.png",
+    "updatedAt": "2026/6/29 14:15:57",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 900,
+        "rewardType": "per_order",
+        "perOrderReward": 0.3
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 1500,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 15000,
+        "rewardType": "per_order",
+        "perOrderReward": 6
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 24000,
+        "rewardType": "per_order",
+        "perOrderReward": 8
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 10
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-09",
+        1,
+        1,
+        9.9,
+        0
+      ],
+      [
+        "2025-06-10",
+        4,
+        4,
+        193,
+        0
+      ],
+      [
+        "2025-06-11",
+        11,
+        11,
+        362.43,
+        0
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -491,11 +2562,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-54.png",
+    "updatedAt": "2026/6/29 14:16:00",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-06",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -511,11 +2612,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-58.png",
+    "updatedAt": "2026/6/29 14:16:03",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-15",
+        6,
+        5,
+        312.53,
+        0
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -531,11 +2662,222 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-65.png",
+    "updatedAt": "2026/6/29 14:16:06",
     "rewardCap": null,
     "tiers": [],
-    "rows": [],
+    "rows": [
+      [
+        "2025-06-20",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-21",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-25",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-06-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-19",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -551,11 +2893,55 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-66.png",
+    "updatedAt": "2026/6/29 14:16:09",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 200000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 300000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-25",
+        80565,
+        80565,
+        1959569.39,
+        1959569.39
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -571,11 +2957,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-71.png",
+    "updatedAt": "2026/6/29 14:16:12",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 5,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 10,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-25",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-06-26",
+        206,
+        115,
+        25445.11,
+        15666.96
+      ],
+      [
+        "2025-06-27",
+        204,
+        142,
+        32174.97,
+        20116.77
+      ],
+      [
+        "2025-06-28",
+        208,
+        155,
+        27692.58,
+        21245.58
+      ],
+      [
+        "2025-06-29",
+        181,
+        128,
+        22545.65,
+        16010.13
+      ],
+      [
+        "2025-06-30",
+        143,
+        98,
+        17750.53,
+        13481.93
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -591,11 +3035,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-73.png",
+    "updatedAt": "2026/6/29 14:16:15",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 8000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 10000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 16000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-27",
+        1,
+        1,
+        63.1,
+        63.1
+      ],
+      [
+        "2025-06-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-29",
+        2,
+        2,
+        151.2,
+        151.2
+      ],
+      [
+        "2025-06-30",
+        4,
+        4,
+        169.38,
+        169.38
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -611,11 +3120,160 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-76.png",
+    "updatedAt": "2026/6/29 14:16:18",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 300,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 800,
+        "rewardType": "per_order",
+        "perOrderReward": 6
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-28",
+        1,
+        1,
+        18.35,
+        18.35
+      ],
+      [
+        "2025-06-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-06-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-14",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -631,11 +3289,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-78.png",
+    "updatedAt": "2026/6/29 14:16:21",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 20000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 50000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 200000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 400000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 6.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-06-29",
+        64807,
+        63208,
+        1687880.81,
+        1647433.74
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -651,11 +3367,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-82.png",
+    "updatedAt": "2026/6/29 14:16:24",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 20000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 50000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 200000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 400000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-02",
+        83828,
+        83723,
+        2057979.95,
+        2055395.67
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -671,11 +3445,27 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-99.png",
+    "updatedAt": "2026/6/29 14:16:28",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 600000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-06",
+        255895,
+        211366,
+        5443633.83,
+        4371624.36
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -691,11 +3481,55 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-100.png",
+    "updatedAt": "2026/6/29 14:16:31",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 25000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 200000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 250000,
+        "rewardType": "per_order",
+        "perOrderReward": 5.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-05",
+        125340,
+        79910,
+        2151736.01,
+        1212799.81
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -711,11 +3545,55 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-101.png",
+    "updatedAt": "2026/6/29 14:16:33",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 18000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 120000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 180000,
+        "rewardType": "per_order",
+        "perOrderReward": 6
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 7
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-05",
+        107182,
+        62091,
+        1918307.83,
+        982934.2
+      ],
+      [
+        "2025-07-06",
+        265136,
+        218487,
+        5634214.82,
+        4518201.97
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -731,11 +3609,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-105.png",
+    "updatedAt": "2026/6/29 14:16:36",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 250000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-09",
+        172004,
+        171192,
+        4371446.75,
+        4348699.02
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -751,11 +3659,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-107.png",
+    "updatedAt": "2026/6/29 14:16:40",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-07-13",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -771,11 +3744,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-110.png",
+    "updatedAt": "2026/6/29 14:16:43",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 80000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 150000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 300000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 600000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-12",
+        303614,
+        303606,
+        6089547.23,
+        6089516.96
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -791,11 +3815,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-111.png",
+    "updatedAt": "2026/6/29 14:16:46",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 40000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 240000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-13",
+        224483,
+        224483,
+        5491649.64,
+        5491649.64
+      ],
+      [
+        "2025-07-14",
+        197706,
+        197706,
+        4820393.54,
+        4820393.54
+      ],
+      [
+        "2025-07-15",
+        209987,
+        209986,
+        5137071.99,
+        5137052.19
+      ],
+      [
+        "2025-07-16",
+        234731,
+        232214,
+        5840753.9,
+        5778405.38
+      ],
+      [
+        "2025-07-17",
+        204842,
+        204842,
+        5283581.45,
+        5283581.45
+      ],
+      [
+        "2025-07-18",
+        188209,
+        188209,
+        4851954,
+        4851954
+      ],
+      [
+        "2025-07-19",
+        296260,
+        291516,
+        6024019.75,
+        5928038.76
+      ],
+      [
+        "2025-07-20",
+        240709,
+        240705,
+        5849698.62,
+        5849687.63
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -811,11 +3907,34 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-117.png",
+    "updatedAt": "2026/6/29 14:16:49",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-16",
+        234732,
+        232384,
+        5840755.9,
+        5782514.9
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -831,11 +3950,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-127.png",
+    "updatedAt": "2026/6/29 14:16:53",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-18",
+        129,
+        129,
+        7998.45,
+        7998.45
+      ],
+      [
+        "2025-07-19",
+        50,
+        50,
+        3174.19,
+        3174.19
+      ],
+      [
+        "2025-07-20",
+        48,
+        48,
+        3076.24,
+        3076.24
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -851,11 +4042,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-129.png",
+    "updatedAt": "2026/6/29 14:16:56",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 25000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 50000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 200000,
+        "rewardType": "rate",
+        "rate": 0.05
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.06
+      },
+      {
+        "name": "档6",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.07
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-18",
+        163,
+        160,
+        11610.96,
+        11461.95
+      ],
+      [
+        "2025-07-19",
+        336,
+        323,
+        22446.85,
+        20793.45
+      ],
+      [
+        "2025-07-20",
+        303,
+        287,
+        18626.22,
+        16750.2
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -871,11 +4127,48 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-131.png",
+    "updatedAt": "2026/6/29 14:16:59",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 300000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 600000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 1000000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-19",
+        296264,
+        291429,
+        6024244.63,
+        5923602.1
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -891,11 +4184,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-134.png",
+    "updatedAt": "2026/6/29 14:17:02",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-19",
+        107476,
+        104804,
+        2313685.61,
+        2257438.31
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -911,11 +4234,34 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-138.png",
+    "updatedAt": "2026/6/29 14:17:05",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-23",
+        258876,
+        256522,
+        5849841.63,
+        5794385.59
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -931,11 +4277,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-140.png",
+    "updatedAt": "2026/6/29 14:17:08",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-25",
+        634,
+        634,
+        89630.01,
+        89630.01
+      ],
+      [
+        "2025-07-26",
+        89,
+        89,
+        11510.08,
+        11510.08
+      ],
+      [
+        "2025-07-27",
+        124,
+        124,
+        16491.21,
+        16491.21
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -951,11 +4369,48 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-146.png",
+    "updatedAt": "2026/6/29 14:17:11",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 80000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 180000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 400000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 600000,
+        "rewardType": "per_order",
+        "perOrderReward": 4.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-26",
+        407985,
+        406071,
+        7806242.5,
+        7770330.44
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -991,11 +4446,34 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-149.png",
+    "updatedAt": "2026/6/29 14:17:15",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-07-30",
+        304497,
+        303952,
+        6909099.61,
+        6897313.98
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1011,11 +4489,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-155.png",
+    "updatedAt": "2026/6/29 14:17:18",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 100,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-01",
+        2,
+        2,
+        81.4,
+        81.4
+      ],
+      [
+        "2025-08-02",
+        66,
+        66,
+        2579.58,
+        2579.58
+      ],
+      [
+        "2025-08-03",
+        35,
+        35,
+        1269.2,
+        1269.2
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1031,11 +4581,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-156.png",
+    "updatedAt": "2026/6/29 14:17:21",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 25000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.05
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 2000000,
+        "rewardType": "rate",
+        "rate": 0.06
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-01",
+        365,
+        344,
+        16305.67,
+        15203.64
+      ],
+      [
+        "2025-08-02",
+        440,
+        435,
+        25041.38,
+        25022.72
+      ],
+      [
+        "2025-08-03",
+        360,
+        350,
+        23283.13,
+        22714.83
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1051,11 +4659,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-157.png",
+    "updatedAt": "2026/6/29 14:17:23",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 200000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 700000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-02",
+        517675,
+        517738,
+        11414588.51,
+        11415204.67
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1071,11 +4730,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-160.png",
+    "updatedAt": "2026/6/29 14:17:27",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-02",
+        142,
+        142,
+        8821.74,
+        8821.74
+      ],
+      [
+        "2025-08-03",
+        122,
+        122,
+        7464.1,
+        7464.1
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1091,11 +4815,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-161.png",
+    "updatedAt": "2026/6/29 14:17:29",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 45000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-03",
+        389949,
+        389949,
+        9675653.29,
+        9675668.37
+      ],
+      [
+        "2025-08-04",
+        332373,
+        332372,
+        8120028.93,
+        8120013.55
+      ],
+      [
+        "2025-08-05",
+        279030,
+        279030,
+        6817040.63,
+        6817041.63
+      ],
+      [
+        "2025-08-06",
+        388272,
+        387027,
+        8921646.65,
+        8892555.99
+      ],
+      [
+        "2025-08-07",
+        401912,
+        400849,
+        7481950.68,
+        7461818.07
+      ],
+      [
+        "2025-08-08",
+        260200,
+        258306,
+        5437558.49,
+        5397367.18
+      ],
+      [
+        "2025-08-09",
+        231210,
+        229207,
+        5271326.01,
+        5227573.71
+      ],
+      [
+        "2025-08-10",
+        216667,
+        216667,
+        5200925.36,
+        5200925.36
+      ],
+      [
+        "2025-08-11",
+        257727,
+        257731,
+        6101090.59,
+        6101128.56
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1111,11 +4907,34 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-166.png",
+    "updatedAt": "2026/6/29 14:17:33",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 310546,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-06",
+        389463,
+        388000,
+        8947760.84,
+        8914036.71
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1131,11 +4950,237 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-169.png",
+    "updatedAt": "2026/6/29 14:17:36",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 6000,
+        "rewardType": "fixed",
+        "fixedReward": 150
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 12000,
+        "rewardType": "fixed",
+        "fixedReward": 400
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 60000,
+        "rewardType": "fixed",
+        "fixedReward": 1250
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 120000,
+        "rewardType": "rate",
+        "rate": 0.01
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 240000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档6",
+        "metric": "amount",
+        "threshold": 600000,
+        "rewardType": "rate",
+        "rate": 0.03
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-07",
+        2,
+        2,
+        1198,
+        1198
+      ],
+      [
+        "2025-08-08",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-08-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-14",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-08-15",
+        2,
+        0,
+        338,
+        0
+      ],
+      [
+        "2025-08-16",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-08-17",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-08-18",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-08-19",
+        14,
+        3,
+        2686.71,
+        620.21
+      ],
+      [
+        "2025-08-20",
+        962,
+        91,
+        206354.68,
+        20217.35
+      ],
+      [
+        "2025-08-21",
+        419,
+        62,
+        87854.08,
+        12846.09
+      ],
+      [
+        "2025-08-22",
+        135,
+        24,
+        29285,
+        5578.5
+      ],
+      [
+        "2025-08-23",
+        109,
+        15,
+        23166,
+        3616.66
+      ],
+      [
+        "2025-08-24",
+        150,
+        38,
+        30355.22,
+        7468.96
+      ],
+      [
+        "2025-08-25",
+        37,
+        16,
+        7944,
+        3565
+      ],
+      [
+        "2025-08-26",
+        16,
+        12,
+        3382.42,
+        2610.86
+      ],
+      [
+        "2025-08-27",
+        110,
+        18,
+        22395,
+        3830.33
+      ],
+      [
+        "2025-08-28",
+        279,
+        57,
+        58839.41,
+        12450.01
+      ],
+      [
+        "2025-08-29",
+        81,
+        5,
+        16976.15,
+        1076.43
+      ],
+      [
+        "2025-08-30",
+        57,
+        13,
+        11251,
+        2420
+      ],
+      [
+        "2025-08-31",
+        26,
+        4,
+        7004,
+        1006
+      ],
+      [
+        "2025-09-01",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1151,11 +5196,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-170.png",
+    "updatedAt": "2026/6/29 14:17:39",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 200000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 400000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 1000000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 2000000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-07",
+        401925,
+        400704,
+        7482141.44,
+        7458776.6
+      ],
+      [
+        "2025-08-08",
+        261197,
+        259156,
+        5456475.91,
+        5411418.92
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1171,11 +5267,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-177.png",
+    "updatedAt": "2026/6/29 14:17:43",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 4000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 6000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-08",
+        20,
+        20,
+        1269.21,
+        1269.21
+      ],
+      [
+        "2025-08-09",
+        20,
+        20,
+        1268.29,
+        1268.29
+      ],
+      [
+        "2025-08-10",
+        15,
+        15,
+        961.33,
+        961.33
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1191,11 +5359,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-178.png",
+    "updatedAt": "2026/6/29 14:17:46",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 25000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.05
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 2000000,
+        "rewardType": "rate",
+        "rate": 0.06
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-08",
+        70,
+        63,
+        4459.53,
+        4059.53
+      ],
+      [
+        "2025-08-09",
+        46,
+        45,
+        3267.11,
+        3257.21
+      ],
+      [
+        "2025-08-10",
+        84,
+        65,
+        5577.27,
+        4719.67
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1211,11 +5437,34 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-182.png",
+    "updatedAt": "2026/6/29 14:17:49",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-09",
+        231998,
+        229587,
+        5287712.2,
+        5231800.09
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1231,11 +5480,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-183.png",
+    "updatedAt": "2026/6/29 14:17:52",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 35000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-12",
+        233599,
+        233599,
+        5384266.01,
+        5384266.01
+      ],
+      [
+        "2025-08-13",
+        244621,
+        242575,
+        5189493.01,
+        5146137.78
+      ],
+      [
+        "2025-08-14",
+        207204,
+        207204,
+        4746564.19,
+        4746564.19
+      ],
+      [
+        "2025-08-15",
+        210222,
+        210221,
+        5009577.15,
+        5009571.35
+      ],
+      [
+        "2025-08-16",
+        241318,
+        239277,
+        5600901.57,
+        5552723.88
+      ],
+      [
+        "2025-08-17",
+        210073,
+        210071,
+        5275838.94,
+        5275810.44
+      ],
+      [
+        "2025-08-18",
+        227867,
+        227863,
+        5398638.03,
+        5398616.78
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1251,11 +5558,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-184.png",
+    "updatedAt": "2026/6/29 14:17:55",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-12",
+        8303,
+        8303,
+        233708.64,
+        233708.64
+      ],
+      [
+        "2025-08-13",
+        10258,
+        10258,
+        290736.14,
+        290736.14
+      ],
+      [
+        "2025-08-14",
+        13018,
+        13018,
+        368457.24,
+        368457.24
+      ],
+      [
+        "2025-08-15",
+        12253,
+        12253,
+        350802.06,
+        350802.06
+      ],
+      [
+        "2025-08-16",
+        11303,
+        11303,
+        341925.13,
+        341925.13
+      ],
+      [
+        "2025-08-17",
+        12281,
+        12281,
+        369239.57,
+        369239.57
+      ],
+      [
+        "2025-08-18",
+        10493,
+        10492,
+        315340.8,
+        315319.19
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1271,11 +5636,34 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-188.png",
+    "updatedAt": "2026/6/29 14:17:58",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-13",
+        245462,
+        243642,
+        5205517.84,
+        5167362.69
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1291,11 +5679,97 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-190.png",
+    "updatedAt": "2026/6/29 14:18:01",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 10000,
+        "rewardType": "rate",
+        "rate": 0.01
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 50000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.05
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-14",
+        46,
+        45,
+        6563.7,
+        6397.7
+      ],
+      [
+        "2025-08-15",
+        61,
+        61,
+        8632.8,
+        8632.8
+      ],
+      [
+        "2025-08-16",
+        79,
+        74,
+        13761.92,
+        13194.42
+      ],
+      [
+        "2025-08-17",
+        73,
+        73,
+        10071.7,
+        10071.7
+      ],
+      [
+        "2025-08-18",
+        58,
+        58,
+        7134.68,
+        7134.68
+      ],
+      [
+        "2025-08-19",
+        40,
+        40,
+        7306.8,
+        7306.8
+      ],
+      [
+        "2025-08-20",
+        74,
+        72,
+        10400.38,
+        10291.88
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1311,11 +5785,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-191.png",
+    "updatedAt": "2026/6/29 14:18:04",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 25000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.06
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 2000000,
+        "rewardType": "rate",
+        "rate": 0.08
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-15",
+        51,
+        51,
+        3492.09,
+        3492.09
+      ],
+      [
+        "2025-08-16",
+        64,
+        53,
+        7506.62,
+        4890.42
+      ],
+      [
+        "2025-08-17",
+        77,
+        72,
+        3343.66,
+        3254.73
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1331,11 +5863,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-192.png",
+    "updatedAt": "2026/6/29 14:18:08",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 100,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-16",
+        1,
+        1,
+        35.3,
+        35.3
+      ],
+      [
+        "2025-08-17",
+        1,
+        1,
+        39.5,
+        39.5
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1351,11 +5955,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-196.png",
+    "updatedAt": "2026/6/29 14:18:11",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 50000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.3
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.7
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-16",
+        242112,
+        239638,
+        5615620.62,
+        5557179.12
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1371,11 +6005,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-198.png",
+    "updatedAt": "2026/6/29 14:18:15",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 35000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-19",
+        226353,
+        226353,
+        5339752.17,
+        5339752.17
+      ],
+      [
+        "2025-08-20",
+        261867,
+        260026,
+        5809984.54,
+        5767512.23
+      ],
+      [
+        "2025-08-21",
+        229241,
+        229241,
+        5529189.23,
+        5529189.23
+      ],
+      [
+        "2025-08-22",
+        224507,
+        224507,
+        5560013.44,
+        5560013.44
+      ],
+      [
+        "2025-08-23",
+        267741,
+        267740,
+        6712559.77,
+        6712547.97
+      ],
+      [
+        "2025-08-24",
+        246786,
+        246783,
+        6287290.22,
+        6287278.64
+      ],
+      [
+        "2025-08-25",
+        212939,
+        212939,
+        5164711.07,
+        5164711.07
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1391,11 +6083,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-199.png",
+    "updatedAt": "2026/6/29 14:18:18",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-19",
+        4570,
+        4570,
+        178590.2,
+        178590.2
+      ],
+      [
+        "2025-08-20",
+        3988,
+        3988,
+        160749.14,
+        160749.14
+      ],
+      [
+        "2025-08-21",
+        4307,
+        4307,
+        175009.17,
+        175009.17
+      ],
+      [
+        "2025-08-22",
+        9119,
+        9119,
+        308230.44,
+        308230.44
+      ],
+      [
+        "2025-08-23",
+        8901,
+        8901,
+        314167.93,
+        314167.93
+      ],
+      [
+        "2025-08-24",
+        9729,
+        9729,
+        329758.73,
+        329758.73
+      ],
+      [
+        "2025-08-25",
+        8042,
+        8042,
+        269849.59,
+        269849.59
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1411,11 +6161,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-202.png",
+    "updatedAt": "2026/6/29 14:18:21",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.8
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.8
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-20",
+        262733,
+        260996,
+        5825978.97,
+        5785320.03
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1451,11 +6231,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-210.png",
+    "updatedAt": "2026/6/29 14:18:24",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 25000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.06
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 2000000,
+        "rewardType": "rate",
+        "rate": 0.08
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-22",
+        61,
+        61,
+        5107.08,
+        5107.08
+      ],
+      [
+        "2025-08-23",
+        83,
+        70,
+        3580.56,
+        2696.7
+      ],
+      [
+        "2025-08-24",
+        43,
+        43,
+        3780.2,
+        3780.2
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1471,11 +6309,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-211.png",
+    "updatedAt": "2026/6/29 14:18:28",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 100,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-22",
+        32,
+        32,
+        715.35,
+        715.35
+      ],
+      [
+        "2025-08-23",
+        8,
+        8,
+        274.05,
+        274.05
+      ],
+      [
+        "2025-08-24",
+        3,
+        3,
+        73.62,
+        73.62
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1491,11 +6401,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-213.png",
+    "updatedAt": "2026/6/29 14:18:31",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 10,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 20,
+        "rewardType": "per_order",
+        "perOrderReward": 6
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 30,
+        "rewardType": "per_order",
+        "perOrderReward": 8
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-22",
+        4,
+        1,
+        70.63,
+        21.9
+      ],
+      [
+        "2025-08-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-24",
+        0,
+        0,
+        0,
+        0
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1511,11 +6472,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-216.png",
+    "updatedAt": "2026/6/29 14:18:34",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-26",
+        206909,
+        206909,
+        4975376.54,
+        4975387.54
+      ],
+      [
+        "2025-08-27",
+        254670,
+        253009,
+        5700820.29,
+        5661853.44
+      ],
+      [
+        "2025-08-28",
+        209023,
+        209023,
+        4874689.25,
+        4874689.25
+      ],
+      [
+        "2025-08-29",
+        192480,
+        192479,
+        4781727.41,
+        4781716.05
+      ],
+      [
+        "2025-08-30",
+        226689,
+        226686,
+        5115629.63,
+        5115616.37
+      ],
+      [
+        "2025-08-31",
+        194929,
+        194929,
+        4493962.95,
+        4493962.95
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1531,11 +6543,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-217.png",
+    "updatedAt": "2026/6/29 14:18:37",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-26",
+        8021,
+        8021,
+        272325.99,
+        272325.99
+      ],
+      [
+        "2025-08-27",
+        7332,
+        7332,
+        249692.68,
+        249692.68
+      ],
+      [
+        "2025-08-28",
+        11403,
+        11403,
+        343136.9,
+        343136.9
+      ],
+      [
+        "2025-08-29",
+        11360,
+        11360,
+        382576.46,
+        382576.46
+      ],
+      [
+        "2025-08-30",
+        12770,
+        12770,
+        399572.29,
+        399572.29
+      ],
+      [
+        "2025-08-31",
+        13055,
+        13055,
+        408975.44,
+        408975.44
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1551,11 +6614,90 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-219.png",
+    "updatedAt": "2026/6/29 14:18:40",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 10000,
+        "rewardType": "rate",
+        "rate": 0.01
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 50000,
+        "rewardType": "rate",
+        "rate": 0.015
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 300000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档6",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.05
+      },
+      {
+        "name": "档7",
+        "metric": "amount",
+        "threshold": 2000000,
+        "rewardType": "rate",
+        "rate": 0.07
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-26",
+        55,
+        55,
+        8164.13,
+        8164.13
+      ],
+      [
+        "2025-08-27",
+        110,
+        110,
+        16407.43,
+        16407.43
+      ],
+      [
+        "2025-08-28",
+        59,
+        59,
+        9638.09,
+        9638.09
+      ],
+      [
+        "2025-08-29",
+        138,
+        138,
+        35866.59,
+        35866.59
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1571,11 +6713,83 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-221.png",
+    "updatedAt": "2026/6/29 14:18:43",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 20,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 100,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 6
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 1500,
+        "rewardType": "per_order",
+        "perOrderReward": 8
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 9
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 10
+      },
+      {
+        "name": "档8",
+        "metric": "orders",
+        "threshold": 10000,
+        "rewardType": "per_order",
+        "perOrderReward": 15
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-28",
+        1203,
+        1203,
+        89229.51,
+        89229.51
+      ],
+      [
+        "2025-08-29",
+        2891,
+        2882,
+        247518.66,
+        246748.66
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1591,11 +6805,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-222.png",
+    "updatedAt": "2026/6/29 14:18:46",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.8
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-27",
+        255459,
+        253646,
+        5718704.64,
+        5677547.24
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1611,11 +6855,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-226.png",
+    "updatedAt": "2026/6/29 14:18:50",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 50000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.06
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 2000000,
+        "rewardType": "rate",
+        "rate": 0.09
+      },
+      {
+        "name": "档6",
+        "metric": "amount",
+        "threshold": 5000000,
+        "rewardType": "rate",
+        "rate": 0.11
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-29",
+        235,
+        78,
+        30157.25,
+        8741.73
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1631,11 +6926,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-228.png",
+    "updatedAt": "2026/6/29 14:18:54",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 300,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 700,
+        "rewardType": "per_order",
+        "perOrderReward": 3.5
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 4.5
+      },
+      {
+        "name": "档7",
+        "metric": "orders",
+        "threshold": 3000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      },
+      {
+        "name": "档8",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 7
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-29",
+        138,
+        136,
+        35866.59,
+        35702.69
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1651,11 +7011,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-229.png",
+    "updatedAt": "2026/6/29 14:18:57",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 25000,
+        "rewardType": "rate",
+        "rate": 0.01
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 100000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 500000,
+        "rewardType": "rate",
+        "rate": 0.03
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 1000000,
+        "rewardType": "rate",
+        "rate": 0.04
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 2000000,
+        "rewardType": "rate",
+        "rate": 0.05
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-30",
+        87,
+        78,
+        7062.84,
+        5929.13
+      ],
+      [
+        "2025-08-31",
+        100,
+        79,
+        7162.98,
+        5811.67
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1671,11 +7082,62 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-230.png",
+    "updatedAt": "2026/6/29 14:19:00",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 10,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 20,
+        "rewardType": "per_order",
+        "perOrderReward": 6
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 30,
+        "rewardType": "per_order",
+        "perOrderReward": 8
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-08-31",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1691,11 +7153,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-236.png",
+    "updatedAt": "2026/6/29 14:19:03",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 40000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-01",
+        171050,
+        171050,
+        3739868.99,
+        3739868.99
+      ],
+      [
+        "2025-09-02",
+        185210,
+        185210,
+        4178968.52,
+        4178968.52
+      ],
+      [
+        "2025-09-03",
+        221478,
+        219338,
+        4659409.51,
+        4612546.67
+      ],
+      [
+        "2025-09-04",
+        198416,
+        198416,
+        4280549.63,
+        4280549.63
+      ],
+      [
+        "2025-09-05",
+        207273,
+        207273,
+        4645314.86,
+        4645314.86
+      ],
+      [
+        "2025-09-06",
+        284855,
+        284856,
+        6442120.17,
+        6442131.72
+      ],
+      [
+        "2025-09-07",
+        258558,
+        258556,
+        5949238.69,
+        5949220.91
+      ],
+      [
+        "2025-09-08",
+        220983,
+        220979,
+        4747966.56,
+        4747949.71
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1711,11 +7238,34 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-238.png",
+    "updatedAt": "2026/6/29 14:19:06",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 2000,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 5
+      }
+    ],
+    "rows": [
+      [
+        "2025-08-29",
+        1058,
+        1048,
+        92041.18,
+        91136.38
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1731,11 +7281,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-239.png",
+    "updatedAt": "2026/6/29 14:19:09",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-01",
+        10926,
+        10926,
+        327898.47,
+        327898.47
+      ],
+      [
+        "2025-09-02",
+        10844,
+        10844,
+        323179.94,
+        323179.94
+      ],
+      [
+        "2025-09-03",
+        10699,
+        10699,
+        320306.65,
+        320306.65
+      ],
+      [
+        "2025-09-04",
+        11716,
+        11716,
+        345815.73,
+        345815.73
+      ],
+      [
+        "2025-09-05",
+        11954,
+        11954,
+        365211.1,
+        365211.1
+      ],
+      [
+        "2025-09-06",
+        14114,
+        14114,
+        445556.08,
+        445556.08
+      ],
+      [
+        "2025-09-07",
+        16137,
+        16137,
+        472416.14,
+        472416.14
+      ],
+      [
+        "2025-09-08",
+        11092,
+        11092,
+        327323.02,
+        327323.02
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1751,11 +7366,265 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-240.png",
+    "updatedAt": "2026/6/29 14:19:13",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 6000,
+        "rewardType": "fixed",
+        "fixedReward": 150
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 12000,
+        "rewardType": "fixed",
+        "fixedReward": 400
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 60000,
+        "rewardType": "fixed",
+        "fixedReward": 1250
+      },
+      {
+        "name": "档4",
+        "metric": "amount",
+        "threshold": 120000,
+        "rewardType": "rate",
+        "rate": 0.01
+      },
+      {
+        "name": "档5",
+        "metric": "amount",
+        "threshold": 240000,
+        "rewardType": "rate",
+        "rate": 0.02
+      },
+      {
+        "name": "档6",
+        "metric": "amount",
+        "threshold": 600000,
+        "rewardType": "rate",
+        "rate": 0.03
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-01",
+        8,
+        2,
+        1872,
+        528
+      ],
+      [
+        "2025-09-02",
+        29,
+        6,
+        6321,
+        1352.33
+      ],
+      [
+        "2025-09-03",
+        8,
+        8,
+        1798,
+        1798
+      ],
+      [
+        "2025-09-04",
+        1,
+        0,
+        264,
+        0
+      ],
+      [
+        "2025-09-05",
+        10,
+        3,
+        1890,
+        647
+      ],
+      [
+        "2025-09-06",
+        38,
+        10,
+        9323,
+        1953
+      ],
+      [
+        "2025-09-07",
+        18,
+        4,
+        3498.66,
+        676
+      ],
+      [
+        "2025-09-08",
+        15,
+        6,
+        3420,
+        1554
+      ],
+      [
+        "2025-09-09",
+        52,
+        8,
+        10488,
+        1662
+      ],
+      [
+        "2025-09-10",
+        64,
+        15,
+        17443,
+        3555
+      ],
+      [
+        "2025-09-11",
+        91,
+        12,
+        19951.66,
+        2524
+      ],
+      [
+        "2025-09-12",
+        51,
+        14,
+        10409,
+        3128.5
+      ],
+      [
+        "2025-09-13",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-09-14",
+        1,
+        0,
+        849,
+        0
+      ],
+      [
+        "2025-09-15",
+        8,
+        5,
+        1632,
+        1055
+      ],
+      [
+        "2025-09-16",
+        6,
+        3,
+        1194,
+        597
+      ],
+      [
+        "2025-09-17",
+        2,
+        2,
+        528,
+        528
+      ],
+      [
+        "2025-09-18",
+        4,
+        0,
+        1156,
+        0
+      ],
+      [
+        "2025-09-19",
+        4,
+        0,
+        866,
+        0
+      ],
+      [
+        "2025-09-20",
+        6,
+        0,
+        1084,
+        0
+      ],
+      [
+        "2025-09-21",
+        4,
+        0,
+        1156,
+        0
+      ],
+      [
+        "2025-09-22",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-09-23",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-09-24",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-09-25",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-09-26",
+        4,
+        4,
+        542,
+        542
+      ],
+      [
+        "2025-09-27",
+        4,
+        3,
+        739,
+        505
+      ],
+      [
+        "2025-09-28",
+        1,
+        1,
+        259,
+        259
+      ],
+      [
+        "2025-09-29",
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        "2025-09-30",
+        0,
+        0,
+        0,
+        0
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1771,11 +7640,41 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-241.png",
+    "updatedAt": "2026/6/29 14:19:16",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 30000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 100000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.8
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 500000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-03",
+        222321,
+        220665,
+        4675718.44,
+        4641021.96
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1791,11 +7690,230 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-243.png",
+    "updatedAt": "2026/6/29 14:19:19",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 250,
+        "rewardType": "per_order",
+        "perOrderReward": 1
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 1250,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 2500,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 5000,
+        "rewardType": "per_order",
+        "perOrderReward": 2.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 7500,
+        "rewardType": "per_order",
+        "perOrderReward": 3
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-03",
+        21,
+        21,
+        1260.43,
+        1260.43
+      ],
+      [
+        "2025-09-04",
+        21,
+        21,
+        1291.1,
+        1291.1
+      ],
+      [
+        "2025-09-05",
+        8,
+        8,
+        429.32,
+        429.32
+      ],
+      [
+        "2025-09-06",
+        9,
+        9,
+        580.89,
+        580.89
+      ],
+      [
+        "2025-09-07",
+        11,
+        11,
+        676.17,
+        676.17
+      ],
+      [
+        "2025-09-08",
+        5,
+        5,
+        308.57,
+        308.57
+      ],
+      [
+        "2025-09-09",
+        3,
+        3,
+        119.8,
+        119.8
+      ],
+      [
+        "2025-09-10",
+        1,
+        1,
+        68.9,
+        68.9
+      ],
+      [
+        "2025-09-11",
+        4,
+        4,
+        250.74,
+        250.74
+      ],
+      [
+        "2025-09-12",
+        1,
+        1,
+        55.4,
+        55.4
+      ],
+      [
+        "2025-09-13",
+        5,
+        5,
+        227.36,
+        227.36
+      ],
+      [
+        "2025-09-14",
+        4,
+        4,
+        260.26,
+        260.26
+      ],
+      [
+        "2025-09-15",
+        5,
+        5,
+        266.21,
+        266.21
+      ],
+      [
+        "2025-09-16",
+        2,
+        2,
+        134.5,
+        134.5
+      ],
+      [
+        "2025-09-17",
+        3,
+        3,
+        227.07,
+        227.07
+      ],
+      [
+        "2025-09-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-09-19",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-09-20",
+        4,
+        4,
+        221.45,
+        221.45
+      ],
+      [
+        "2025-09-21",
+        3,
+        3,
+        208.07,
+        208.07
+      ],
+      [
+        "2025-09-22",
+        1,
+        1,
+        53.81,
+        53.81
+      ],
+      [
+        "2025-09-23",
+        1,
+        1,
+        70,
+        70
+      ],
+      [
+        "2025-09-24",
+        1,
+        1,
+        71.23,
+        71.23
+      ],
+      [
+        "2025-09-25",
+        3,
+        3,
+        252.27,
+        252.27
+      ],
+      [
+        "2025-09-26",
+        1,
+        1,
+        69.52,
+        69.52
+      ],
+      [
+        "2025-09-27",
+        1,
+        1,
+        31.3,
+        31.3
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1811,11 +7929,76 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-246.png",
+    "updatedAt": "2026/6/29 14:19:22",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 8,
+        "rewardType": "per_order",
+        "perOrderReward": 4
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 16,
+        "rewardType": "per_order",
+        "perOrderReward": 6
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 25,
+        "rewardType": "per_order",
+        "perOrderReward": 8
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 50,
+        "rewardType": "per_order",
+        "perOrderReward": 8.8
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 100,
+        "rewardType": "per_order",
+        "perOrderReward": 10
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-09-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2025-09-07",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1831,11 +8014,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-250.png",
+    "updatedAt": "2026/6/29 14:19:26",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 35000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-09",
+        99512,
+        99511,
+        2234152.37,
+        2234134.31
+      ],
+      [
+        "2025-09-10",
+        235234,
+        233639,
+        4972744.4,
+        4937760.96
+      ],
+      [
+        "2025-09-11",
+        213615,
+        213615,
+        4566639.16,
+        4566640.16
+      ],
+      [
+        "2025-09-12",
+        199648,
+        199648,
+        4127513.04,
+        4127513.04
+      ],
+      [
+        "2025-09-13",
+        226110,
+        226107,
+        4675010.97,
+        4674980.27
+      ],
+      [
+        "2025-09-14",
+        203871,
+        203871,
+        4298170.6,
+        4298170.6
+      ],
+      [
+        "2025-09-15",
+        186386,
+        186386,
+        3713857.43,
+        3713857.43
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -1851,11 +8092,69 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:19",
     "listUpdatedAt": "2026/6/29 14:11:05",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-252.png",
+    "updatedAt": "2026/6/29 14:19:29",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2025-09-09",
+        11684,
+        11684,
+        343384.5,
+        343384.5
+      ],
+      [
+        "2025-09-10",
+        12361,
+        12361,
+        372968.65,
+        372968.65
+      ],
+      [
+        "2025-09-11",
+        13683,
+        13683,
+        398601.46,
+        398601.46
+      ],
+      [
+        "2025-09-12",
+        14136,
+        14136,
+        425514.03,
+        425514.03
+      ],
+      [
+        "2025-09-13",
+        16871,
+        16871,
+        529344.15,
+        529344.15
+      ],
+      [
+        "2025-09-14",
+        18355,
+        18355,
+        558534.98,
+        558534.98
+      ],
+      [
+        "2025-09-15",
+        15962,
+        15962,
+        460610.13,
+        460610.13
+      ]
+    ],
     "overrides": {},
     "recordSnapshot": false
   },
@@ -8132,7 +14431,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1171.png",
-    "updatedAt": "2026/6/29 14:10:26",
+    "updatedAt": "2026/6/29 14:23:44",
     "rewardCap": null,
     "tiers": [
       {
@@ -8540,7 +14839,7 @@
     "ruleImage": "./assets/activity-rule-1199.png",
     "recordSnapshot": true,
     "overrides": {},
-    "updatedAt": "2026/6/29 14:10:56",
+    "updatedAt": "2026/6/29 14:24:13",
     "rewardCap": 600000,
     "tiers": [
       {
@@ -8625,9 +14924,9 @@
       [
         "2026-06-14",
         147367,
-        144991,
+        144993,
         4234573.86,
-        4156310.9
+        4156802.9
       ],
       [
         "2026-06-15",
@@ -8722,17 +15021,17 @@
       ],
       [
         "2026-06-28",
-        177994,
-        174984,
-        5046034.92,
-        4937767.07
+        177990,
+        174994,
+        5045950.8,
+        4938038.23
       ],
       [
         "2026-06-29",
-        75381,
-        63450,
-        1900546.51,
-        1611355.92
+        76720,
+        64970,
+        1935140.92,
+        1649952.18
       ],
       [
         "2026-06-30",
@@ -9424,7 +15723,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1290.png",
-    "updatedAt": "2026/6/29 14:10:29",
+    "updatedAt": "2026/6/29 14:23:47",
     "rewardCap": null,
     "tiers": [
       {
@@ -9543,10 +15842,10 @@
       ],
       [
         "2026-06-29",
-        112,
-        89,
-        2562.82,
-        1669.11
+        116,
+        90,
+        2663.81,
+        1714.91
       ],
       [
         "2026-06-30",
@@ -9669,7 +15968,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1299.png",
-    "updatedAt": "2026/6/29 14:10:32",
+    "updatedAt": "2026/6/29 14:23:50",
     "rewardCap": null,
     "tiers": [
       {
@@ -9718,17 +16017,17 @@
       ],
       [
         "2026-06-28",
-        147270,
-        144861,
-        4408858.14,
-        4330597.78
+        147267,
+        144867,
+        4408785.92,
+        4330782.95
       ],
       [
         "2026-06-29",
-        61213,
-        52754,
-        1646452.99,
-        1406644.35
+        62317,
+        54012,
+        1677060.67,
+        1440606.33
       ],
       [
         "2026-06-30",
@@ -9754,7 +16053,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1300.png",
-    "updatedAt": "2026/6/29 14:10:35",
+    "updatedAt": "2026/6/29 14:23:52",
     "rewardCap": null,
     "tiers": [
       {
@@ -9803,17 +16102,17 @@
       ],
       [
         "2026-06-28",
-        11532,
-        11324,
-        269100.63,
-        264248.95
+        11530,
+        11322,
+        269066.71,
+        264215.03
       ],
       [
         "2026-06-29",
-        5855,
-        5109,
-        128017.06,
-        112059.38
+        5953,
+        5203,
+        130285.91,
+        114062.51
       ],
       [
         "2026-06-30",
@@ -9839,7 +16138,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1301.png",
-    "updatedAt": "2026/6/29 14:10:38",
+    "updatedAt": "2026/6/29 14:23:55",
     "rewardCap": null,
     "tiers": [],
     "rows": [
@@ -9881,16 +16180,16 @@
       [
         "2026-06-28",
         6179,
-        5992,
+        5993,
         160125.76,
-        154604.89
+        154616.99
       ],
       [
         "2026-06-29",
-        1912,
-        1534,
-        46034.35,
-        36271.55
+        1958,
+        1572,
+        47295.44,
+        37075.54
       ],
       [
         "2026-06-30",
@@ -9916,7 +16215,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1303.png",
-    "updatedAt": "2026/6/29 14:10:41",
+    "updatedAt": "2026/6/29 14:23:58",
     "rewardCap": null,
     "tiers": [
       {
@@ -10036,7 +16335,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1304.png",
-    "updatedAt": "2026/6/29 14:10:44",
+    "updatedAt": "2026/6/29 14:24:01",
     "rewardCap": null,
     "tiers": [
       {
@@ -10217,7 +16516,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1311.png",
-    "updatedAt": "2026/6/29 14:10:47",
+    "updatedAt": "2026/6/29 14:24:04",
     "rewardCap": null,
     "tiers": [
       {
@@ -10266,10 +16565,10 @@
       ],
       [
         "2026-06-29",
-        468,
-        347,
-        71392.53,
-        53490.16
+        474,
+        357,
+        72436.03,
+        54887.16
       ],
       [
         "2026-06-30",
@@ -10355,7 +16654,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 14:11:02",
     "ruleImage": "./assets/activity-rule-1323.png",
-    "updatedAt": "2026/6/29 14:10:50",
+    "updatedAt": "2026/6/29 14:24:07",
     "rewardCap": null,
     "tiers": [
       {
@@ -10432,10 +16731,10 @@
       ],
       [
         "2026-06-29",
-        112,
-        90,
-        2562.82,
-        1675.41
+        116,
+        92,
+        2663.81,
+        1752.29
       ],
       [
         "2026-06-30",
@@ -10473,7 +16772,7 @@
     "title": "美团外卖6月27日-6月28日冲锋激励",
     "activityTime": "2026-06-27 00:00:00 - 2026-06-28 23:59:59",
     "ruleImage": "./assets/activity-rule-1326.png",
-    "updatedAt": "2026/6/29 14:10:53",
+    "updatedAt": "2026/6/29 14:24:10",
     "rewardCap": null,
     "tiers": [
       {
@@ -10501,10 +16800,10 @@
       ],
       [
         "2026-06-28",
-        118145,
-        115321,
-        3575536.59,
-        3482139.64
+        118143,
+        115326,
+        3575486.39,
+        3482307.33
       ]
     ],
     "overrides": {},
