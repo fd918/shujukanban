@@ -247,6 +247,20 @@
       font-size: 14px;
     }
 
+    .activity-manager-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .activity-manager-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
     .activity-tabs {
       display: flex;
       gap: 8px;
@@ -279,17 +293,27 @@
       font-size: 12px;
     }
 
+    .activity-table {
+      min-width: 1080px;
+      table-layout: fixed;
+    }
+
     .activity-manager th,
     .activity-manager td {
       padding: 10px 8px;
       vertical-align: middle;
+      text-align: center;
+      white-space: nowrap;
     }
 
-    .activity-title-cell {
-      max-width: 320px;
+    .activity-manager .text-left {
+      text-align: left;
+    }
+
+    .activity-title-cell,
+    .activity-time-cell {
       overflow: hidden;
       text-overflow: ellipsis;
-      text-align: left;
     }
 
     .button.small {
@@ -367,6 +391,10 @@
       border-radius: 8px;
       box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
       padding: 18px;
+    }
+
+    #switch-modal .modal-panel {
+      width: min(1180px, 100%);
     }
 
     .modal-head {
@@ -559,8 +587,13 @@
           </div>
           <div class="activity-manager">
             <div class="activity-manager-head">
-              <strong>活动管理</strong>
-              <span class="note" id="activity-manager-note">活动列表每天 9:00 和 21:00 自动同步；自动刷新只对勾选活动记录快照。</span>
+              <div class="activity-manager-title">
+                <strong>活动管理</strong>
+                <span class="note" id="activity-manager-note">活动列表每天 9:00 和 21:00 自动同步；全开只作用于当前分组和搜索结果。</span>
+              </div>
+              <div class="activity-manager-actions local-only">
+                <button class="button small" id="enable-group-refresh">全开</button>
+              </div>
             </div>
             <div class="activity-tabs" id="activity-tabs">
               <button class="activity-tab active" data-activity-group="ongoing">进行中</button>
@@ -568,13 +601,23 @@
               <button class="activity-tab" data-activity-group="ended">已结束</button>
             </div>
             <div class="table-wrap">
-              <table>
+              <table class="activity-table">
+                <colgroup>
+                  <col style="width: 64px">
+                  <col style="width: 70px">
+                  <col style="width: 310px">
+                  <col style="width: 270px">
+                  <col class="local-only" style="width: 82px">
+                  <col class="local-only" style="width: 82px">
+                  <col style="width: 118px">
+                  <col style="width: 150px">
+                </colgroup>
                 <thead>
                   <tr>
                     <th>活动 ID</th>
                     <th>状态</th>
-                    <th>活动标题</th>
-                    <th>活动时间</th>
+                    <th class="text-left">活动标题</th>
+                    <th class="text-left">活动时间</th>
                     <th class="local-only">自动刷新</th>
                     <th class="local-only">默认展示</th>
                     <th>上次刷新时间</th>
@@ -852,6 +895,53 @@
       });
       syncIntervalControls();
       setAutoRefreshStatus(`自动刷新已改为每 ${serviceConfig.intervalMinutes} 分钟；纳入自动刷新的活动会记录快照并推送到 GitHub。`);
+    }
+
+    async function enableCurrentGroupAutoRefresh() {
+      if (isPublicPage()) {
+        setAutoRefreshStatus("公网访问模式不能修改自动刷新，请在本机看板里操作。");
+        return;
+      }
+      const button = document.getElementById("enable-group-refresh");
+      const { groupItems } = filteredActivityItems();
+      if (!groupItems.length) {
+        alert("当前分组没有可开启的活动。");
+        return;
+      }
+      const newItems = groupItems.filter(item => !((serviceConfig.activityIds || []).map(id => String(id)).includes(String(item.id)) || item.recordSnapshot));
+      if (!newItems.length) {
+        setAutoRefreshStatus("当前分组的活动都已经开启自动刷新。");
+        return;
+      }
+      if (newItems.length > 30) {
+        const confirmed = confirm(`当前会开启 ${newItems.length} 个活动的自动刷新。\n\n确认后这些活动会按设置间隔拉取接口并记录快照。`);
+        if (!confirmed) return;
+      }
+      const previousText = button.textContent;
+      button.disabled = true;
+      button.textContent = "开启中";
+      try {
+        newItems.forEach(item => {
+          activities[item.id].recordSnapshot = true;
+        });
+        saveActivities();
+        await Promise.all(newItems.map(item => saveActivityToService(activities[item.id])));
+        const ids = new Set((serviceConfig.activityIds || []).map(id => Number(id)));
+        newItems.forEach(item => ids.add(Number(item.id)));
+        await saveServiceConfig({ activityIds: [...ids] });
+        renderActivityManager();
+        setAutoRefreshStatus(`已开启 ${newItems.length} 个活动的自动刷新。`);
+      } catch (error) {
+        newItems.forEach(item => {
+          activities[item.id].recordSnapshot = false;
+        });
+        saveActivities();
+        renderActivityManager();
+        alert(`一键开启失败：${error.message}`);
+      } finally {
+        button.disabled = false;
+        button.textContent = previousText;
+      }
     }
 
     function switchActivity(id) {
@@ -1241,26 +1331,33 @@
       });
     }
 
+    function filteredActivityItems() {
+      const keyword = (document.getElementById("activity-search")?.value || "").trim().toLowerCase();
+      const allItems = Object.values(activities)
+        .filter(item => !keyword || String(item.id).includes(keyword) || String(item.title || "").toLowerCase().includes(keyword))
+        .sort((a, b) => Number(a.id) - Number(b.id));
+      return {
+        allItems,
+        groupItems: allItems.filter(item => activityStatusGroup(item) === activityGroup)
+      };
+    }
+
     function renderActivityManager() {
       const body = document.getElementById("activity-manager-body");
       if (!body) return;
       const watchedIds = new Set((serviceConfig.activityIds || []).map(id => String(id)));
       const primaryId = String(serviceConfig.primaryActivityId || DEFAULT_ACTIVITY.id);
-      const keyword = (document.getElementById("activity-search")?.value || "").trim().toLowerCase();
-      const allItems = Object.values(activities)
-        .filter(item => !keyword || String(item.id).includes(keyword) || String(item.title || "").toLowerCase().includes(keyword))
-        .sort((a, b) => Number(a.id) - Number(b.id));
+      const { allItems, groupItems } = filteredActivityItems();
       renderActivityTabs(allItems);
-      const items = allItems.filter(item => activityStatusGroup(item) === activityGroup);
-      body.innerHTML = items.map(item => {
+      body.innerHTML = groupItems.map(item => {
         const isWatched = watchedIds.has(String(item.id)) || Boolean(item.recordSnapshot);
         const isPrimary = String(item.id) === primaryId;
         return `
           <tr>
             <td>${escapeHtml(item.id)}</td>
             <td>${escapeHtml(activityStatusText(item))}</td>
-            <td class="activity-title-cell" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</td>
-            <td>${escapeHtml(item.activityTime || "未获取")}</td>
+            <td class="activity-title-cell text-left" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</td>
+            <td class="activity-time-cell text-left" title="${escapeHtml(item.activityTime || "未获取")}">${escapeHtml(item.activityTime || "未获取")}</td>
             <td class="local-only"><label class="checkbox-line"><input type="checkbox" data-watch-activity="${escapeHtml(item.id)}" ${isWatched ? "checked" : ""}> 开启</label></td>
             <td class="local-only">${isPrimary ? "<span class=\"positive\">当前默认</span>" : `<button class="button secondary small" data-default-activity="${escapeHtml(item.id)}">默认</button>`}</td>
             <td>${escapeHtml(item.updatedAt || "未刷新")}</td>
@@ -1493,6 +1590,8 @@
       localStorage.setItem(ACTIVITY_GROUP_KEY, group);
       renderActivityManager();
     });
+
+    document.getElementById("enable-group-refresh").addEventListener("click", enableCurrentGroupAutoRefresh);
 
     document.getElementById("add-activity").addEventListener("click", async () => {
       const id = document.getElementById("new-activity-id").value.trim();
