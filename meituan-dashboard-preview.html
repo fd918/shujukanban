@@ -88,11 +88,11 @@
     }
 
     .target-grid[data-tier-count="1"] {
-      grid-template-columns: minmax(300px, 430px);
+      grid-template-columns: minmax(300px, 1fr);
     }
 
     .target-grid[data-tier-count="2"] {
-      grid-template-columns: repeat(2, minmax(300px, 430px));
+      grid-template-columns: repeat(2, minmax(300px, 1fr));
     }
 
     .two-grid {
@@ -1656,11 +1656,12 @@
       const container = document.getElementById("category-tabs");
       if (!container) return;
       const categories = loadCategories();
-      const allCount = items.length;
+      const groupItems = items.filter(item => activityStatusGroup(item) === activityGroup);
+      const allCount = groupItems.length;
       const buttons = [
         `<button class="activity-tab ${activityCategory === "all" ? "active" : ""}" data-activity-category="all">全部 ${allCount}</button>`,
         ...categories.map(category => {
-          const count = items.filter(item => activityMatchesCategory(item, category.id)).length;
+          const count = groupItems.filter(item => activityMatchesCategory(item, category.id)).length;
           return `<button class="activity-tab ${activityCategory === category.id ? "active" : ""}" data-activity-category="${escapeHtml(category.id)}">${escapeHtml(category.name)} ${count}</button>`;
         })
       ];
