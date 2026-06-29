@@ -163,9 +163,10 @@ async function runRefreshExclusive(label, task) {
     console.log(`[${nowText()}] 开始刷新任务：${label}`);
     return task();
   })();
-  refreshInFlight = current.finally(() => {
-    if (refreshInFlight === current) refreshInFlight = null;
+  const guard = current.catch(() => {}).finally(() => {
+    if (refreshInFlight === guard) refreshInFlight = null;
   });
+  refreshInFlight = guard;
   return current;
 }
 
