@@ -149,7 +149,7 @@ function buildTiers(data) {
   const stages = data?.data?.categoryRewardList?.[0]?.activityStages || [];
   return stages.map(stage => {
     const amountThreshold = Number(((stage.finalConsumeOrdersAmount || stage.consumeOrdersAmount || 0) / 100).toFixed(2));
-    const orderThreshold = Number(stage.finalConsumeOrders || stage.consumeOrders || 0);
+    const orderThreshold = Number(stage.finalConsumeOrders || stage.consumeOrders || stage.finalValidOrders || stage.validOrders || 0);
     const rate = Number(((stage.perOrderCommission || 0) / 10000).toFixed(4));
     const perOrderReward = Number(((stage.perOrderReward || 0) / 100).toFixed(2));
     const extraReward = Number(((stage.extraReward || 0) / 100).toFixed(2));

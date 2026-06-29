@@ -8137,7 +8137,7 @@
     "tiers": [],
     "rows": [],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1175": {
     "id": "1175",
@@ -8286,7 +8286,7 @@
     "ruleImage": "./assets/activity-rule-1199.png",
     "recordSnapshot": false,
     "overrides": {},
-    "updatedAt": "2026/6/29 11:45:39",
+    "updatedAt": "2026/6/29 11:53:51",
     "rewardCap": 600000,
     "tiers": [
       {
@@ -8364,9 +8364,9 @@
       [
         "2026-06-13",
         151404,
-        148985,
+        148986,
         4368860.82,
-        4293273.24
+        4293388.24
       ],
       [
         "2026-06-14",
@@ -8427,9 +8427,9 @@
       [
         "2026-06-22",
         127962,
-        127151,
+        127152,
         3397179.74,
-        3368466.61
+        3368484.51
       ],
       [
         "2026-06-23",
@@ -8448,37 +8448,37 @@
       [
         "2026-06-25",
         148510,
-        147363,
+        147364,
         4098265.35,
-        4054146.4
+        4054216.4
       ],
       [
         "2026-06-26",
         155815,
-        154575,
+        154580,
         4372156.44,
-        4320455.22
+        4320556.22
       ],
       [
         "2026-06-27",
         170574,
-        168322,
+        168327,
         4855987.44,
-        4768610.99
+        4768786.08
       ],
       [
         "2026-06-28",
-        178026,
-        174557,
-        5047377.27,
-        4923974.33
+        178024,
+        174614,
+        5047297.46,
+        4925782.75
       ],
       [
         "2026-06-29",
-        48799,
-        23438,
-        1229465.9,
-        624674.24
+        51490,
+        26357,
+        1295241.66,
+        697255.6
       ],
       [
         "2026-06-30",
@@ -9169,13 +9169,141 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 11:45:44",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-1290.png",
+    "updatedAt": "2026/6/29 11:53:48",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 1,
+        "rewardType": "per_order",
+        "perOrderReward": 0.1
+      },
+      {
+        "name": "档2",
+        "metric": "orders",
+        "threshold": 100,
+        "rewardType": "per_order",
+        "perOrderReward": 0.3
+      },
+      {
+        "name": "档3",
+        "metric": "orders",
+        "threshold": 300,
+        "rewardType": "per_order",
+        "perOrderReward": 0.5
+      },
+      {
+        "name": "档4",
+        "metric": "orders",
+        "threshold": 500,
+        "rewardType": "per_order",
+        "perOrderReward": 0.8
+      },
+      {
+        "name": "档5",
+        "metric": "orders",
+        "threshold": 1000,
+        "rewardType": "per_order",
+        "perOrderReward": 1.5
+      },
+      {
+        "name": "档6",
+        "metric": "orders",
+        "threshold": 2500,
+        "rewardType": "per_order",
+        "perOrderReward": 2
+      }
+    ],
+    "rows": [
+      [
+        "2026-06-19",
+        282,
+        276,
+        5689.44,
+        5572.4
+      ],
+      [
+        "2026-06-20",
+        295,
+        289,
+        6191.88,
+        5977.13
+      ],
+      [
+        "2026-06-21",
+        262,
+        247,
+        5262.14,
+        4743.97
+      ],
+      [
+        "2026-06-22",
+        254,
+        245,
+        5716.58,
+        5185.01
+      ],
+      [
+        "2026-06-23",
+        339,
+        329,
+        8758.4,
+        8045.7
+      ],
+      [
+        "2026-06-24",
+        352,
+        341,
+        7956.97,
+        6918.93
+      ],
+      [
+        "2026-06-25",
+        323,
+        310,
+        8288.02,
+        5531.86
+      ],
+      [
+        "2026-06-26",
+        290,
+        275,
+        7620.8,
+        5241.96
+      ],
+      [
+        "2026-06-27",
+        289,
+        278,
+        5537.01,
+        5141.78
+      ],
+      [
+        "2026-06-28",
+        339,
+        313,
+        8076.87,
+        5866.52
+      ],
+      [
+        "2026-06-29",
+        82,
+        56,
+        2067.26,
+        1048.67
+      ],
+      [
+        "2026-06-30",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1291": {
     "id": "1291",
@@ -9286,13 +9414,78 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/6/29 11:45:44",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-1299.png",
+    "updatedAt": "2026/6/29 11:51:32",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "orders",
+        "threshold": 18000,
+        "rewardType": "per_order",
+        "perOrderReward": 0.7
+      }
+    ],
+    "rows": [
+      [
+        "2026-06-23",
+        109910,
+        109003,
+        3073505.22,
+        3049063
+      ],
+      [
+        "2026-06-24",
+        119149,
+        117830,
+        3371294.98,
+        3332694.78
+      ],
+      [
+        "2026-06-25",
+        125386,
+        124258,
+        3568394.83,
+        3536943.97
+      ],
+      [
+        "2026-06-26",
+        130030,
+        128832,
+        3790409.73,
+        3755565.52
+      ],
+      [
+        "2026-06-27",
+        140175,
+        138524,
+        4217681.98,
+        4165124.82
+      ],
+      [
+        "2026-06-28",
+        147286,
+        144559,
+        4409323.61,
+        4321044.49
+      ],
+      [
+        "2026-06-29",
+        41357,
+        21046,
+        1104206.14,
+        570413.71
+      ],
+      [
+        "2026-06-30",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1300": {
     "id": "1300",
@@ -9312,7 +9505,7 @@
     "tiers": [],
     "rows": [],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1301": {
     "id": "1301",
@@ -9332,7 +9525,7 @@
     "tiers": [],
     "rows": [],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1303": {
     "id": "1303",
@@ -9352,7 +9545,7 @@
     "tiers": [],
     "rows": [],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1304": {
     "id": "1304",
@@ -9372,7 +9565,7 @@
     "tiers": [],
     "rows": [],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1307": {
     "id": "1307",
@@ -9432,7 +9625,7 @@
     "tiers": [],
     "rows": [],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1313": {
     "id": "1313",
@@ -9512,7 +9705,7 @@
     "tiers": [],
     "rows": [],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1325": {
     "id": "1325",
