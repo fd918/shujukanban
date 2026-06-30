@@ -878,5 +878,21 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 23,
     "cumulativeRedemptionAmount": 6731
+  },
+  {
+    "activityId": "1171",
+    "title": "暑期早鸟订酒店团购媒体激励-2026年6月",
+    "metric": "amount",
+    "date": "2026-06-30",
+    "hour": 20,
+    "slotMinute": 0,
+    "dateHour": "2026-06-30 20:00",
+    "recordedAt": "2026/6/30 20:04:40",
+    "todayValidOrders": 1,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 480,
+    "todayRedemptionAmount": 0,
+    "cumulativeRedemptionOrders": 23,
+    "cumulativeRedemptionAmount": 6731
   }
 ]
