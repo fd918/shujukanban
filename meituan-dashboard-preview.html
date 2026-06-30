@@ -1367,6 +1367,16 @@
       return wan(value);
     }
 
+    function thresholdText(value, metric = activeMetric()) {
+      if (metric === "orders") return `${Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: 0 })} 单`;
+      const amount = Number(value || 0);
+      const hasCents = Math.round(amount * 100) % 100 !== 0;
+      return `${amount.toLocaleString("zh-CN", {
+        minimumFractionDigits: hasCents ? 2 : 0,
+        maximumFractionDigits: 2
+      })} 元`;
+    }
+
     function rowMetricValue(row, metric = activeMetric()) {
       return metric === "orders" ? (row[2] || 0) : (row[4] || 0);
     }
@@ -1834,7 +1844,7 @@
         return `
           <tr>
             <td>${tier.name}</td>
-            <td>${metricName(tier.metric)}达到 ${metricText(tier.threshold, tier.metric)}</td>
+            <td>${metricName(tier.metric)}达到 ${thresholdText(tier.threshold, tier.metric)}</td>
             <td>${rewardRuleText(tier)}</td>
             <td>${wan(thresholdReward)}</td>
             <td>${wan(projectedReward)}</td>
@@ -1907,7 +1917,7 @@
       }
       return {
         label: "未达档",
-        note: `首档门槛：${metricText(first.threshold, activeMetric(activity))}；激励：${rewardRuleText(first)}。`
+        note: `首档门槛：${thresholdText(first.threshold, activeMetric(activity))}；激励：${rewardRuleText(first)}。`
       };
     }
 
