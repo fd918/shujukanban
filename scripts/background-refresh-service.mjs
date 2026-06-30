@@ -487,7 +487,7 @@ function scheduleNextRun() {
 
 function nextActivityListSyncAt() {
   const now = new Date();
-  const candidates = [9, 21].map(hour => {
+  const candidates = [8, 10, 12, 14, 16, 18, 20, 22].map(hour => {
     const date = new Date(now);
     date.setHours(hour, 0, 0, 0);
     if (date <= now) date.setDate(date.getDate() + 1);
