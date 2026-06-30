@@ -558,5 +558,21 @@
     "todayRedemptionAmount": 0,
     "cumulativeRedemptionOrders": 110,
     "cumulativeRedemptionAmount": 9336.789999999999
+  },
+  {
+    "activityId": "1303",
+    "title": "【美团闪购】6.24-6.30鲜花单单补激励",
+    "metric": "orders",
+    "date": "2026-06-30",
+    "hour": 10,
+    "slotMinute": 0,
+    "dateHour": "2026-06-30 10:00",
+    "recordedAt": "2026/6/30 10:03:36",
+    "todayValidOrders": 3,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 211,
+    "todayRedemptionAmount": 0,
+    "cumulativeRedemptionOrders": 111,
+    "cumulativeRedemptionAmount": 9380.789999999999
   }
 ]
