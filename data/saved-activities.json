@@ -22574,13 +22574,253 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/30 11:51:12",
     "listUpdatedAt": "2026/6/30 11:51:12",
-    "ruleImage": "",
-    "updatedAt": "",
+    "ruleImage": "./assets/activity-rule-1347.png",
+    "updatedAt": "2026/6/30 11:53:53",
     "rewardCap": null,
-    "tiers": [],
-    "rows": [],
+    "tiers": [
+      {
+        "name": "档1",
+        "metric": "amount",
+        "threshold": 120427032,
+        "rewardType": "rate",
+        "rate": 0.002
+      },
+      {
+        "name": "档2",
+        "metric": "amount",
+        "threshold": 131644321,
+        "rewardType": "rate",
+        "rate": 0.004
+      },
+      {
+        "name": "档3",
+        "metric": "amount",
+        "threshold": 142861611,
+        "rewardType": "rate",
+        "rate": 0.005
+      }
+    ],
+    "rows": [
+      [
+        "2026-07-01",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-02",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-03",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-19",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-20",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-21",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-25",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-31",
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
     "overrides": {},
-    "recordSnapshot": false
+    "recordSnapshot": true
   },
   "1352": {
     "id": "1352",
