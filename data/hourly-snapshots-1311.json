@@ -542,5 +542,21 @@
     "todayRedemptionAmount": 14323.33,
     "cumulativeRedemptionOrders": 9487,
     "cumulativeRedemptionAmount": 1407972.4600000002
+  },
+  {
+    "activityId": "1311",
+    "title": "美团联盟代理类媒体拉新玩法考核-2期",
+    "metric": "orders",
+    "date": "2026-06-30",
+    "hour": 9,
+    "slotMinute": 30,
+    "dateHour": "2026-06-30 09:30",
+    "recordedAt": "2026/6/30 09:31:55",
+    "todayValidOrders": 141,
+    "todayRedemptionOrders": 107,
+    "todayActualPayment": 20397.14,
+    "todayRedemptionAmount": 14425.11,
+    "cumulativeRedemptionOrders": 9489,
+    "cumulativeRedemptionAmount": 1408234.2400000002
   }
 ]
