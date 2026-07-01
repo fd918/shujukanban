@@ -30,5 +30,21 @@
     "todayRedemptionAmount": 0,
     "cumulativeRedemptionOrders": 0,
     "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1352",
+    "title": "美食团购GTV返点奖励赛-7.1-7.3",
+    "metric": "amount",
+    "date": "2026-07-01",
+    "hour": 15,
+    "slotMinute": 30,
+    "dateHour": "2026-07-01 15:30",
+    "recordedAt": "2026/7/1 15:38:21",
+    "todayValidOrders": 3,
+    "todayRedemptionOrders": 1,
+    "todayActualPayment": 635.9,
+    "todayRedemptionAmount": 225,
+    "cumulativeRedemptionOrders": 1,
+    "cumulativeRedemptionAmount": 225
   }
 ]
