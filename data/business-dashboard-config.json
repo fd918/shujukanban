@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "minorPct": 15,
+    "minorOrders": 50,
+    "majorPct": 25,
+    "majorOrders": 200,
+    "criticalPct": 40,
+    "criticalOrders": 500,
+    "upPct": 50,
+    "upOrders": 500
+  },
+  "refreshSeconds": 120,
+  "snapshotMinutes": 30,
+  "notification": {
+    "mode": "immediate",
+    "criticalImmediate": true,
+    "enabled": true
+  }
+}
