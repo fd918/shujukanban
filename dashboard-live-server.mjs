@@ -1102,6 +1102,7 @@ async function encryptedPublicUserDetails(dateRange) {
 
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
+  await warmBusinessUserDetails(data.businesses || [], dateRange);
   return {
     ok: true,
     latestDataTime: nowText(),
