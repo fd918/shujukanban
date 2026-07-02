@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "latestDataTime": "2026/7/2 10:54:51",
+  "latestDataTime": "2026/7/2 11:24:46",
   "dateRange": {
     "preset": "today",
     "startDate": "2026-07-02",
@@ -27,8 +27,8 @@
   },
   "source": {
     "publicSnapshot": true,
-    "snapshotCreatedAt": "2026-07-02T02:54:51.593Z",
-    "snapshotCreatedAtText": "2026/7/2 10:54:51",
+    "snapshotCreatedAt": "2026-07-02T03:24:46.413Z",
+    "snapshotCreatedAtText": "2026/7/2 11:24:46",
     "dataSource": "本机服务脱敏公开快照"
   },
   "summary": null,
@@ -38,18 +38,29 @@
       "name": "美团联盟-美团外卖节",
       "businessId": "400",
       "platformBusinessId": "2505",
-      "users": 3055,
-      "currentLabel": "今日",
+      "users": 3056,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 16568,
-      "yesterdayOrders": 121059,
-      "yesterdaySameTimeOrders": 21994,
-      "totalOrders": 6241317,
-      "todayCommission": 4726.82,
-      "yesterdayCommission": 42925.42,
+      "todayOrders": 24810,
+      "yesterdayOrders": 121068,
+      "yesterdaySameTimeOrders": 45098,
+      "totalOrders": 6258474,
+      "todayCommission": 7252.35,
+      "yesterdayCommission": 42925.24,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 427981.2,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 631378.03,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 45098,
+          "commission": 42925.24,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "饿了么",
@@ -57,53 +68,115 @@
       "businessId": "194",
       "platformBusinessId": "2204",
       "users": 9314,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 5109,
-      "yesterdayOrders": 37961,
-      "yesterdaySameTimeOrders": 6662,
-      "totalOrders": 27079758,
-      "todayCommission": 2917.95,
-      "yesterdayCommission": 22663.68,
+      "todayOrders": 8109,
+      "yesterdayOrders": 37958,
+      "yesterdaySameTimeOrders": 13803,
+      "totalOrders": 27085848,
+      "todayCommission": 4677.49,
+      "yesterdayCommission": 22663.65,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 105775.4,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "饿了么",
-      "name": "饿了么(阿里本地生活)",
-      "businessId": "44",
-      "platformBusinessId": "302",
-      "users": 8268,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 4120,
-      "yesterdayOrders": 31123,
-      "yesterdaySameTimeOrders": 5242,
-      "totalOrders": 14994201,
-      "todayCommission": 2156.56,
-      "yesterdayCommission": 15748.73,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 94292.74,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 167185.86,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 13803,
+          "commission": 22663.65,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
       "name": "美团联盟-美团外卖甄选好店",
       "businessId": "432",
       "platformBusinessId": "2535",
-      "users": 1586,
-      "currentLabel": "今日",
+      "users": 1587,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 3930,
-      "yesterdayOrders": 28621,
-      "yesterdaySameTimeOrders": 6087,
-      "totalOrders": 1060397,
-      "todayCommission": 1886.95,
-      "yesterdayCommission": 14318.42,
+      "todayOrders": 6121,
+      "yesterdayOrders": 28623,
+      "yesterdaySameTimeOrders": 11326,
+      "totalOrders": 1065163,
+      "todayCommission": 2906.49,
+      "yesterdayCommission": 14319.03,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 95189.04,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 143359.37,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 11326,
+          "commission": 14319.03,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "饿了么",
+      "name": "饿了么(阿里本地生活)",
+      "businessId": "44",
+      "platformBusinessId": "302",
+      "users": 8269,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 5813,
+      "yesterdayOrders": 31123,
+      "yesterdaySameTimeOrders": 9281,
+      "totalOrders": 14996536,
+      "todayCommission": 3086.49,
+      "yesterdayCommission": 15748.73,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 133905.49,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 9281,
+          "commission": 15748.73,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "京东",
+      "name": "京东外卖",
+      "businessId": "289",
+      "platformBusinessId": "1602",
+      "users": 3476,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 2787,
+      "yesterdayOrders": 12910,
+      "yesterdaySameTimeOrders": 6096,
+      "totalOrders": 7032915,
+      "todayCommission": 329.87,
+      "yesterdayCommission": 1371.31,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 23146.41,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 6096,
+          "commission": 1371.31,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "出行服务",
@@ -111,35 +184,28 @@
       "businessId": "13",
       "platformBusinessId": "603",
       "users": 4604,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 2538,
+      "todayOrders": 2764,
       "yesterdayOrders": 7676,
-      "yesterdaySameTimeOrders": 3005,
-      "totalOrders": 11715238,
-      "todayCommission": 2463.79,
+      "yesterdaySameTimeOrders": 3468,
+      "totalOrders": 11715571,
+      "todayCommission": 2732.6,
       "yesterdayCommission": 9819.05,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 42553.6,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "京东",
-      "name": "京东外卖",
-      "businessId": "289",
-      "platformBusinessId": "1602",
-      "users": 3475,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 1645,
-      "yesterdayOrders": 12911,
-      "yesterdaySameTimeOrders": 3006,
-      "totalOrders": 7030480,
-      "todayCommission": 182.48,
-      "yesterdayCommission": 1371.4,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 13235.28,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 45901.26,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 3468,
+          "commission": 9819.05,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "出行服务",
@@ -147,17 +213,28 @@
       "businessId": "20",
       "platformBusinessId": "605",
       "users": 2616,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 688,
+      "todayOrders": 739,
       "yesterdayOrders": 2304,
-      "yesterdaySameTimeOrders": 812,
-      "totalOrders": 2610839,
-      "todayCommission": 508.03,
+      "yesterdaySameTimeOrders": 938,
+      "totalOrders": 2610931,
+      "todayCommission": 546.39,
       "yesterdayCommission": 1798.98,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 9717.53,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 10452.91,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 938,
+          "commission": 1798.98,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "快递",
@@ -165,17 +242,28 @@
       "businessId": "84",
       "platformBusinessId": "401",
       "users": 1977,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 507,
-      "yesterdayOrders": 2537,
-      "yesterdaySameTimeOrders": 653,
-      "totalOrders": 1847557,
-      "todayCommission": 682.83,
-      "yesterdayCommission": 2880.43,
+      "todayOrders": 604,
+      "yesterdayOrders": 2534,
+      "yesterdaySameTimeOrders": 854,
+      "totalOrders": 1847668,
+      "todayCommission": 787.74,
+      "yesterdayCommission": 2874.42,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 4977.52,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 5944.15,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 854,
+          "commission": 2874.42,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -183,35 +271,28 @@
       "businessId": "111",
       "platformBusinessId": "205",
       "users": 17102,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 434,
-      "yesterdayOrders": 2368,
-      "yesterdaySameTimeOrders": 664,
-      "totalOrders": 94325531,
-      "todayCommission": 614.56,
-      "yesterdayCommission": 2658.88,
+      "todayOrders": 588,
+      "yesterdayOrders": 2369,
+      "yesterdaySameTimeOrders": 1024,
+      "totalOrders": 94325781,
+      "todayCommission": 749.55,
+      "yesterdayCommission": 2658.89,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 5270.64,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "京东",
-      "name": "京东电商",
-      "businessId": "32",
-      "platformBusinessId": "1601",
-      "users": 4799,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 365,
-      "yesterdayOrders": 1691,
-      "yesterdaySameTimeOrders": 956,
-      "totalOrders": 4418434,
-      "todayCommission": 2617.6,
-      "yesterdayCommission": 13001.03,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 462605.84,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 7362.34,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1024,
+          "commission": 2658.89,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -219,17 +300,57 @@
       "businessId": "412",
       "platformBusinessId": "2516",
       "users": 929,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 323,
-      "yesterdayOrders": 2047,
-      "yesterdaySameTimeOrders": 401,
-      "totalOrders": 92227,
-      "todayCommission": 25.41,
-      "yesterdayCommission": 192.66,
+      "todayOrders": 468,
+      "yesterdayOrders": 2046,
+      "yesterdaySameTimeOrders": 796,
+      "totalOrders": 92523,
+      "todayCommission": 41.41,
+      "yesterdayCommission": 192.64,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 8103.67,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 12057.48,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 796,
+          "commission": 192.64,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "京东",
+      "name": "京东电商",
+      "businessId": "32",
+      "platformBusinessId": "1601",
+      "users": 4799,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 401,
+      "yesterdayOrders": 1691,
+      "yesterdaySameTimeOrders": 1245,
+      "totalOrders": 4418473,
+      "todayCommission": 3051.06,
+      "yesterdayCommission": 13001.03,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 523962.76,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1245,
+          "commission": 13001.03,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -237,35 +358,28 @@
       "businessId": "2",
       "platformBusinessId": "202",
       "users": 2804,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 241,
-      "yesterdayOrders": 944,
-      "yesterdaySameTimeOrders": 293,
-      "totalOrders": 2009857,
-      "todayCommission": 2249.28,
-      "yesterdayCommission": 7320.72,
+      "todayOrders": 263,
+      "yesterdayOrders": 943,
+      "yesterdaySameTimeOrders": 375,
+      "totalOrders": 2009872,
+      "todayCommission": 2404.5,
+      "yesterdayCommission": 7314.85,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 74993.03,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "出行服务",
-      "name": "T3出行",
-      "businessId": "86",
-      "platformBusinessId": "617",
-      "users": 776,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 163,
-      "yesterdayOrders": 521,
-      "yesterdaySameTimeOrders": 201,
-      "totalOrders": 1205956,
-      "todayCommission": 108.99,
-      "yesterdayCommission": 339.64,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 2193.79,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 80168.4,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 375,
+          "commission": 7314.85,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "霸王餐",
@@ -273,17 +387,28 @@
       "businessId": "150",
       "platformBusinessId": "505",
       "users": 21,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 113,
+      "todayOrders": 189,
       "yesterdayOrders": 468,
-      "yesterdaySameTimeOrders": 204,
-      "totalOrders": 160272,
-      "todayCommission": 286.6,
-      "yesterdayCommission": 3859.4,
+      "yesterdaySameTimeOrders": 346,
+      "totalOrders": 160446,
+      "todayCommission": 379.6,
+      "yesterdayCommission": 3935.5,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 346,
+          "commission": 3935.5,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "霸王餐",
@@ -291,35 +416,57 @@
       "businessId": "148",
       "platformBusinessId": "504",
       "users": 21,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 113,
+      "todayOrders": 189,
       "yesterdayOrders": 468,
-      "yesterdaySameTimeOrders": 204,
-      "totalOrders": 160562,
-      "todayCommission": 52.73,
-      "yesterdayCommission": 806.53,
+      "yesterdaySameTimeOrders": 346,
+      "totalOrders": 160736,
+      "todayCommission": 78.56,
+      "yesterdayCommission": 828.03,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 2152.15,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 3608.48,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 346,
+          "commission": 828.03,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
-      "platform": "美团",
-      "name": "美团联盟-美团外卖私域拉新会场",
-      "businessId": "403",
-      "platformBusinessId": "2508",
-      "users": 604,
-      "currentLabel": "今日",
+      "platform": "出行服务",
+      "name": "T3出行",
+      "businessId": "86",
+      "platformBusinessId": "617",
+      "users": 776,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 90,
-      "yesterdayOrders": 572,
-      "yesterdaySameTimeOrders": 124,
-      "totalOrders": 26102,
-      "todayCommission": 225,
-      "yesterdayCommission": 1427.87,
+      "todayOrders": 181,
+      "yesterdayOrders": 521,
+      "yesterdaySameTimeOrders": 226,
+      "totalOrders": 1205986,
+      "todayCommission": 118.48,
+      "yesterdayCommission": 339.64,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 2385.36,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 226,
+          "commission": 339.64,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "霸王餐",
@@ -327,17 +474,61 @@
       "businessId": "92",
       "platformBusinessId": "501",
       "users": 912,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 88,
+      "todayOrders": 133,
       "yesterdayOrders": 402,
-      "yesterdaySameTimeOrders": 107,
-      "totalOrders": 567578,
-      "todayCommission": 422.58,
+      "yesterdaySameTimeOrders": 191,
+      "totalOrders": 567647,
+      "todayCommission": 650,
       "yesterdayCommission": 2105.04,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 2009.21,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 2985.28,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 191,
+          "commission": 2105.04,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团外卖私域拉新会场",
+      "businessId": "403",
+      "platformBusinessId": "2508",
+      "users": 604,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 106,
+      "yesterdayOrders": 572,
+      "yesterdaySameTimeOrders": 157,
+      "totalOrders": 26131,
+      "todayCommission": 265,
+      "yesterdayCommission": 1427.87,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "name": "菜鸟快递",
+          "platform": "快递",
+          "orders": 0,
+          "commission": null
+        },
+        "lastWeek": null,
+        "sevenDayAvg": {
+          "orders": 0,
+          "commission": 0
+        },
+        "hasSnapshot": true,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "酒店民宿",
@@ -345,17 +536,28 @@
       "businessId": "67",
       "platformBusinessId": "701",
       "users": 638,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 81,
-      "yesterdayOrders": 249,
-      "yesterdaySameTimeOrders": 59,
-      "totalOrders": 118681,
-      "todayCommission": 1215.43,
+      "todayOrders": 90,
+      "yesterdayOrders": 248,
+      "yesterdaySameTimeOrders": 73,
+      "totalOrders": 118693,
+      "todayCommission": 1462.57,
       "yesterdayCommission": 3532.33,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 20327.31,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 24045.23,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 73,
+          "commission": 3532.33,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -363,35 +565,28 @@
       "businessId": "404",
       "platformBusinessId": "2509",
       "users": 739,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 68,
-      "yesterdayOrders": 541,
-      "yesterdaySameTimeOrders": 87,
-      "totalOrders": 40095,
-      "todayCommission": 134.57,
-      "yesterdayCommission": 910.45,
+      "todayOrders": 82,
+      "yesterdayOrders": 540,
+      "yesterdaySameTimeOrders": 131,
+      "totalOrders": 40120,
+      "todayCommission": 140.71,
+      "yesterdayCommission": 909.85,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 11326.19,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "出行服务",
-      "name": "滴滴顺风车",
-      "businessId": "180",
-      "platformBusinessId": "2101",
-      "users": 1545,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 64,
-      "yesterdayOrders": 295,
-      "yesterdaySameTimeOrders": 172,
-      "totalOrders": 445864,
-      "todayCommission": 75.44,
-      "yesterdayCommission": 389.23,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 1572,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 12343.14,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 131,
+          "commission": 909.85,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -399,17 +594,28 @@
       "businessId": "407",
       "platformBusinessId": "2511",
       "users": 276,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 60,
+      "todayOrders": 69,
       "yesterdayOrders": 258,
-      "yesterdaySameTimeOrders": 79,
-      "totalOrders": 11383,
-      "todayCommission": 1872.72,
+      "yesterdaySameTimeOrders": 92,
+      "totalOrders": 11399,
+      "todayCommission": 2118.26,
       "yesterdayCommission": 7187.31,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 26754.25,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 30263.55,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 92,
+          "commission": 7187.31,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -417,35 +623,57 @@
       "businessId": "416",
       "platformBusinessId": "2520",
       "users": 493,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 57,
+      "todayOrders": 66,
       "yesterdayOrders": 141,
-      "yesterdaySameTimeOrders": 1,
-      "totalOrders": 16152,
-      "todayCommission": 106.77,
+      "yesterdaySameTimeOrders": 2,
+      "totalOrders": 16169,
+      "todayCommission": 123.5,
       "yesterdayCommission": 233.36,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 2134.08,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 2468.25,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 2,
+          "commission": 233.36,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
-      "platform": "美团",
-      "name": "美团联盟-美团闪购-红包天天领",
-      "businessId": "402",
-      "platformBusinessId": "2507",
-      "users": 669,
-      "currentLabel": "今日",
+      "platform": "出行服务",
+      "name": "滴滴顺风车",
+      "businessId": "180",
+      "platformBusinessId": "2101",
+      "users": 1545,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 44,
-      "yesterdayOrders": 285,
-      "yesterdaySameTimeOrders": 64,
-      "totalOrders": 24169,
-      "todayCommission": 58.88,
-      "yesterdayCommission": 367.88,
+      "todayOrders": 65,
+      "yesterdayOrders": 295,
+      "yesterdaySameTimeOrders": 179,
+      "totalOrders": 445865,
+      "todayCommission": 76.22,
+      "yesterdayCommission": 389.23,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 1759.89,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 1603,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 179,
+          "commission": 389.23,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "淘宝",
@@ -453,17 +681,57 @@
       "businessId": "31",
       "platformBusinessId": "1501",
       "users": 1662,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 44,
+      "todayOrders": 50,
       "yesterdayOrders": 434,
-      "yesterdaySameTimeOrders": 108,
-      "totalOrders": 791693,
-      "todayCommission": 428.92,
+      "yesterdaySameTimeOrders": 187,
+      "totalOrders": 791701,
+      "todayCommission": 433.98,
       "yesterdayCommission": 2578.99,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 3805.4,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 4154.84,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 187,
+          "commission": 2578.99,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团闪购-红包天天领",
+      "businessId": "402",
+      "platformBusinessId": "2507",
+      "users": 669,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 48,
+      "yesterdayOrders": 285,
+      "yesterdaySameTimeOrders": 88,
+      "totalOrders": 24180,
+      "todayCommission": 61.71,
+      "yesterdayCommission": 367.88,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 1853.52,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 88,
+          "commission": 367.88,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "酒店民宿",
@@ -471,17 +739,28 @@
       "businessId": "164",
       "platformBusinessId": "707",
       "users": 675,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 31,
-      "yesterdayOrders": 151,
-      "yesterdaySameTimeOrders": 45,
-      "totalOrders": 356604,
-      "todayCommission": 442.12,
-      "yesterdayCommission": 2407.32,
+      "todayOrders": 35,
+      "yesterdayOrders": 150,
+      "yesterdaySameTimeOrders": 56,
+      "totalOrders": 356610,
+      "todayCommission": 465.57,
+      "yesterdayCommission": 2400.47,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 8842.38,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 9311.38,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 56,
+          "commission": 2400.47,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -489,17 +768,28 @@
       "businessId": "414",
       "platformBusinessId": "2518",
       "users": 252,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 28,
+      "todayOrders": 29,
       "yesterdayOrders": 91,
-      "yesterdaySameTimeOrders": 28,
-      "totalOrders": 6059,
+      "yesterdaySameTimeOrders": 34,
+      "totalOrders": 6064,
       "todayCommission": 7.53,
       "yesterdayCommission": 73.07,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 614.66,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 705.44,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 34,
+          "commission": 73.07,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -507,17 +797,28 @@
       "businessId": "427",
       "platformBusinessId": "2531",
       "users": 356,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 26,
+      "todayOrders": 27,
       "yesterdayOrders": 66,
-      "yesterdaySameTimeOrders": 18,
-      "totalOrders": 6097,
-      "todayCommission": 299,
+      "yesterdaySameTimeOrders": 25,
+      "totalOrders": 6101,
+      "todayCommission": 314,
       "yesterdayCommission": 703,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 24982,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 25463,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 25,
+          "commission": 703,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "电影",
@@ -525,53 +826,28 @@
       "businessId": "59",
       "platformBusinessId": "905",
       "users": 1437,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 20,
+      "todayOrders": 23,
       "yesterdayOrders": 80,
-      "yesterdaySameTimeOrders": 14,
-      "totalOrders": 154282,
-      "todayCommission": 88.48,
+      "yesterdaySameTimeOrders": 20,
+      "totalOrders": 154289,
+      "todayCommission": 98.76,
       "yesterdayCommission": 529.49,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 1147.7,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "本地生活",
-      "name": "飞猪景点门票",
-      "businessId": "157",
-      "platformBusinessId": "107",
-      "users": 286,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 19,
-      "yesterdayOrders": 82,
-      "yesterdaySameTimeOrders": 31,
-      "totalOrders": 10760,
-      "todayCommission": 5.41,
-      "yesterdayCommission": 50.54,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 542.9,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "美团",
-      "name": "美团联盟-美团机票-百元特价票",
-      "businessId": "418",
-      "platformBusinessId": "2522",
-      "users": 338,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 17,
-      "yesterdayOrders": 70,
-      "yesterdaySameTimeOrders": 21,
-      "totalOrders": 5371,
-      "todayCommission": 426,
-      "yesterdayCommission": 1173,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 15806,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 1227.5,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 20,
+          "commission": 529.49,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -579,17 +855,86 @@
       "businessId": "146",
       "platformBusinessId": "207",
       "users": 2871,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 15,
+      "todayOrders": 21,
       "yesterdayOrders": 92,
-      "yesterdaySameTimeOrders": 24,
-      "totalOrders": 945619,
-      "todayCommission": 69.76,
+      "yesterdaySameTimeOrders": 41,
+      "totalOrders": 945630,
+      "todayCommission": 94.46,
       "yesterdayCommission": 375.34,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 4650.2,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 5642.9,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 41,
+          "commission": 375.34,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "本地生活",
+      "name": "飞猪景点门票",
+      "businessId": "157",
+      "platformBusinessId": "107",
+      "users": 286,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 20,
+      "yesterdayOrders": 82,
+      "yesterdaySameTimeOrders": 36,
+      "totalOrders": 10762,
+      "todayCommission": 5.41,
+      "yesterdayCommission": 50.54,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 542.91,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 36,
+          "commission": 50.54,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团机票-百元特价票",
+      "businessId": "418",
+      "platformBusinessId": "2522",
+      "users": 338,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 17,
+      "yesterdayOrders": 70,
+      "yesterdaySameTimeOrders": 27,
+      "totalOrders": 5373,
+      "todayCommission": 426,
+      "yesterdayCommission": 1173,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 15806,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 27,
+          "commission": 1173,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "抖音",
@@ -597,35 +942,28 @@
       "businessId": "141",
       "platformBusinessId": "1908",
       "users": 326,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 14,
+      "todayOrders": 16,
       "yesterdayOrders": 39,
-      "yesterdaySameTimeOrders": 6,
-      "totalOrders": 29786,
-      "todayCommission": 114.03,
+      "yesterdaySameTimeOrders": 8,
+      "totalOrders": 29787,
+      "todayCommission": 134.53,
       "yesterdayCommission": 363.64,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 714.52,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "美团",
-      "name": "美团联盟-美团闪购-松鼠便利",
-      "businessId": "415",
-      "platformBusinessId": "2519",
-      "users": 31,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 13,
-      "yesterdayOrders": 17,
-      "yesterdaySameTimeOrders": 6,
-      "totalOrders": 919,
-      "todayCommission": 3.96,
-      "yesterdayCommission": 21.6,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 192.73,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 850.2,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 8,
+          "commission": 363.64,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -633,35 +971,57 @@
       "businessId": "408",
       "platformBusinessId": "2512",
       "users": 30,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 11,
+      "todayOrders": 14,
       "yesterdayOrders": 41,
-      "yesterdaySameTimeOrders": 11,
-      "totalOrders": 1573,
-      "todayCommission": 19.5,
+      "yesterdaySameTimeOrders": 16,
+      "totalOrders": 1580,
+      "todayCommission": 29.19,
       "yesterdayCommission": 93.06,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 835.98,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 1029.92,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 16,
+          "commission": 93.06,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
-      "name": "美团联盟-美团闪购-屈臣氏专场",
-      "businessId": "433",
-      "platformBusinessId": "2536",
-      "users": 25,
-      "currentLabel": "今日",
+      "name": "美团联盟-美团闪购-松鼠便利",
+      "businessId": "415",
+      "platformBusinessId": "2519",
+      "users": 31,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 10,
-      "yesterdayOrders": 68,
-      "yesterdaySameTimeOrders": 5,
-      "totalOrders": 3948,
-      "todayCommission": 39.95,
-      "yesterdayCommission": 237.72,
+      "todayOrders": 13,
+      "yesterdayOrders": 17,
+      "yesterdaySameTimeOrders": 6,
+      "totalOrders": 920,
+      "todayCommission": 3.96,
+      "yesterdayCommission": 21.6,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 1033.47,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 192.73,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 6,
+          "commission": 21.6,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -669,17 +1029,57 @@
       "businessId": "419",
       "platformBusinessId": "2523",
       "users": 375,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 9,
+      "todayOrders": 13,
       "yesterdayOrders": 37,
-      "yesterdaySameTimeOrders": 12,
-      "totalOrders": 2967,
-      "todayCommission": 51.28,
+      "yesterdaySameTimeOrders": 15,
+      "totalOrders": 2974,
+      "todayCommission": 73.5,
       "yesterdayCommission": 183.84,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 691.75,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 1013.85,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 15,
+          "commission": 183.84,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团闪购-屈臣氏专场",
+      "businessId": "433",
+      "platformBusinessId": "2536",
+      "users": 25,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 11,
+      "yesterdayOrders": 68,
+      "yesterdaySameTimeOrders": 8,
+      "totalOrders": 3951,
+      "todayCommission": 39.95,
+      "yesterdayCommission": 237.72,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 1075.16,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 8,
+          "commission": 237.72,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "出行服务",
@@ -687,17 +1087,28 @@
       "businessId": "78",
       "platformBusinessId": "615",
       "users": 344,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 7,
+      "todayOrders": 9,
       "yesterdayOrders": 18,
       "yesterdaySameTimeOrders": 44,
-      "totalOrders": 8033,
+      "totalOrders": 8036,
       "todayCommission": 0,
       "yesterdayCommission": 5.94,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 3052,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 3520,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 44,
+          "commission": 5.94,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "大牌点餐",
@@ -705,17 +1116,28 @@
       "businessId": "60",
       "platformBusinessId": "814",
       "users": 308,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 7,
       "yesterdayOrders": 14,
-      "yesterdaySameTimeOrders": 7,
+      "yesterdaySameTimeOrders": 8,
       "totalOrders": 10221,
       "todayCommission": 4.38,
       "yesterdayCommission": 18.74,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 84,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 8,
+          "commission": 18.74,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "出行服务",
@@ -723,17 +1145,28 @@
       "businessId": "22",
       "platformBusinessId": "607",
       "users": 445,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 6,
       "yesterdayOrders": 18,
-      "yesterdaySameTimeOrders": 19,
+      "yesterdaySameTimeOrders": 21,
       "totalOrders": 26976,
       "todayCommission": 96.97,
       "yesterdayCommission": 146.09,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 251.32,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 21,
+          "commission": 146.09,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -741,17 +1174,28 @@
       "businessId": "423",
       "platformBusinessId": "2527",
       "users": 187,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 6,
       "yesterdayOrders": 3,
-      "yesterdaySameTimeOrders": 0,
+      "yesterdaySameTimeOrders": 1,
       "totalOrders": 2675,
       "todayCommission": 1.49,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 50.6,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 0,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -759,17 +1203,86 @@
       "businessId": "424",
       "platformBusinessId": "2528",
       "users": 42,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
-      "todayOrders": 3,
+      "todayOrders": 5,
       "yesterdayOrders": 20,
       "yesterdaySameTimeOrders": 5,
-      "totalOrders": 1204,
+      "totalOrders": 1208,
       "todayCommission": 0,
       "yesterdayCommission": 1.86,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 45.31,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 111.29,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 5,
+          "commission": 1.86,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "霸王餐",
+      "name": "饿了么官方(自主打款-返现)",
+      "businessId": "151",
+      "platformBusinessId": "507",
+      "users": 18,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 3,
+      "yesterdayOrders": 5,
+      "yesterdaySameTimeOrders": 7,
+      "totalOrders": 4674,
+      "todayCommission": 9,
+      "yesterdayCommission": 43.2,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 7,
+          "commission": 43.2,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "霸王餐",
+      "name": "饿了么官方(自主打款-佣金)",
+      "businessId": "149",
+      "platformBusinessId": "506",
+      "users": 18,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 3,
+      "yesterdayOrders": 5,
+      "yesterdaySameTimeOrders": 7,
+      "totalOrders": 4676,
+      "todayCommission": 1,
+      "yesterdayCommission": 8.8,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 57.38,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 7,
+          "commission": 8.8,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -777,17 +1290,28 @@
       "businessId": "409",
       "platformBusinessId": "2513",
       "users": 523,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 3,
       "yesterdayOrders": 10,
-      "yesterdaySameTimeOrders": 2,
+      "yesterdaySameTimeOrders": 4,
       "totalOrders": 4937,
       "todayCommission": 0.09,
       "yesterdayCommission": 0.26,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 94.86,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 4,
+          "commission": 0.26,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -795,17 +1319,28 @@
       "businessId": "320",
       "platformBusinessId": "2409",
       "users": 354,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 3,
       "yesterdayOrders": 4,
-      "yesterdaySameTimeOrders": 1,
+      "yesterdaySameTimeOrders": 2,
       "totalOrders": 15867,
       "todayCommission": 0,
       "yesterdayCommission": 0.5,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 24.88,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 2,
+          "commission": 0.5,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "拼多多",
@@ -813,7 +1348,7 @@
       "businessId": "33",
       "platformBusinessId": "1701",
       "users": 146,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 3,
       "yesterdayOrders": 2,
@@ -823,7 +1358,18 @@
       "yesterdayCommission": 0.02,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 44.9,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 0.02,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "唯品会",
@@ -831,7 +1377,7 @@
       "businessId": "34",
       "platformBusinessId": "1801",
       "users": 170,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 3,
       "yesterdayOrders": 7,
@@ -841,7 +1387,18 @@
       "yesterdayCommission": 49.45,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 807,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 2,
+          "commission": 49.45,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "大牌点餐",
@@ -849,7 +1406,7 @@
       "businessId": "37",
       "platformBusinessId": "806",
       "users": 220,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 2,
       "yesterdayOrders": 2,
@@ -859,7 +1416,18 @@
       "yesterdayCommission": 1.97,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 24.7,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 1.97,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -867,7 +1435,7 @@
       "businessId": "417",
       "platformBusinessId": "2521",
       "users": 12,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 2,
       "yesterdayOrders": 11,
@@ -877,7 +1445,18 @@
       "yesterdayCommission": 19.33,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 42.3,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 5,
+          "commission": 19.33,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -885,17 +1464,57 @@
       "businessId": "405",
       "platformBusinessId": "2510",
       "users": 18,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 2,
       "yesterdayOrders": 8,
-      "yesterdaySameTimeOrders": 2,
+      "yesterdaySameTimeOrders": 3,
       "totalOrders": 448,
       "todayCommission": 7.23,
       "yesterdayCommission": 13.62,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 556,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 3,
+          "commission": 13.62,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团闪购-万物免单会场",
+      "businessId": "420",
+      "platformBusinessId": "2524",
+      "users": 44,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 2,
+      "yesterdayOrders": 8,
+      "yesterdaySameTimeOrders": 1,
+      "totalOrders": 1866,
+      "todayCommission": 1.81,
+      "yesterdayCommission": 3.73,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 60.57,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 3.73,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "霸王餐",
@@ -903,53 +1522,28 @@
       "businessId": "137",
       "platformBusinessId": "503",
       "users": 317,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 7,
-      "yesterdaySameTimeOrders": 1,
+      "yesterdaySameTimeOrders": 2,
       "totalOrders": 27048,
       "todayCommission": 10,
       "yesterdayCommission": 46.87,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 29.28,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "霸王餐",
-      "name": "饿了么官方(自主打款-返现)",
-      "businessId": "151",
-      "platformBusinessId": "507",
-      "users": 18,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 1,
-      "yesterdayOrders": 5,
-      "yesterdaySameTimeOrders": 4,
-      "totalOrders": 4671,
-      "todayCommission": 0,
-      "yesterdayCommission": 43.2,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "霸王餐",
-      "name": "饿了么官方(自主打款-佣金)",
-      "businessId": "149",
-      "platformBusinessId": "506",
-      "users": 18,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 1,
-      "yesterdayOrders": 5,
-      "yesterdaySameTimeOrders": 4,
-      "totalOrders": 4674,
-      "todayCommission": 0,
-      "yesterdayCommission": 8.8,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 23.9,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 2,
+          "commission": 46.87,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "出行服务",
@@ -957,7 +1551,7 @@
       "businessId": "58",
       "platformBusinessId": "610",
       "users": 270,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 1,
@@ -967,43 +1561,43 @@
       "yesterdayCommission": 0.29,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 21.65,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "出行服务",
-      "name": "同程打车",
-      "businessId": "58",
-      "platformBusinessId": "610",
-      "users": 270,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 1,
-      "yesterdayOrders": 1,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 19168,
-      "todayCommission": 10,
-      "yesterdayCommission": 0.29,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 21.65,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 0.29,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "大牌点餐",
       "name": "肯德基（渠道1）",
       "businessId": "9",
       "platformBusinessId": "801",
-      "users": 1,
-      "currentLabel": "今日",
+      "users": 326,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 1,
+      "totalOrders": 10332,
       "todayCommission": 0.41,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 11.9,
-      "source": "中台业务数据总览"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1011,7 +1605,7 @@
       "businessId": "61",
       "platformBusinessId": "815",
       "users": 239,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 2,
@@ -1021,7 +1615,18 @@
       "yesterdayCommission": 2.43,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 12.5,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 2,
+          "commission": 2.43,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1029,7 +1634,7 @@
       "businessId": "42",
       "platformBusinessId": "811",
       "users": 69,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 0,
@@ -1039,43 +1644,72 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 20.5,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
-      "platform": "大牌点餐",
-      "name": "星巴克",
-      "businessId": "42",
-      "platformBusinessId": "811",
-      "users": 69,
-      "currentLabel": "今日",
+      "platform": "电影",
+      "name": "电影（活动1）",
+      "businessId": "7",
+      "platformBusinessId": "901",
+      "users": 670,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
-      "yesterdayOrders": 0,
+      "yesterdayOrders": 7,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 246,
-      "todayCommission": 0.93,
-      "yesterdayCommission": 0,
+      "totalOrders": 63031,
+      "todayCommission": 0,
+      "yesterdayCommission": 52.56,
       "yesterdaySameTimeCommission": 0,
-      "todayAmount": 20.5,
-      "source": "中台业务列表 + 业务统计"
+      "todayAmount": 45.8,
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 7,
+          "commission": 52.56,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "活动奖励",
       "name": "邀请裂变活动",
       "businessId": "184",
       "platformBusinessId": "2104",
-      "users": 1,
-      "currentLabel": "今日",
+      "users": 1563,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 1,
       "yesterdaySameTimeOrders": 1,
-      "totalOrders": 1,
+      "totalOrders": 103060,
       "todayCommission": 0.04,
       "yesterdayCommission": 0.09,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务数据总览"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 0.09,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -1083,7 +1717,7 @@
       "businessId": "426",
       "platformBusinessId": "2530",
       "users": 10,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 4,
@@ -1093,25 +1727,18 @@
       "yesterdayCommission": 16.13,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 557,
-      "source": "中台业务列表 + 业务统计"
-    },
-    {
-      "platform": "美团",
-      "name": "美团联盟-美团闪购-万物免单会场",
-      "businessId": "420",
-      "platformBusinessId": "2524",
-      "users": 44,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 1,
-      "yesterdayOrders": 8,
-      "yesterdaySameTimeOrders": 1,
-      "totalOrders": 1863,
-      "todayCommission": 0.57,
-      "yesterdayCommission": 3.73,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 19.07,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 16.13,
+          "source": "中台昨日同时刻趋势"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "运营商业务",
@@ -1119,7 +1746,7 @@
       "businessId": "132",
       "platformBusinessId": "1405",
       "users": 984,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 1,
       "yesterdayOrders": 1,
@@ -1129,15 +1756,26 @@
       "yesterdayCommission": 125,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表 + 业务统计"
+      "source": "中台业务列表 + 业务统计",
+      "sameTime": {
+        "yesterday": {
+          "orders": 1,
+          "commission": 125,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "霸王餐",
-      "name": "霸王餐-美团官方(自主打款)",
-      "businessId": "318",
-      "platformBusinessId": "2407",
-      "users": 8,
-      "currentLabel": "今日",
+      "name": "霸王餐-饿了么官方(自主打款)",
+      "businessId": "319",
+      "platformBusinessId": "2408",
+      "users": 7,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1147,7 +1785,89 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "霸王餐",
+      "name": "霸王餐-美团官方(自主打款)",
+      "businessId": "318",
+      "platformBusinessId": "2407",
+      "users": 8,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 0,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "霸王餐",
+      "name": "霸王餐-美团官方(自主打款)",
+      "businessId": "318",
+      "platformBusinessId": "2407",
+      "users": 8,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 0,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "霸王餐",
+      "name": "霸王餐-美团官方(自主打款)",
+      "businessId": "318",
+      "platformBusinessId": "2407",
+      "users": 8,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 0,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "霸王餐",
@@ -1155,7 +1875,7 @@
       "businessId": "128",
       "platformBusinessId": "502",
       "users": 321,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1165,25 +1885,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "霸王餐",
-      "name": "霸王餐(三方)",
-      "businessId": "128",
-      "platformBusinessId": "502",
-      "users": 321,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 74692,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
@@ -1191,7 +1900,7 @@
       "businessId": "158",
       "platformBusinessId": "108",
       "users": 71,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1201,7 +1910,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
@@ -1209,7 +1925,7 @@
       "businessId": "159",
       "platformBusinessId": "109",
       "users": 44,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1219,25 +1935,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "本地生活",
-      "name": "飞猪租车",
-      "businessId": "159",
-      "platformBusinessId": "109",
-      "users": 44,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 879,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
@@ -1245,7 +1950,7 @@
       "businessId": "186",
       "platformBusinessId": "113",
       "users": 74,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1255,43 +1960,64 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
-      "name": "话费充值",
-      "businessId": "186",
-      "platformBusinessId": "113",
-      "users": 74,
-      "currentLabel": "今日",
+      "name": "奖励订单",
+      "businessId": "71",
+      "platformBusinessId": "103",
+      "users": 1389,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 264,
+      "totalOrders": 1389,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
-      "name": "快手（活动2）",
-      "businessId": "439",
-      "platformBusinessId": "2542",
-      "users": 1,
-      "currentLabel": "今日",
+      "name": "奖励订单",
+      "businessId": "71",
+      "platformBusinessId": "103",
+      "users": 1389,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 48,
+      "totalOrders": 1389,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
@@ -1299,7 +2025,7 @@
       "businessId": "328",
       "platformBusinessId": "2503",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 6,
@@ -1309,7 +2035,18 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 6,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "本地生活",
@@ -1317,7 +2054,7 @@
       "businessId": "328",
       "platformBusinessId": "2503",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 6,
@@ -1327,79 +2064,68 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 6,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "本地生活",
-      "name": "旅游门票",
-      "businessId": "328",
-      "platformBusinessId": "2503",
-      "users": 1,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 6,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 10,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "本地生活",
-      "name": "奶多多话费兑换购物券",
-      "businessId": "228",
-      "platformBusinessId": "114",
-      "users": 4,
-      "currentLabel": "今日",
+      "name": "淘宝1分购",
+      "businessId": "181",
+      "platformBusinessId": "111",
+      "users": 86,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 11,
+      "totalOrders": 341,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
-      "name": "松鼠便利小程序",
-      "businessId": "326",
-      "platformBusinessId": "2501",
-      "users": 18,
-      "currentLabel": "今日",
+      "name": "淘宝1分购",
+      "businessId": "181",
+      "platformBusinessId": "111",
+      "users": 86,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 176,
+      "totalOrders": 341,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "本地生活",
-      "name": "松鼠便利小程序",
-      "businessId": "326",
-      "platformBusinessId": "2501",
-      "users": 18,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 176,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
@@ -1407,7 +2133,7 @@
       "businessId": "182",
       "platformBusinessId": "112",
       "users": 21,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1417,7 +2143,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "本地生活",
+      "name": "闲鱼1分购",
+      "businessId": "182",
+      "platformBusinessId": "112",
+      "users": 21,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 471,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
@@ -1425,7 +2183,7 @@
       "businessId": "198",
       "platformBusinessId": "2207",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1435,25 +2193,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "本地生活",
-      "name": "闲鱼一分购（活动2）",
-      "businessId": "198",
-      "platformBusinessId": "2207",
-      "users": 1,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 1,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "本地生活",
@@ -1461,7 +2208,7 @@
       "businessId": "201",
       "platformBusinessId": "2210",
       "users": 39,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1471,7 +2218,64 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "本地生活",
+      "name": "小红书拉新",
+      "businessId": "201",
+      "platformBusinessId": "2210",
+      "users": 39,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 165,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "本地生活",
+      "name": "新支付宝碰一碰",
+      "businessId": "307",
+      "platformBusinessId": "2319",
+      "users": 108,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 4668,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "出行服务",
@@ -1479,7 +2283,7 @@
       "businessId": "171",
       "platformBusinessId": "2003",
       "users": 107,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1489,25 +2293,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "出行服务",
-      "name": "滴滴火车票",
-      "businessId": "171",
-      "platformBusinessId": "2003",
-      "users": 107,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 4639,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "出行服务",
@@ -1515,7 +2308,7 @@
       "businessId": "14",
       "platformBusinessId": "604",
       "users": 6,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1525,25 +2318,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "出行服务",
-      "name": "滴滴学生认证",
-      "businessId": "127",
-      "platformBusinessId": "621",
-      "users": 36,
-      "currentLabel": "今日",
+      "name": "滴滴洗车",
+      "businessId": "88",
+      "platformBusinessId": "618",
+      "users": 1,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 16676,
+      "totalOrders": 1,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "出行服务",
@@ -1551,7 +2358,7 @@
       "businessId": "72",
       "platformBusinessId": "611",
       "users": 276,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1561,7 +2368,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "出行服务",
+      "name": "飞猪火车票",
+      "businessId": "72",
+      "platformBusinessId": "611",
+      "users": 276,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 13467,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "出行服务",
@@ -1569,7 +2408,7 @@
       "businessId": "90",
       "platformBusinessId": "619",
       "users": 217,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1579,25 +2418,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "出行服务",
-      "name": "高德打车2",
-      "businessId": "77",
-      "platformBusinessId": "614",
-      "users": 87,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 2881,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "出行服务",
@@ -1605,7 +2433,7 @@
       "businessId": "197",
       "platformBusinessId": "2206",
       "users": 90,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1615,43 +2443,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
-      "platform": "出行服务",
-      "name": "哈啰顺风车",
-      "businessId": "99",
-      "platformBusinessId": "620",
-      "users": 80,
-      "currentLabel": "今日",
+      "platform": "大牌点餐",
+      "name": "必胜客",
+      "businessId": "48",
+      "platformBusinessId": "812",
+      "users": 11,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 4843,
+      "totalOrders": 13,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "出行服务",
-      "name": "哈啰顺风车",
-      "businessId": "99",
-      "platformBusinessId": "620",
-      "users": 80,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 4843,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1659,7 +2483,7 @@
       "businessId": "102",
       "platformBusinessId": "821",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1669,7 +2493,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1677,7 +2508,7 @@
       "businessId": "138",
       "platformBusinessId": "823",
       "users": 96,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 4,
@@ -1687,7 +2518,47 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 4,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "大牌点餐",
+      "name": "大牌点餐（活动2）",
+      "businessId": "138",
+      "platformBusinessId": "823",
+      "users": 96,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 4,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 1024,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 4,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1695,7 +2566,7 @@
       "businessId": "100",
       "platformBusinessId": "820",
       "users": 10,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1705,7 +2576,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "大牌点餐",
+      "name": "汉堡王",
+      "businessId": "39",
+      "platformBusinessId": "808",
+      "users": 12,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 23,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1713,7 +2616,7 @@
       "businessId": "24",
       "platformBusinessId": "802",
       "users": 21,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1723,25 +2626,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "大牌点餐",
-      "name": "肯德基（渠道2）",
-      "businessId": "24",
-      "platformBusinessId": "802",
-      "users": 21,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 71,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1749,7 +2641,7 @@
       "businessId": "53",
       "platformBusinessId": "813",
       "users": 46,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1759,7 +2651,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "大牌点餐",
+      "name": "肯德基（渠道3）",
+      "businessId": "53",
+      "platformBusinessId": "813",
+      "users": 46,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 374,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1767,7 +2691,7 @@
       "businessId": "64",
       "platformBusinessId": "818",
       "users": 153,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1777,7 +2701,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1785,7 +2716,7 @@
       "businessId": "64",
       "platformBusinessId": "818",
       "users": 153,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1795,25 +2726,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "大牌点餐",
-      "name": "瑞幸咖啡",
-      "businessId": "40",
-      "platformBusinessId": "809",
-      "users": 42,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 153,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1821,7 +2741,7 @@
       "businessId": "65",
       "platformBusinessId": "819",
       "users": 48,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1831,7 +2751,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1839,7 +2766,7 @@
       "businessId": "35",
       "platformBusinessId": "804",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1849,25 +2776,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "大牌点餐",
-      "name": "喜茶外卖",
-      "businessId": "35",
-      "platformBusinessId": "804",
-      "users": 1,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 1,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1875,7 +2791,7 @@
       "businessId": "41",
       "platformBusinessId": "810",
       "users": 32,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1885,7 +2801,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "大牌点餐",
@@ -1893,7 +2816,7 @@
       "businessId": "62",
       "platformBusinessId": "816",
       "users": 108,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1903,43 +2826,64 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
-      "platform": "大牌点餐",
-      "name": "星巴克（活动2）",
-      "businessId": "62",
-      "platformBusinessId": "816",
-      "users": 108,
-      "currentLabel": "今日",
+      "platform": "电影",
+      "name": "电影(活动3)",
+      "businessId": "131",
+      "platformBusinessId": "907",
+      "users": 8,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 674,
+      "totalOrders": 27,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
-      "platform": "大牌点餐",
-      "name": "星巴克（活动2）",
-      "businessId": "62",
-      "platformBusinessId": "816",
-      "users": 108,
-      "currentLabel": "今日",
+      "platform": "电影",
+      "name": "电影票",
+      "businessId": "50",
+      "platformBusinessId": "904",
+      "users": 17,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 674,
+      "totalOrders": 131,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "电影",
@@ -1947,7 +2891,7 @@
       "businessId": "315",
       "platformBusinessId": "2401",
       "users": 113,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 4,
@@ -1957,25 +2901,76 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 4,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "电影",
-      "name": "淘票票",
-      "businessId": "16",
-      "platformBusinessId": "903",
-      "users": 812,
-      "currentLabel": "今日",
+      "name": "电影票（活动4）",
+      "businessId": "315",
+      "platformBusinessId": "2401",
+      "users": 113,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
-      "yesterdayOrders": 0,
+      "yesterdayOrders": 4,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 12733,
+      "totalOrders": 935,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 4,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "电影",
+      "name": "电影票（活动4）",
+      "businessId": "315",
+      "platformBusinessId": "2401",
+      "users": 113,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 4,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 935,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 4,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "电影",
@@ -1983,7 +2978,7 @@
       "businessId": "183",
       "platformBusinessId": "2102",
       "users": 1295,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -1993,7 +2988,64 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "电影",
+      "name": "淘票票-券包",
+      "businessId": "183",
+      "platformBusinessId": "2102",
+      "users": 1295,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 21961,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "抖音",
+      "name": "抖音-拉新",
+      "businessId": "325",
+      "platformBusinessId": "2413",
+      "users": 2,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 28,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "抖音",
@@ -2001,7 +3053,7 @@
       "businessId": "133",
       "platformBusinessId": "1907",
       "users": 264,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2011,61 +3063,97 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
-      "platform": "饿了么",
-      "name": "闪购特定活动",
-      "businessId": "440",
-      "platformBusinessId": "2543",
-      "users": 15,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 61,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 1955,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "饿了么",
-      "name": "闪购特定活动",
-      "businessId": "440",
-      "platformBusinessId": "2543",
-      "users": 15,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 61,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 1955,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "饿了么",
-      "name": "社群限量福利",
-      "businessId": "81",
-      "platformBusinessId": "2403",
-      "users": 48,
-      "currentLabel": "今日",
+      "platform": "抖音",
+      "name": "抖音（活动1）",
+      "businessId": "133",
+      "platformBusinessId": "1907",
+      "users": 264,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 321,
+      "totalOrders": 164224,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "饿了么",
+      "name": "闪购特定活动",
+      "businessId": "440",
+      "platformBusinessId": "2543",
+      "users": 15,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 120,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 2014,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 120,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
+    },
+    {
+      "platform": "饿了么",
+      "name": "闪购特定活动",
+      "businessId": "440",
+      "platformBusinessId": "2543",
+      "users": 15,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 120,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 2014,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 120,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "活动奖励",
@@ -2073,7 +3161,7 @@
       "businessId": "267",
       "platformBusinessId": "2282",
       "users": 45,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2083,7 +3171,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "活动奖励",
@@ -2091,7 +3186,7 @@
       "businessId": "267",
       "platformBusinessId": "2282",
       "users": 45,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2101,7 +3196,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "京东",
@@ -2109,7 +3211,7 @@
       "businessId": "324",
       "platformBusinessId": "2412",
       "users": 59,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2119,43 +3221,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
-      "platform": "快递",
-      "name": "菜鸟快递",
-      "businessId": "134",
-      "platformBusinessId": "403",
-      "users": 33,
-      "currentLabel": "今日",
+      "platform": "京东",
+      "name": "京东快递券",
+      "businessId": "324",
+      "platformBusinessId": "2412",
+      "users": 59,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 12342,
+      "totalOrders": 720,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "快递",
-      "name": "菜鸟快递",
-      "businessId": "134",
-      "platformBusinessId": "403",
-      "users": 33,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 12342,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "快递",
@@ -2163,7 +3261,7 @@
       "businessId": "196",
       "platformBusinessId": "2205",
       "users": 88,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2173,7 +3271,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "快递",
@@ -2181,7 +3286,7 @@
       "businessId": "196",
       "platformBusinessId": "2205",
       "users": 88,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2191,61 +3296,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
-      "platform": "美团",
-      "name": "美团-境外酒店",
-      "businessId": "316",
-      "platformBusinessId": "2404",
-      "users": 16,
-      "currentLabel": "今日",
+      "platform": "快递",
+      "name": "菜鸟快递（活动2）",
+      "businessId": "196",
+      "platformBusinessId": "2205",
+      "users": 88,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 81,
+      "totalOrders": 69502,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "美团-境外酒店",
-      "businessId": "316",
-      "platformBusinessId": "208",
-      "users": 16,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 81,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "美团-境外酒店",
-      "businessId": "316",
-      "platformBusinessId": "2404",
-      "users": 16,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 81,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2253,7 +3336,7 @@
       "businessId": "316",
       "platformBusinessId": "208",
       "users": 16,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2263,7 +3346,64 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团-境外酒店",
+      "businessId": "316",
+      "platformBusinessId": "2404",
+      "users": 16,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 81,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团-境外酒店",
+      "businessId": "316",
+      "platformBusinessId": "208",
+      "users": 16,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 81,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2271,7 +3411,7 @@
       "businessId": "321",
       "platformBusinessId": "2410",
       "users": 522,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 5514,
@@ -2281,7 +3421,18 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 5514,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -2289,7 +3440,7 @@
       "businessId": "322",
       "platformBusinessId": "2411",
       "users": 261,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 816,
@@ -2299,7 +3450,18 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 816,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -2307,7 +3469,7 @@
       "businessId": "57",
       "platformBusinessId": "203",
       "users": 3002,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 8874,
@@ -2317,25 +3479,84 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 8874,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
-      "name": "美团-赏金（外卖商家）",
-      "businessId": "57",
-      "platformBusinessId": "203",
-      "users": 3002,
-      "currentLabel": "今日",
+      "name": "美团-随心学",
+      "businessId": "205",
+      "platformBusinessId": "2211",
+      "users": 12,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
-      "yesterdayOrders": 8874,
+      "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 1456008,
+      "totalOrders": 13,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "name": "美团联盟-到家",
+          "platform": "美团",
+          "orders": 4066,
+          "commission": null
+        },
+        "lastWeek": null,
+        "sevenDayAvg": {
+          "orders": 4066,
+          "commission": 0
+        },
+        "hasSnapshot": true,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团-随心学",
+      "businessId": "205",
+      "platformBusinessId": "2211",
+      "users": 12,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 13,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "name": "美团联盟-到家",
+          "platform": "美团",
+          "orders": 4066,
+          "commission": null
+        },
+        "lastWeek": null,
+        "sevenDayAvg": {
+          "orders": 4066,
+          "commission": 0
+        },
+        "hasSnapshot": true,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2343,7 +3564,7 @@
       "businessId": "1",
       "platformBusinessId": "201",
       "users": 8,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2353,7 +3574,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2361,7 +3589,7 @@
       "businessId": "1",
       "platformBusinessId": "201",
       "users": 8,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2371,25 +3599,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
-      "name": "美团机票",
-      "businessId": "187",
-      "platformBusinessId": "2201",
-      "users": 613,
-      "currentLabel": "今日",
+      "name": "美团联盟-美团-达喜专场",
+      "businessId": "435",
+      "platformBusinessId": "2538",
+      "users": 1,
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
       "yesterdaySameTimeOrders": 0,
-      "totalOrders": 5783,
+      "totalOrders": 2,
       "todayCommission": 0,
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2397,7 +3639,7 @@
       "businessId": "438",
       "platformBusinessId": "2541",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2407,7 +3649,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2415,7 +3664,7 @@
       "businessId": "410",
       "platformBusinessId": "2514",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2425,7 +3674,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团-酒店华住通兑",
+      "businessId": "413",
+      "platformBusinessId": "2517",
+      "users": 6,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 36,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2433,7 +3714,7 @@
       "businessId": "436",
       "platformBusinessId": "2539",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2443,7 +3724,64 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团-买药甲流专场",
+      "businessId": "436",
+      "platformBusinessId": "2539",
+      "users": 1,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 2,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团-买药甲流专场",
+      "businessId": "436",
+      "platformBusinessId": "2539",
+      "users": 1,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 2,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2451,7 +3789,7 @@
       "businessId": "401",
       "platformBusinessId": "2506",
       "users": 2,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2461,7 +3799,105 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "name": "快递CPS",
+          "platform": "快递",
+          "orders": 4370,
+          "commission": null
+        },
+        "lastWeek": null,
+        "sevenDayAvg": {
+          "orders": 4370,
+          "commission": 0
+        },
+        "hasSnapshot": true,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团-门票",
+      "businessId": "401",
+      "platformBusinessId": "2506",
+      "users": 2,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 0,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "name": "快递CPS",
+          "platform": "快递",
+          "orders": 4370,
+          "commission": null
+        },
+        "lastWeek": null,
+        "sevenDayAvg": {
+          "orders": 4370,
+          "commission": 0
+        },
+        "hasSnapshot": true,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团-五一出游",
+      "businessId": "429",
+      "platformBusinessId": "2533",
+      "users": 1,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 0,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "美团",
+      "name": "美团联盟-美团-五一出游",
+      "businessId": "429",
+      "platformBusinessId": "2533",
+      "users": 1,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 0,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2469,7 +3905,7 @@
       "businessId": "411",
       "platformBusinessId": "2515",
       "users": 1,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2479,7 +3915,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2487,7 +3930,7 @@
       "businessId": "434",
       "platformBusinessId": "2537",
       "users": 12,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2497,7 +3940,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2505,7 +3955,7 @@
       "businessId": "434",
       "platformBusinessId": "2537",
       "users": 12,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2515,25 +3965,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "美团联盟-美团闪购-大牌联合专场",
-      "businessId": "434",
-      "platformBusinessId": "2537",
-      "users": 12,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 58,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2541,7 +3980,7 @@
       "businessId": "425",
       "platformBusinessId": "2529",
       "users": 10,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2551,43 +3990,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "美团联盟-美团闪购-官方旗舰店专场",
-      "businessId": "425",
-      "platformBusinessId": "2529",
-      "users": 10,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 44,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "美团联盟-美团闪购-官方旗舰店专场",
-      "businessId": "425",
-      "platformBusinessId": "2529",
-      "users": 10,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 44,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2595,7 +4005,7 @@
       "businessId": "421",
       "platformBusinessId": "2525",
       "users": 9,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 2,
@@ -2605,25 +4015,18 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "美团联盟-美团闪购-歪马送酒专场",
-      "businessId": "421",
-      "platformBusinessId": "2525",
-      "users": 9,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 2,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 22,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": {
+          "orders": 2,
+          "commission": 0,
+          "source": "中台前一日全日"
+        },
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": true
+      }
     },
     {
       "platform": "美团",
@@ -2631,7 +4034,7 @@
       "businessId": "143",
       "platformBusinessId": "2402",
       "users": 19,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2641,7 +4044,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2649,7 +4059,7 @@
       "businessId": "156",
       "platformBusinessId": "2002",
       "users": 4,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2659,7 +4069,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "美团",
@@ -2667,7 +4084,7 @@
       "businessId": "191",
       "platformBusinessId": "2202",
       "users": 1165,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2677,43 +4094,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "赏金联盟(商家返现)",
-      "businessId": "191",
-      "platformBusinessId": "2202",
-      "users": 1165,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 92098,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "美团",
-      "name": "赏金联盟(商家返现)",
-      "businessId": "191",
-      "platformBusinessId": "2202",
-      "users": 1165,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 92098,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "淘宝",
@@ -2721,7 +4109,7 @@
       "businessId": "199",
       "platformBusinessId": "2208",
       "users": 126,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2731,61 +4119,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "同城优惠",
-      "name": "同城优惠",
-      "businessId": "45",
-      "platformBusinessId": "2001",
-      "users": 1,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 0,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "未知平台",
-      "name": "美团-随心学",
-      "businessId": "205",
-      "platformBusinessId": "2219",
-      "users": 12,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 13,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "未知平台",
-      "name": "美团-随心学",
-      "businessId": "205",
-      "platformBusinessId": "2219",
-      "users": 12,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 13,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "运营商业务",
@@ -2793,7 +4134,7 @@
       "businessId": "56",
       "platformBusinessId": "1401",
       "users": 629,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2803,25 +4144,14 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
-    },
-    {
-      "platform": "运营商业务",
-      "name": "运营商业务（活动2）",
-      "businessId": "68",
-      "platformBusinessId": "1402",
-      "users": 41,
-      "currentLabel": "今日",
-      "currentDateKey": "2026-07-02",
-      "todayOrders": 0,
-      "yesterdayOrders": 0,
-      "yesterdaySameTimeOrders": 0,
-      "totalOrders": 20,
-      "todayCommission": 0,
-      "yesterdayCommission": 0,
-      "yesterdaySameTimeCommission": 0,
-      "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     },
     {
       "platform": "CPA",
@@ -2829,7 +4159,7 @@
       "businessId": "119",
       "platformBusinessId": "1304",
       "users": 3,
-      "currentLabel": "今日",
+      "currentLabel": "2026-07-02",
       "currentDateKey": "2026-07-02",
       "todayOrders": 0,
       "yesterdayOrders": 0,
@@ -2839,7 +4169,39 @@
       "yesterdayCommission": 0,
       "yesterdaySameTimeCommission": 0,
       "todayAmount": 0,
-      "source": "中台业务列表"
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
+    },
+    {
+      "platform": "CPA",
+      "name": "美团私域CPA",
+      "businessId": "119",
+      "platformBusinessId": "1304",
+      "users": 3,
+      "currentLabel": "2026-07-02",
+      "currentDateKey": "2026-07-02",
+      "todayOrders": 0,
+      "yesterdayOrders": 0,
+      "yesterdaySameTimeOrders": 0,
+      "totalOrders": 0,
+      "todayCommission": 0,
+      "yesterdayCommission": 0,
+      "yesterdaySameTimeCommission": 0,
+      "todayAmount": 0,
+      "source": "中台业务列表",
+      "sameTime": {
+        "yesterday": null,
+        "lastWeek": null,
+        "sevenDayAvg": null,
+        "hasSnapshot": false,
+        "hasApiBaseline": false
+      }
     }
   ],
   "users": []

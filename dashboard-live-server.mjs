@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "node:crypto";
+import { createHash, createHmac, createCipheriv, pbkdf2Sync, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { readFile, writeFile, mkdir, appendFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -15,11 +15,12 @@ const SNAPSHOT_PATH = join(ROOT, "data/business-dashboard-snapshots.jsonl");
 const DASHBOARD_CACHE_PATH = join(ROOT, "data/business-dashboard-cache.json");
 const USER_PHONE_INDEX_PATH = join(ROOT, "data/user-phone-index.json");
 const USER_DETAIL_CACHE_PATH = join(ROOT, "data/business-user-detail-cache.json");
-const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.json");
+const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.json");
 const USER_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.username";
 const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
 const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook";
 const FEISHU_SECRET_SERVICE = "com.tanwenjie.business-dashboard.feishu.secret";
+const PUBLIC_PASSWORD_SERVICE = "com.tanwenjie.business-dashboard.public.password";
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
@@ -1079,18 +1080,32 @@ async function runCommand(command, args) {
   return `${stdout || ""}${stderr || ""}`.trim();
 }
 
-function publicBusiness(row) {
-  const copy = { ...row };
-  delete copy.userIds;
-  delete copy.userSearchText;
-  return copy;
+async function encryptedPublicUserDetails(dateRange) {
+  const snapshots = await readSnapshots();
+  const details = {};
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    try {
+      const key = JSON.parse(cacheKey);
+      if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
+      const rows = enrichWithSnapshots(payload.rows || [], snapshots, "users", dateRange);
+      details[String(key.businessId)] = {
+        latestDataTime: nowText(),
+        total: payload.total || rows.length,
+        rows
+      };
+    } catch {
+      // Ignore old cache keys that are not JSON.
+    }
+  }
+  return details;
 }
 
-function sanitizePublicDashboard(data) {
+async function sanitizePublicDashboard(data) {
+  const dateRange = data.dateRange || rangeFromQuery();
   return {
     ok: true,
     latestDataTime: nowText(),
-    dateRange: data.dateRange || rangeFromQuery(),
+    dateRange,
     config: {
       rules: data.config?.rules || defaultConfig.rules,
       refreshSeconds: data.config?.refreshSeconds || defaultConfig.refreshSeconds,
@@ -1098,26 +1113,52 @@ function sanitizePublicDashboard(data) {
     },
     source: {
       publicSnapshot: true,
+      encrypted: true,
       snapshotCreatedAt: data.snapshot?.createdAt || new Date().toISOString(),
       snapshotCreatedAtText: data.snapshot?.createdAtText || nowText(),
-      dataSource: "本机服务脱敏公开快照"
+      dataSource: "本机服务加密公开快照"
     },
     summary: data.summary || null,
-    businesses: (data.businesses || []).map(publicBusiness),
-    users: []
+    businesses: data.businesses || [],
+    users: data.users || [],
+    userDetails: await encryptedPublicUserDetails(dateRange)
+  };
+}
+
+async function encryptPublicPayload(payload) {
+  const password = await readSecret(PUBLIC_PASSWORD_SERVICE);
+  if (!password) throw new Error("缺少公网看板访问密码，请先写入钥匙串。");
+  const salt = randomBytes(16);
+  const iv = randomBytes(12);
+  const key = pbkdf2Sync(password, salt, 200000, 32, "sha256");
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const plaintext = Buffer.from(JSON.stringify(payload), "utf8");
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  return {
+    version: 1,
+    algorithm: "AES-256-GCM",
+    kdf: "PBKDF2-SHA256",
+    iterations: 200000,
+    salt: salt.toString("base64"),
+    iv: iv.toString("base64"),
+    tag: cipher.getAuthTag().toString("base64"),
+    ciphertext: encrypted.toString("base64"),
+    updatedAt: new Date().toISOString(),
+    updatedAtText: nowText()
   };
 }
 
 async function publishPublicDashboard(data) {
-  const payload = sanitizePublicDashboard(data);
+  const payload = await sanitizePublicDashboard(data);
+  const encryptedPayload = await encryptPublicPayload(payload);
   await mkdir(join(ROOT, "data"), { recursive: true });
-  await writeFile(PUBLIC_DASHBOARD_PATH, JSON.stringify(payload, null, 2));
+  await writeFile(PUBLIC_DASHBOARD_PATH, JSON.stringify(encryptedPayload, null, 2));
   await pushPublicDashboard();
 }
 
 async function pushPublicDashboard() {
-  await runCommand("git", ["add", ".gitignore", "README.md", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.json"]);
-  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.json"]);
+  await runCommand("git", ["add", ".gitignore", "README.md", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
+  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
   if (!status) {
     console.log(`[${nowText()}] 业务看板公开文件没有变化，跳过 GitHub 推送。`);
     return false;
