@@ -14,6 +14,7 @@ const CONFIG_PATH = join(ROOT, "data/business-dashboard-config.json");
 const SNAPSHOT_PATH = join(ROOT, "data/business-dashboard-snapshots.jsonl");
 const DASHBOARD_CACHE_PATH = join(ROOT, "data/business-dashboard-cache.json");
 const USER_PHONE_INDEX_PATH = join(ROOT, "data/user-phone-index.json");
+const USER_DETAIL_CACHE_PATH = join(ROOT, "data/business-user-detail-cache.json");
 const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.json");
 const USER_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.username";
 const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
@@ -31,6 +32,8 @@ const userProfileCache = new Map();
 let userPhoneIndexLoadedAt = 0;
 let userPhoneIndexPromise = null;
 let lastOperationalAlert = { key: "", at: 0 };
+let startupWarmupRunning = false;
+let detailCacheSaveTimer = null;
 
 const defaultConfig = {
   rules: {
@@ -296,6 +299,28 @@ function normalizeBusiness(row) {
   };
 }
 
+function normalizeBusinessCatalog(row, dateRange) {
+  return {
+    platform: row.platform || "未分类",
+    name: row.business_name || `业务 ${row.business_id || ""}`.trim(),
+    businessId: String(row.business_type || row.order_type || row.business_id || ""),
+    platformBusinessId: String(row.business_id || row.platform_business_id || ""),
+    users: number(row.promotion_users),
+    userIds: [],
+    currentLabel: dateRange.label,
+    currentDateKey: dateRange.startDate === dateRange.endDate ? dateRange.endDate : "period_total",
+    todayOrders: number(row.today_orders),
+    yesterdayOrders: number(row.yesterday_orders),
+    yesterdaySameTimeOrders: 0,
+    totalOrders: number(row.total_orders),
+    todayCommission: 0,
+    yesterdayCommission: 0,
+    yesterdaySameTimeCommission: 0,
+    todayAmount: 0,
+    source: "中台业务列表"
+  };
+}
+
 function normalizeUser(row, dateKeyValue = "") {
   const current = dateKeyValue && row[dateKeyValue] !== undefined ? row[dateKeyValue] : row.period_total;
   return {
@@ -378,6 +403,36 @@ async function writeUserPhoneIndexToDisk() {
     phones: Object.fromEntries(userPhoneCache),
     profiles: Object.fromEntries(userProfileCache)
   }, null, 2));
+}
+
+async function loadUserDetailCacheFromDisk() {
+  if (!existsSync(USER_DETAIL_CACHE_PATH)) return false;
+  try {
+    const saved = JSON.parse(await readFile(USER_DETAIL_CACHE_PATH, "utf8"));
+    Object.entries(saved.items || {}).forEach(([key, value]) => {
+      if (Array.isArray(value?.rows)) userDetailCache.set(key, value);
+    });
+    return userDetailCache.size > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function writeUserDetailCacheToDisk() {
+  await mkdir(join(ROOT, "data"), { recursive: true });
+  const entries = Array.from(userDetailCache.entries()).slice(-300);
+  await writeFile(USER_DETAIL_CACHE_PATH, JSON.stringify({
+    savedAt: new Date().toISOString(),
+    savedAtText: nowText(),
+    items: Object.fromEntries(entries)
+  }, null, 2));
+}
+
+function scheduleUserDetailCacheSave() {
+  if (detailCacheSaveTimer) clearTimeout(detailCacheSaveTimer);
+  detailCacheSaveTimer = setTimeout(() => {
+    writeUserDetailCacheToDisk().catch(error => console.error(`[${nowText()}] 保存用户明细缓存失败：${error.message}`));
+  }, 1500);
 }
 
 async function ensureUserPhoneIndex(statuses = []) {
@@ -593,6 +648,32 @@ async function fetchBusinessSummary(dateRange, statuses) {
   };
 }
 
+function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
+  const byStatId = new Map(summaryRows.map(row => [String(row.businessId), row]));
+  const merged = [];
+  const seen = new Set();
+  for (const catalog of catalogRows) {
+    const base = normalizeBusinessCatalog(catalog, dateRange);
+    const stat = byStatId.get(String(base.businessId));
+    const row = stat ? {
+      ...base,
+      ...stat,
+      platform: stat.platform || base.platform,
+      name: stat.name || base.name,
+      platformBusinessId: base.platformBusinessId || stat.platformBusinessId,
+      users: Math.max(number(base.users), number(stat.users)),
+      totalOrders: Math.max(number(base.totalOrders), number(stat.totalOrders)),
+      source: "中台业务列表 + 业务统计"
+    } : base;
+    merged.push(row);
+    seen.add(String(row.businessId));
+  }
+  for (const stat of summaryRows) {
+    if (!seen.has(String(stat.businessId))) merged.push(stat);
+  }
+  return merged.sort((a, b) => number(b.todayOrders) - number(a.todayOrders) || String(a.platform).localeCompare(String(b.platform), "zh-CN") || String(a.name).localeCompare(String(b.name), "zh-CN"));
+}
+
 async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 1, pageSize = 100, sortField = "", sortOrder = "", refresh = false }, statuses = []) {
   const cacheKey = JSON.stringify({ businessId, startDate, endDate, page, pageSize, sortField, sortOrder });
   if (!refresh && userDetailCache.has(cacheKey)) {
@@ -672,7 +753,56 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     rows
   };
   userDetailCache.set(cacheKey, payload);
+  scheduleUserDetailCacheSave();
   return payload;
+}
+
+async function warmBusinessUserDetails(businesses, dateRange) {
+  const rows = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
+  if (!rows.length) return;
+  let warmed = 0;
+  await mapLimit(rows, 2, async row => {
+    const statuses = [];
+    const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
+    try {
+      await fetchBusinessUsers({
+        businessId: row.platformBusinessId || row.businessId || "",
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        page: 1,
+        pageSize,
+        sortField: dateRange.startDate === dateRange.endDate ? dateRange.endDate : "period_total",
+        sortOrder: "desc",
+        refresh: false
+      }, statuses);
+      warmed += 1;
+    } catch (error) {
+      console.error(`[${nowText()}] 预热业务用户失败：${row.name} ${error.message}`);
+    }
+  });
+  console.log(`[${nowText()}] 已预热业务用户明细缓存：${warmed}/${rows.length}`);
+}
+
+async function warmStartupData() {
+  if (startupWarmupRunning) return;
+  startupWarmupRunning = true;
+  try {
+    console.log(`[${nowText()}] 开始启动预热：用户索引、今日业务、用户明细缓存`);
+    const loadedDetailCache = await loadUserDetailCacheFromDisk();
+    if (loadedDetailCache) console.log(`[${nowText()}] 已加载本地用户明细缓存：${userDetailCache.size} 条`);
+    await ensureUserPhoneIndex();
+    const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
+    const data = await liveDashboard({ recordSnapshot: false, query: { preset: "today", start_date: dateRange.startDate, end_date: dateRange.endDate, force: "1" } });
+    await warmBusinessUserDetails(data.businesses, dateRange);
+    console.log(`[${nowText()}] 启动预热完成`);
+  } catch (error) {
+    console.error(`[${nowText()}] 启动预热失败：${error.message}`);
+    readConfig()
+      .then(config => notifyOperationalIssue("启动预热失败", error.message, config))
+      .catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
+  } finally {
+    startupWarmupRunning = false;
+  }
 }
 
 async function readSnapshots(limit = 5000) {
@@ -747,14 +877,15 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     }
   }
   const statuses = [];
-  const [userStats, userIndex, businessSummary] = await Promise.all([
+  const [userStats, userIndex, businessSummary, businessPages] = await Promise.all([
     apiCall("用户统计汇总", "POST", "/api/v2/dashboard/summary/statistics", {}, 12000),
     apiCall("用户列表", "POST", "/api/v2/dashboard/summary/index", { page: 1, size: 50 }, 25000),
-    fetchBusinessSummary(dateRange, statuses)
+    fetchBusinessSummary(dateRange, statuses),
+    fetchBusinessPages(statuses)
   ]);
   statuses.push(userStats, userIndex);
 
-  let businesses = businessSummary.businesses;
+  let businesses = mergeBusinessCatalog(businessPages.rows, businessSummary.businesses, dateRange);
   let users = asList(userIndex.data).map(row => normalizeUser(row, dateRange.endDate));
   if (businesses.length) lastGood.businesses = businesses;
   if (users.length) lastGood.users = users;
@@ -1051,4 +1182,5 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, "127.0.0.1", async () => {
   await scheduleSnapshots();
   console.log(`业务异常监控看板已启动：http://127.0.0.1:${PORT}/`);
+  warmStartupData();
 });
