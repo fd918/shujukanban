@@ -4,7 +4,12 @@
 
 ## 使用方式
 
-直接打开 `index.html` 或 `meituan-dashboard-preview.html`。
+优先直接打开 `index.html`，这是统一入口，可以在同一个网站里切换：
+
+- “激励活动看板”：对应 `meituan-dashboard-preview.html`。
+- “用户内部看板”：对应 `business-user-dashboard-prototype.html`。
+
+如果只想单独打开某一个看板，也可以继续直接打开 `meituan-dashboard-preview.html` 或 `business-user-dashboard-prototype.html`。
 
 ## 刷新接口数据
 
