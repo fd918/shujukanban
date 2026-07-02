@@ -903,6 +903,9 @@
     const ACTIVITY_CATEGORY_KEY = "meituan_dashboard_activity_category";
     const CATEGORY_STORE_KEY = "meituan_dashboard_activity_categories";
     const SERVICE_URL = "http://127.0.0.1:8765";
+    const PAGE_RELOAD_MIN_MS = 60 * 1000;
+    const PAGE_RELOAD_MAX_MS = 5 * 60 * 1000;
+    const PUBLIC_RELOAD_MIN_MS = 5 * 60 * 1000;
     const CAP = 600000;
     const DEFAULT_TIERS = [
       { name: "档一", metric: "amount", threshold: 95378491, rewardType: "rate", rate: 0.002 },
@@ -921,6 +924,8 @@
     if (!activities[activeId]) activeId = DEFAULT_ACTIVITY.id;
     let activityGroup = localStorage.getItem(ACTIVITY_GROUP_KEY) || "ongoing";
     let activityCategory = localStorage.getItem(ACTIVITY_CATEGORY_KEY) || "all";
+    let pageAutoReloadTimer = null;
+    let lastSeenActiveUpdatedAt = "";
     let serviceConfig = {
       intervalMinutes: 30,
       primaryActivityId: Number(DEFAULT_ACTIVITY.id),
@@ -1254,6 +1259,7 @@
       if (!activities[id]) return;
       activeId = String(id);
       localStorage.setItem(ACTIVE_KEY, activeId);
+      lastSeenActiveUpdatedAt = String(activeActivity().updatedAt || "");
       updateHeader();
       renderTable();
       updateMetrics();
@@ -2222,6 +2228,17 @@
       const intervalSelect = document.getElementById("background-refresh-interval");
       if (isPublicPage()) {
         intervalSelect.disabled = true;
+        try {
+          const response = await fetch(`./data/watch-config.json?ts=${Date.now()}`, { cache: "no-store" });
+          if (response.ok) {
+            const config = await response.json();
+            if (config && Number(config.intervalMinutes) >= 1) {
+              serviceConfig = { ...serviceConfig, ...config };
+            }
+          }
+        } catch {
+          // 公网页面拿不到配置时，沿用页面内置默认间隔。
+        }
         return;
       }
       try {
@@ -2240,6 +2257,69 @@
       } catch {
         setAutoRefreshStatus("未连接到后台看板服务，暂不能读取自动刷新间隔。");
       }
+    }
+
+    function pageAutoReloadDelayMs() {
+      const intervalMs = Math.max(1, Number(serviceConfig.intervalMinutes || 30)) * 60 * 1000;
+      const minMs = isPublicPage() ? PUBLIC_RELOAD_MIN_MS : PAGE_RELOAD_MIN_MS;
+      return Math.max(minMs, Math.min(intervalMs, PAGE_RELOAD_MAX_MS));
+    }
+
+    function canAutoReloadNow() {
+      if (document.querySelector(".modal.open")) return false;
+      const activeElement = document.activeElement;
+      return !activeElement || !["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName);
+    }
+
+    function extractUpdatedAtFromHtml(html, id) {
+      const activityId = String(id);
+      const objectMarker = `"${activityId}":{`;
+      let index = html.indexOf(objectMarker);
+      if (index < 0) index = html.indexOf(`"id":"${activityId}"`);
+      if (index < 0) return "";
+      const snippet = html.slice(index, index + 5000);
+      const match = snippet.match(/"updatedAt":"([^"]*)"/);
+      return match ? match[1] : "";
+    }
+
+    async function latestActiveUpdatedAt() {
+      if (isPublicPage()) {
+        const response = await fetch(`${location.pathname}?ts=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) return "";
+        return extractUpdatedAtFromHtml(await response.text(), activeId);
+      }
+      const response = await fetch(`${SERVICE_URL}/activities?ts=${Date.now()}`, { cache: "no-store" });
+      const data = await response.json();
+      return data.ok ? String(data.activities?.[activeId]?.updatedAt || "") : "";
+    }
+
+    async function checkPageAutoReload() {
+      try {
+        const latestUpdatedAt = await latestActiveUpdatedAt();
+        if (!latestUpdatedAt) return;
+        if (!lastSeenActiveUpdatedAt) lastSeenActiveUpdatedAt = String(activeActivity().updatedAt || "");
+        if (latestUpdatedAt && latestUpdatedAt !== lastSeenActiveUpdatedAt) {
+          if (canAutoReloadNow()) {
+            reloadWithoutCache();
+            return;
+          }
+          setAutoRefreshStatus(`检测到数据已更新到 ${latestUpdatedAt}，当前正在操作页面，稍后自动刷新。`);
+        }
+      } catch {
+        // 自动检查失败不影响看板使用，下次继续检查。
+      } finally {
+        schedulePageAutoReload();
+      }
+    }
+
+    function schedulePageAutoReload(delayMs = pageAutoReloadDelayMs()) {
+      if (pageAutoReloadTimer) clearTimeout(pageAutoReloadTimer);
+      pageAutoReloadTimer = setTimeout(checkPageAutoReload, delayMs);
+    }
+
+    function startPageAutoReload() {
+      lastSeenActiveUpdatedAt = String(activeActivity().updatedAt || "");
+      schedulePageAutoReload();
     }
 
     document.getElementById("refresh-now").addEventListener("click", async () => {
@@ -2262,7 +2342,7 @@
     applyAccessMode();
     renderTable();
     updateMetrics();
-    loadServiceConfig();
+    loadServiceConfig().finally(startPageAutoReload);
     loadSavedActivitiesFromService();
     loadSavedOverrides();
   </script>
