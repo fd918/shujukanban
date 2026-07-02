@@ -1343,7 +1343,15 @@
     }
 
     function wan(value) {
-      return `${money(value / 10000)} 万`;
+      const amount = Number(value || 0);
+      if (Math.abs(amount) < 100000) {
+        const hasCents = Math.round(amount * 100) % 100 !== 0;
+        return `${amount.toLocaleString("zh-CN", {
+          minimumFractionDigits: hasCents ? 2 : 0,
+          maximumFractionDigits: 2
+        })} 元`;
+      }
+      return `${money(amount / 10000)} 万`;
     }
 
     function activeMetric(activity = activeActivity()) {
