@@ -97,6 +97,7 @@ logs/background-refresh-error.log
 - “查看服务状态”：查看开机自启服务是否正在运行。
 - “启动服务 / 停止服务 / 重启服务”：手动控制本地接口代理。
 - “打开本地看板”：打开业务用户实时看板。
+- “打开公网看板”：打开 GitHub Pages 上的业务异常监控公开快照。
 - “写入/更新钥匙串账号”：把中台账号密码写入 macOS 钥匙串，服务启动时从钥匙串读取，不写入 HTML、plist 或日志。
 
 对应的 macOS 开机自启任务是：
@@ -124,6 +125,8 @@ logs/business-user-dashboard-error.log
 - 主看板缓存：后台会把每个日期范围最近一次成功返回的主看板数据保存到本地；页面首次打开优先显示缓存，点击右上角刷新才强制请求最新中台数据。
 - 对比基准：当前页面先固定展示今天，今天对比前一日同时刻；上周同时刻和近 7 日同期均值依赖后台持续记录的快照。
 - 快照记录：后台服务会按设置的间隔记录业务和用户快照；页面“刷新”只请求最新数据，不等于记录快照。
+- 公网快照：每次定时快照成功后，会生成脱敏公开数据 `data/business-dashboard-public.json`，并自动推送到 GitHub Pages。
+- 快照异常通知：如果快照记录失败、接口数据缺失、业务为空、订单全为 0，或大量活跃业务数据与上一条快照完全一致，会通过飞书机器人通知；同类问题 1 小时内最多通知一次。
 
 业务异常监控配置文件：
 
@@ -142,6 +145,14 @@ data/business-dashboard-snapshots.jsonl
 ```text
 data/business-dashboard-cache.json
 ```
+
+公网看板地址：
+
+```text
+https://fd918.github.io/shujukanban/business-user-dashboard-prototype.html
+```
+
+公网只展示业务汇总和异常状态，不展示用户明细、手机号、原始快照、账号密码、飞书 Webhook 或本地配置。
 
 注意：中台账号密码、飞书 Webhook URL 和飞书签名密钥保存在 macOS 钥匙串，不写入 HTML、配置文件或日志。
 

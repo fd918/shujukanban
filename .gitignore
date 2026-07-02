@@ -6,3 +6,6 @@ meituan-activity-*-latest.json
 logs/
 data/manual-overrides.json
 data/user-phone-index.json
+data/business-dashboard-cache.json
+data/business-dashboard-snapshots.jsonl
+data/business-dashboard-config.json
