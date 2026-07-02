@@ -268,7 +268,7 @@
   <main class="content">
     <section class="filters">
       <select class="field" id="platformSelect"><option value="all">全部平台</option></select>
-      <input class="field" id="searchInput" placeholder="搜索业务、用户、ID、手机号、公司">
+      <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
       <button class="btn primary" id="applyBtn">查询</button>
     </section>
 
@@ -313,12 +313,12 @@
               <th>序号</th>
               <th><button class="sort-btn" data-sort="platform">平台</button></th>
               <th><button class="sort-btn" data-sort="name">业务名称</button></th>
-              <th><button class="sort-btn" data-sort="today" id="currentHeader">当前订单</button></th>
+              <th><button class="sort-btn active" data-sort="today" id="currentHeader">当前订单</button></th>
               <th><button class="sort-btn" data-sort="yesterday" id="baselineHeader">前一日同时刻</button></th>
               <th><button class="sort-btn" data-sort="lastWeek">上周同时刻</button></th>
               <th><button class="sort-btn" data-sort="sevenAvg">近7日同期均值</button></th>
               <th><button class="sort-btn" data-sort="ratio">变化比例</button></th>
-              <th><button class="sort-btn active" data-sort="impact">影响量</button></th>
+              <th><button class="sort-btn" data-sort="impact">影响量</button></th>
               <th><button class="sort-btn" data-sort="level">异常等级</button></th>
               <th><button class="sort-btn" data-sort="users">相关用户</button></th>
               <th>操作</th>
@@ -375,7 +375,7 @@
   <div class="toast" id="toast">已刷新</div>
 
   <script>
-    const state = { metric: "orders", level: "all", sort: "impact", sortDir: "desc", platform: "all", search: "", config: null, businesses: [], users: [], source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, detailMode: "abnormal", detailRow: null, detailUsers: [], detailRefreshing: false, detailLatestTime: "", publicMode: false, publicUserDetails: {} };
+    const state = { metric: "orders", level: "all", sort: "today", sortDir: "desc", platform: "all", search: "", config: null, businesses: [], users: [], source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, detailMode: "abnormal", detailRow: null, detailUsers: [], detailRefreshing: false, detailLatestTime: "", publicMode: false, publicUserDetails: {} };
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
@@ -474,7 +474,7 @@
       if (state.level !== "all") rows = rows.filter(row => row.cmp.level === state.level);
       if (state.search) {
         const key = state.search.toLowerCase();
-        rows = rows.filter(row => `${row.platform}${row.name}${row.businessId}${row.userIds?.join("") || ""}${row.userSearchText || ""}`.toLowerCase().includes(key));
+        rows = rows.filter(row => `${row.platform}${row.name}${row.businessId}${row.platformBusinessId || ""}`.toLowerCase().includes(key));
       }
       return rows.sort((a, b) => sortRows(a, b) || rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
     }
@@ -806,7 +806,7 @@
               const yesterday = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : user.cmp.base;
               const lastWeek = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
               const sevenAvg = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
-              return `<tr><td class="user-cell"><strong>${user.name}</strong><span class="muted">${user.phone || "-"}｜${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${yesterday ? fmt(yesterday) : "-"}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pct(user.cmp.ratio)}</td><td>${fmt(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td></tr>`;
+              return `<tr><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${yesterday ? fmt(yesterday) : "-"}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pct(user.cmp.ratio)}</td><td>${fmt(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td></tr>`;
             }).join("") : `<tr><td colspan="8" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的异常用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>`;
