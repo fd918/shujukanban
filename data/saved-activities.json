@@ -20136,7 +20136,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1171.png",
-    "updatedAt": "2026/7/3 10:04:51",
+    "updatedAt": "2026/7/3 10:15:41",
     "rewardCap": null,
     "tiers": [
       {
@@ -20544,7 +20544,7 @@
     "ruleImage": "./assets/activity-rule-1199.png",
     "recordSnapshot": true,
     "overrides": {},
-    "updatedAt": "2026/7/3 10:04:55",
+    "updatedAt": "2026/7/3 10:15:45",
     "rewardCap": 600000,
     "tiers": [
       {
@@ -21428,7 +21428,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1290.png",
-    "updatedAt": "2026/7/3 10:04:58",
+    "updatedAt": "2026/7/3 10:15:48",
     "rewardCap": null,
     "tiers": [
       {
@@ -21673,7 +21673,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1299.png",
-    "updatedAt": "2026/7/3 10:05:01",
+    "updatedAt": "2026/7/3 10:15:51",
     "rewardCap": null,
     "tiers": [
       {
@@ -21758,7 +21758,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1300.png",
-    "updatedAt": "2026/7/3 10:05:04",
+    "updatedAt": "2026/7/3 10:15:54",
     "rewardCap": null,
     "tiers": [
       {
@@ -21842,8 +21842,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
-    "ruleImage": "",
-    "updatedAt": "2026/7/3 10:05:05",
+    "ruleImage": "./assets/activity-rule-1301.png",
+    "updatedAt": "2026/7/3 10:15:57",
     "rewardCap": null,
     "tiers": [],
     "rows": [
@@ -21920,7 +21920,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1303.png",
-    "updatedAt": "2026/7/3 10:05:07",
+    "updatedAt": "2026/7/3 10:16:00",
     "rewardCap": null,
     "tiers": [
       {
@@ -22039,8 +22039,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:00",
-    "ruleImage": "./assets/activity-rule-1304.png",
-    "updatedAt": "2026/7/3 10:05:11",
+    "ruleImage": "",
+    "updatedAt": "2026/7/3 10:16:00",
     "rewardCap": null,
     "tiers": [
       {
@@ -22220,8 +22220,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
-    "ruleImage": "",
-    "updatedAt": "2026/7/3 10:05:11",
+    "ruleImage": "./assets/activity-rule-1311.png",
+    "updatedAt": "2026/7/3 10:16:04",
     "rewardCap": null,
     "tiers": [
       {
@@ -22359,7 +22359,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1323.png",
-    "updatedAt": "2026/7/3 10:05:14",
+    "updatedAt": "2026/7/3 10:16:07",
     "rewardCap": null,
     "tiers": [
       {
@@ -22465,7 +22465,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1325.png",
-    "updatedAt": "2026/7/3 10:05:18",
+    "updatedAt": "2026/7/3 10:16:10",
     "rewardCap": null,
     "tiers": [
       {
@@ -22904,8 +22904,8 @@
   },
   "1347": {
     "id": "1347",
-    "title": "活动 1347",
-    "activityTime": "",
+    "title": "美团联盟年框媒体激励2026年7月-云瞻",
+    "activityTime": "2026-07-01 00:00:00 - 2026-07-31 23:59:59",
     "activityStartTime": 1782835200,
     "activityEndTime": 1785513599,
     "activityStatus": 2,
@@ -22915,7 +22915,7 @@
     "discoveredAt": "2026/6/30 11:51:12",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1347.png",
-    "updatedAt": "2026/7/3 09:54:44",
+    "updatedAt": "2026/7/3 10:16:25",
     "rewardCap": null,
     "tiers": [
       {
@@ -22943,24 +22943,220 @@
     "rows": [
       [
         "2026-07-01",
-        159376,
-        156645,
-        4313911.13,
-        4207764.96
+        159375,
+        156650,
+        4313897.63,
+        4207911.52
       ],
       [
         "2026-07-02",
-        149566,
-        148029,
-        4106074.64,
-        4042365.01
+        149559,
+        148046,
+        4105921.31,
+        4042904.5
       ],
       [
         "2026-07-03",
-        14611,
-        10833,
-        413486.82,
-        305504.98
+        16772,
+        11747,
+        470160.73,
+        333941.35
+      ],
+      [
+        "2026-07-04",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-05",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-06",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-07",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-08",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-09",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-10",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-11",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-12",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-13",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-14",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-15",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-16",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-17",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-18",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-19",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-20",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-21",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-22",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-23",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-24",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-25",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-26",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-27",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-28",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-29",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-30",
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        "2026-07-31",
+        null,
+        null,
+        null,
+        null
       ]
     ],
     "overrides": {},
@@ -23050,7 +23246,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1356.png",
-    "updatedAt": "2026/7/3 10:05:27",
+    "updatedAt": "2026/7/3 10:16:13",
     "rewardCap": null,
     "tiers": [
       {
@@ -23065,23 +23261,23 @@
       [
         "2026-07-01",
         129956,
-        127812,
+        127814,
         3643308.98,
-        3581566.48
+        3581614.24
       ],
       [
         "2026-07-02",
-        121292,
-        120430,
-        3453155.79,
-        3420211.01
+        121290,
+        120439,
+        3453112.49,
+        3420405.39
       ],
       [
         "2026-07-03",
-        12246,
-        9033,
-        345402.54,
-        254070.83
+        13274,
+        9401,
+        373789.84,
+        263582.59
       ],
       [
         "2026-07-04",
@@ -23121,7 +23317,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1358.png",
-    "updatedAt": "2026/7/3 10:05:30",
+    "updatedAt": "2026/7/3 10:16:16",
     "rewardCap": null,
     "tiers": [
       {
@@ -23143,9 +23339,9 @@
       [
         "2026-07-01",
         129956,
-        127530,
+        127532,
         3643308.98,
-        3575590.94
+        3575638.7
       ]
     ],
     "overrides": {},
@@ -23163,8 +23359,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:00",
-    "ruleImage": "",
-    "updatedAt": "2026/7/3 10:05:30",
+    "ruleImage": "./assets/activity-rule-1359.png",
+    "updatedAt": "2026/7/3 10:16:19",
     "rewardCap": null,
     "tiers": [
       {
@@ -23185,17 +23381,17 @@
       ],
       [
         "2026-07-02",
-        9718,
-        9651,
-        214083.44,
-        212598.46
+        9717,
+        9650,
+        214061.54,
+        212576.56
       ],
       [
         "2026-07-03",
-        375,
-        256,
-        8745.97,
-        5874.62
+        418,
+        268,
+        9641,
+        6115.01
       ],
       [
         "2026-07-04",
@@ -23235,7 +23431,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1360.png",
-    "updatedAt": "2026/7/3 10:05:34",
+    "updatedAt": "2026/7/3 10:16:22",
     "rewardCap": null,
     "tiers": [],
     "rows": [
@@ -23255,10 +23451,10 @@
       ],
       [
         "2026-07-03",
-        369,
-        246,
-        8192.67,
-        5385.57
+        399,
+        257,
+        8860.18,
+        5688.27
       ],
       [
         "2026-07-04",
