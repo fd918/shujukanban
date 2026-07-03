@@ -1342,5 +1342,21 @@
     "todayRedemptionAmount": 184838.93,
     "cumulativeRedemptionOrders": 254487,
     "cumulativeRedemptionAmount": 7185167.39
+  },
+  {
+    "activityId": "1356",
+    "title": "活动 1356",
+    "metric": "orders",
+    "date": "2026-07-03",
+    "hour": 8,
+    "slotMinute": 30,
+    "dateHour": "2026-07-03 08:30",
+    "recordedAt": "2026/7/3 08:38:34",
+    "todayValidOrders": 8490,
+    "todayRedemptionOrders": 6534,
+    "todayActualPayment": 242659.8,
+    "todayRedemptionAmount": 190906.62,
+    "cumulativeRedemptionOrders": 254741,
+    "cumulativeRedemptionAmount": 7191457.47
   }
 ]
