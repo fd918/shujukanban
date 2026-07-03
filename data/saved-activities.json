@@ -20136,7 +20136,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1171.png",
-    "updatedAt": "2026/7/3 08:16:18",
+    "updatedAt": "2026/7/3 08:27:05",
     "rewardCap": null,
     "tiers": [
       {
@@ -20544,7 +20544,7 @@
     "ruleImage": "./assets/activity-rule-1199.png",
     "recordSnapshot": true,
     "overrides": {},
-    "updatedAt": "2026/7/3 08:16:21",
+    "updatedAt": "2026/7/3 08:27:09",
     "rewardCap": 600000,
     "tiers": [
       {
@@ -21428,7 +21428,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1290.png",
-    "updatedAt": "2026/7/3 08:16:24",
+    "updatedAt": "2026/7/3 08:27:12",
     "rewardCap": null,
     "tiers": [
       {
@@ -21673,7 +21673,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1299.png",
-    "updatedAt": "2026/7/3 08:16:28",
+    "updatedAt": "2026/7/3 08:27:15",
     "rewardCap": null,
     "tiers": [
       {
@@ -21758,7 +21758,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1300.png",
-    "updatedAt": "2026/7/3 08:05:39",
+    "updatedAt": "2026/7/3 08:27:18",
     "rewardCap": null,
     "tiers": [
       {
@@ -21843,7 +21843,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1301.png",
-    "updatedAt": "2026/7/3 08:16:31",
+    "updatedAt": "2026/7/3 08:27:21",
     "rewardCap": null,
     "tiers": [],
     "rows": [
@@ -21909,8 +21909,8 @@
   },
   "1303": {
     "id": "1303",
-    "title": "活动 1303",
-    "activityTime": "",
+    "title": "【美团闪购】6.24-6.30鲜花单单补激励",
+    "activityTime": "2026-06-24 00:00:00 - 2026-06-30 23:59:59",
     "activityStartTime": 1782230400,
     "activityEndTime": 1782835199,
     "activityStatus": 4,
@@ -21920,7 +21920,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1303.png",
-    "updatedAt": "2026/7/3 08:16:34",
+    "updatedAt": "2026/7/3 08:27:24",
     "rewardCap": null,
     "tiers": [
       {
@@ -22029,8 +22029,8 @@
   },
   "1304": {
     "id": "1304",
-    "title": "【美团闪购】伊利奶粉供给及激励政策-6.24-7.5",
-    "activityTime": "2026-06-24 00:00:00 - 2026-07-05 23:59:59",
+    "title": "活动 1304",
+    "activityTime": "",
     "activityStartTime": 1782230400,
     "activityEndTime": 1783267199,
     "activityStatus": 2,
@@ -22040,7 +22040,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1304.png",
-    "updatedAt": "2026/7/3 08:16:37",
+    "updatedAt": "2026/7/3 08:27:27",
     "rewardCap": null,
     "tiers": [
       {
@@ -22079,92 +22079,7 @@
         "rate": 0.03
       }
     ],
-    "rows": [
-      [
-        "2026-06-24",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-06-25",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-06-26",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-06-27",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-06-28",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-06-29",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-06-30",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-07-01",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-07-02",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-07-03",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-07-04",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-07-05",
-        null,
-        null,
-        null,
-        null
-      ]
-    ],
+    "rows": [],
     "overrides": {},
     "recordSnapshot": true
   },
@@ -22221,7 +22136,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
     "ruleImage": "./assets/activity-rule-1311.png",
-    "updatedAt": "2026/7/3 08:16:40",
+    "updatedAt": "2026/7/3 08:27:30",
     "rewardCap": null,
     "tiers": [
       {
@@ -22358,8 +22273,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:03",
-    "ruleImage": "",
-    "updatedAt": "2026/7/3 08:16:40",
+    "ruleImage": "./assets/activity-rule-1323.png",
+    "updatedAt": "2026/7/3 08:27:34",
     "rewardCap": null,
     "tiers": [
       {
@@ -22465,7 +22380,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1325.png",
-    "updatedAt": "2026/7/3 08:16:43",
+    "updatedAt": "2026/7/3 08:27:37",
     "rewardCap": null,
     "tiers": [
       {
@@ -22795,8 +22710,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/29 22:02:23",
     "listUpdatedAt": "2026/7/2 18:00:00",
-    "ruleImage": "./assets/activity-rule-1331.png",
-    "updatedAt": "2026/7/3 08:16:47",
+    "ruleImage": "",
+    "updatedAt": "2026/7/3 08:27:37",
     "rewardCap": null,
     "tiers": [
       {
@@ -22915,7 +22830,7 @@
     "discoveredAt": "2026/6/30 11:51:12",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1347.png",
-    "updatedAt": "2026/7/3 08:16:58",
+    "updatedAt": "2026/7/3 08:27:54",
     "rewardCap": null,
     "tiers": [
       {
@@ -22951,16 +22866,16 @@
       [
         "2026-07-02",
         149584,
-        147945,
+        147964,
         4106694.36,
-        4038859.39
+        4039421.85
       ],
       [
         "2026-07-03",
-        9561,
-        7357,
-        282632.95,
-        223977.26
+        10050,
+        7630,
+        294707.35,
+        229795.63
       ],
       [
         "2026-07-04",
@@ -23175,7 +23090,7 @@
     "discoveredAt": "2026/6/30 11:51:12",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1352.png",
-    "updatedAt": "2026/7/3 08:16:50",
+    "updatedAt": "2026/7/3 08:27:40",
     "rewardCap": null,
     "tiers": [
       {
@@ -23235,8 +23150,8 @@
   },
   "1356": {
     "id": "1356",
-    "title": "美团外卖企业媒体日常奖励活动-2026年第24期",
-    "activityTime": "2026-07-01 00:00:00 - 2026-07-06 23:59:59",
+    "title": "活动 1356",
+    "activityTime": "",
     "activityStartTime": 1782835200,
     "activityEndTime": 1783353599,
     "activityStatus": 2,
@@ -23245,8 +23160,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:00",
-    "ruleImage": "",
-    "updatedAt": "2026/7/3 08:16:50",
+    "ruleImage": "./assets/activity-rule-1356.png",
+    "updatedAt": "2026/7/3 08:27:44",
     "rewardCap": null,
     "tiers": [
       {
@@ -23268,37 +23183,16 @@
       [
         "2026-07-02",
         121309,
-        120376,
+        120386,
         3453767.06,
-        3418371.02
+        3418796.78
       ],
       [
         "2026-07-03",
-        7751,
-        6074,
-        223967.06,
-        179735.3
-      ],
-      [
-        "2026-07-04",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-07-05",
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        "2026-07-06",
-        null,
-        null,
-        null,
-        null
+        8114,
+        6288,
+        233035.08,
+        184838.93
       ]
     ],
     "overrides": {},
@@ -23316,8 +23210,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:03",
-    "ruleImage": "",
-    "updatedAt": "2026/7/3 08:16:51",
+    "ruleImage": "./assets/activity-rule-1358.png",
+    "updatedAt": "2026/7/3 08:27:47",
     "rewardCap": null,
     "tiers": [
       {
@@ -23360,7 +23254,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:00",
     "ruleImage": "./assets/activity-rule-1359.png",
-    "updatedAt": "2026/7/3 08:16:54",
+    "updatedAt": "2026/7/3 08:27:50",
     "rewardCap": null,
     "tiers": [
       {
@@ -23388,10 +23282,10 @@
       ],
       [
         "2026-07-03",
-        233,
-        176,
-        5421.11,
-        4276.64
+        239,
+        186,
+        5537.83,
+        4468.24
       ],
       [
         "2026-07-04",
@@ -23430,8 +23324,8 @@
     "pictureUrl": "",
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/2 18:00:00",
-    "ruleImage": "./assets/activity-rule-1360.png",
-    "updatedAt": "2026/7/3 08:06:10",
+    "ruleImage": "",
+    "updatedAt": "2026/7/3 08:27:51",
     "rewardCap": null,
     "tiers": [],
     "rows": [
@@ -23445,16 +23339,16 @@
       [
         "2026-07-02",
         4914,
-        4818,
+        4819,
         125088.22,
-        121061.22
+        121171.72
       ],
       [
         "2026-07-03",
-        206,
-        157,
-        4704.62,
-        3623.69
+        219,
+        165,
+        4871.58,
+        3708.68
       ],
       [
         "2026-07-04",
