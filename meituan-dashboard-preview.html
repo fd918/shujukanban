@@ -155,6 +155,13 @@
 
     .target-head strong { font-size: 18px; }
 
+    .target-main-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
     .pill {
       padding: 4px 8px;
       border-radius: 999px;
@@ -1887,15 +1894,19 @@
         const rewardAtThreshold = rewardFor(tier, tier.threshold, activity);
         const projectedReward = rewardFor(tier, amounts.projectedTotal, activity);
         const cardClass = projectedGap <= 0 ? "positive" : "danger";
+        const mainLabel = projectedOver > 0
+          ? "预计超出"
+          : (amounts.futureUnfilled > 0 ? "需补日均" : "最终缺口");
         const dailyLabel = projectedOver > 0 ? `超过 ${metricText(projectedOver, metric)}` : (amounts.futureUnfilled > 0 ? `${metricText(dailyNeed, metric)}/天` : metricText(projectedGap, metric));
         const note = projectedOver > 0
           ? `按当前输入，预计超过${tier.name}门槛 ${metricText(projectedOver, metric)}。`
           : (amounts.futureUnfilled > 0
-            ? `还有 ${amounts.futureUnfilled} 天使用自动预估，可在下方手动调整。`
+            ? `按预估后缺口 ÷ ${amounts.futureUnfilled} 天计算；每天至少补到这个数才预计达档。`
             : "未来日期都已录入预估，预计缺口为最终缺口。");
         return `
           <div class="panel target-card">
             <div class="target-head"><strong>${tier.name}目标</strong><span class="pill">${rewardRuleText(tier)}</span></div>
+            <div class="target-main-label">${mainLabel}</div>
             <div class="daily-target ${cardClass}">${dailyLabel}</div>
             <div class="note">${note}</div>
             <div class="target-meta">
