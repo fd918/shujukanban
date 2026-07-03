@@ -1847,12 +1847,12 @@
     "hour": 0,
     "slotMinute": 0,
     "dateHour": "2026-07-04 00:00",
-    "recordedAt": "2026/7/4 00:03:03",
-    "todayValidOrders": null,
-    "todayRedemptionOrders": null,
-    "todayActualPayment": null,
-    "todayRedemptionAmount": null,
-    "cumulativeRedemptionOrders": 14959,
-    "cumulativeRedemptionAmount": 379927.22
+    "recordedAt": "2026/7/4 00:14:04",
+    "todayValidOrders": 14,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 368.92,
+    "todayRedemptionAmount": 0,
+    "cumulativeRedemptionOrders": 15002,
+    "cumulativeRedemptionAmount": 381218.45
   }
 ]
