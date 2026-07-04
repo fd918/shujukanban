@@ -896,13 +896,14 @@ function cachedBusinessUsersSnapshot(dateRange) {
       const businessId = String(key.businessId);
       const rows = payload.rows || [];
       if (details[businessId] && Object.keys(details[businessId]).length >= rows.length) continue;
-      details[businessId] = Object.fromEntries(rows.map(row => [String(row.id), {
-        name: row.name,
-        phone: row.phone,
-        version: row.version,
-        orders: row.todayOrders,
-        commission: row.todayCommission
-      }]));
+      const byUser = {};
+      for (const row of rows) {
+        const userId = String(row.id);
+        byUser[userId] ||= { name: row.name, phone: row.phone, version: row.version, orders: 0, commission: 0 };
+        byUser[userId].orders += number(row.todayOrders);
+        byUser[userId].commission += number(row.todayCommission);
+      }
+      details[businessId] = byUser;
     } catch {
       // Ignore old cache keys that are not JSON.
     }
