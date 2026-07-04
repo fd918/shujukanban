@@ -893,7 +893,10 @@ function cachedBusinessUsersSnapshot(dateRange) {
     try {
       const key = JSON.parse(cacheKey);
       if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
-      details[String(key.businessId)] = Object.fromEntries((payload.rows || []).map(row => [String(row.id), {
+      const businessId = String(key.businessId);
+      const rows = payload.rows || [];
+      if (details[businessId] && Object.keys(details[businessId]).length >= rows.length) continue;
+      details[businessId] = Object.fromEntries(rows.map(row => [String(row.id), {
         name: row.name,
         phone: row.phone,
         version: row.version,
