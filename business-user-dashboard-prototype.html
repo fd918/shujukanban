@@ -797,7 +797,7 @@
           <button class="btn" data-detail-refresh="1">刷新用户</button>
           <span class="muted">${state.detailRefreshing ? "正在刷新用户，当前先保留上次结果" : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || state.source.latestDataTime || "-"}</span>
         </div>
-        <section class="source ${row.sameTime?.hasSnapshot ? "" : "warn"}"><strong>下钻说明：</strong>${row.sameTime?.hasSnapshot ? "已使用历史快照做同时刻比较。" : "当前同时刻历史快照不足，用户对比基准临时使用前一日全日数据；服务会继续按设置频率记录快照。"} 外部列表显示 ${fmt(row.users || row.userIds?.length || 0)} 个用户，当前已加载 ${fmt(allUsers.length)} 个用户；默认只展示异常用户。</section>
+        <section class="source ${row.sameTime?.hasSnapshot ? "" : "warn"}"><strong>下钻说明：</strong>${row.sameTime?.hasSnapshot ? "已使用历史快照做同时刻比较。" : "当前业务用户同时刻历史快照不足，用户对比基准临时使用该业务前一日全日数据；服务会继续按设置频率记录业务用户快照。"} 业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，当前业务明细返回 ${fmt(allUsers.length)} 个有数据用户；默认只展示异常用户，可切换全部用户。</section>
         <div class="detail-table-wrap">
           <table class="compact">
             <thead><tr><th>用户</th><th>${currentMetricLabel()}</th><th>昨日同时刻</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>影响订单</th><th>状态</th></tr></thead>

@@ -852,6 +852,61 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
   });
 }
 
+function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange = rangeFromQuery()) {
+  const currentDate = dateFromDay(dateRange.endDate);
+  const minute = minuteOfDay();
+  const yesterday = nearestSnapshot(snapshots, dayKey(addDays(currentDate, -1)), minute);
+  const lastWeek = nearestSnapshot(snapshots, dayKey(addDays(currentDate, -7)), minute);
+  const recent = Array.from({ length: 7 }, (_, index) => nearestSnapshot(snapshots, dayKey(addDays(currentDate, -(index + 1))), minute)).filter(Boolean);
+  const businessKey = String(businessId || "");
+
+  return rows.map(row => {
+    const id = String(row.id || "");
+    const pick = snap => snap?.businessUsers?.[businessKey]?.[id] || null;
+    const sevenValues = recent.map(pick).filter(Boolean);
+    const avg = sevenValues.length
+      ? {
+          orders: Math.round(sevenValues.reduce((sum, item) => sum + number(item.orders), 0) / sevenValues.length),
+          commission: Math.round(sevenValues.reduce((sum, item) => sum + number(item.commission), 0) / sevenValues.length * 100) / 100
+        }
+      : null;
+    return {
+      ...row,
+      sameTime: {
+        yesterday: pick(yesterday) || (row.yesterdayOrders || row.yesterdayCommission ? {
+          orders: number(row.yesterdayOrders),
+          commission: number(row.yesterdayCommission),
+          source: "中台业务用户前一日全日"
+        } : null),
+        lastWeek: pick(lastWeek),
+        sevenDayAvg: avg,
+        hasSnapshot: Boolean(pick(yesterday) || pick(lastWeek) || avg),
+        hasApiBaseline: Boolean(row.yesterdayOrders || row.yesterdayCommission)
+      }
+    };
+  });
+}
+
+function cachedBusinessUsersSnapshot(dateRange) {
+  const details = {};
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    try {
+      const key = JSON.parse(cacheKey);
+      if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
+      details[String(key.businessId)] = Object.fromEntries((payload.rows || []).map(row => [String(row.id), {
+        name: row.name,
+        phone: row.phone,
+        version: row.version,
+        orders: row.todayOrders,
+        commission: row.todayCommission
+      }]));
+    } catch {
+      // Ignore old cache keys that are not JSON.
+    }
+  }
+  return details;
+}
+
 async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   const config = await readConfig();
   const dateRange = rangeFromQuery(query);
@@ -941,6 +996,8 @@ async function maybeRecordSnapshot(businesses, users, force = false) {
   const config = await readConfig();
   const interval = Math.max(1, Number(config.snapshotMinutes || 30)) * 60 * 1000;
   if (!force && Date.now() - lastSnapshotAt < interval) return false;
+  const dateRange = rangeFromQuery();
+  await warmBusinessUserDetails(businesses, dateRange);
   const previousSnapshot = (await readSnapshots(1))[0] || null;
   await mkdir(join(ROOT, "data"), { recursive: true });
   const snapshot = {
@@ -948,8 +1005,9 @@ async function maybeRecordSnapshot(businesses, users, force = false) {
     createdAtText: nowText(),
     day: dayKey(),
     minuteOfDay: minuteOfDay(),
-    business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: null }])),
-    users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission }]))
+    business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: row.todayCommission }])),
+    users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission }])),
+    businessUsers: cachedBusinessUsersSnapshot(dateRange)
   };
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
@@ -1072,7 +1130,11 @@ async function notifyOperationalIssue(title, detail, config = defaultConfig) {
   const key = title;
   if (lastOperationalAlert.key === key && Date.now() - lastOperationalAlert.at < 60 * 60 * 1000) return;
   lastOperationalAlert = { key, at: Date.now() };
-  await sendFeishuText(`业务异常监控\n${title}\n时间：${nowText()}\n说明：${detail}\n处理建议：打开本机看板或桌面“业务用户看板服务.command”查看服务状态。`);
+  try {
+    await sendFeishuText(`业务异常监控\n${title}\n时间：${nowText()}\n说明：${detail}\n处理建议：打开本机看板或桌面“业务用户看板服务.command”查看服务状态。`);
+  } catch (error) {
+    console.error(`[${nowText()}] 飞书通知失败：${error.message}`);
+  }
 }
 
 async function runCommand(command, args) {
@@ -1087,7 +1149,7 @@ async function encryptedPublicUserDetails(dateRange) {
     try {
       const key = JSON.parse(cacheKey);
       if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
-      const rows = enrichWithSnapshots(payload.rows || [], snapshots, "users", dateRange);
+      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, key.businessId, dateRange);
       details[String(key.businessId)] = {
         latestDataTime: nowText(),
         total: payload.total || rows.length,
@@ -1204,7 +1266,7 @@ const server = createServer(async (req, res) => {
         refresh: url.searchParams.get("refresh") === "1"
       }, statuses);
       const snapshots = await readSnapshots();
-      const users = enrichWithSnapshots(result.rows, snapshots, "users", rangeFromQuery({ start_date: startDate, end_date: endDate }));
+      const users = enrichBusinessUsersWithSnapshots(result.rows, snapshots, url.searchParams.get("business_id") || "", rangeFromQuery({ start_date: startDate, end_date: endDate }));
       return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: nowText(), users, total: result.total, page: result.page, pageSize: result.pageSize, source: { statuses } });
     }
     if (url.pathname === "/api/config" && req.method === "GET") return json(res, 200, await getPublicConfig());
