@@ -20136,7 +20136,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1171.png",
-    "updatedAt": "2026/7/5 00:00:02",
+    "updatedAt": "2026/7/5 00:11:04",
     "rewardCap": null,
     "tiers": [
       {
@@ -20544,7 +20544,7 @@
     "ruleImage": "./assets/activity-rule-1199.png",
     "recordSnapshot": true,
     "overrides": {},
-    "updatedAt": "2026/7/5 00:00:05",
+    "updatedAt": "2026/7/5 00:11:07",
     "rewardCap": 600000,
     "tiers": [
       {
@@ -21428,7 +21428,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1290.png",
-    "updatedAt": "2026/7/5 00:00:08",
+    "updatedAt": "2026/7/5 00:11:10",
     "rewardCap": null,
     "tiers": [
       {
@@ -21673,7 +21673,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1299.png",
-    "updatedAt": "2026/7/5 00:00:12",
+    "updatedAt": "2026/7/5 00:11:13",
     "rewardCap": null,
     "tiers": [
       {
@@ -21758,7 +21758,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1300.png",
-    "updatedAt": "2026/7/5 00:00:15",
+    "updatedAt": "2026/7/5 00:11:16",
     "rewardCap": null,
     "tiers": [
       {
@@ -21843,7 +21843,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1301.png",
-    "updatedAt": "2026/7/5 00:00:18",
+    "updatedAt": "2026/7/5 00:11:19",
     "rewardCap": null,
     "tiers": [],
     "rows": [
@@ -21920,7 +21920,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1303.png",
-    "updatedAt": "2026/7/5 00:00:21",
+    "updatedAt": "2026/7/5 00:11:23",
     "rewardCap": null,
     "tiers": [
       {
@@ -22040,7 +22040,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:49:59",
     "ruleImage": "./assets/activity-rule-1304.png",
-    "updatedAt": "2026/7/5 00:00:24",
+    "updatedAt": "2026/7/5 00:11:26",
     "rewardCap": null,
     "tiers": [
       {
@@ -22221,7 +22221,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1311.png",
-    "updatedAt": "2026/7/5 00:00:27",
+    "updatedAt": "2026/7/5 00:11:28",
     "rewardCap": null,
     "tiers": [
       {
@@ -22359,7 +22359,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1323.png",
-    "updatedAt": "2026/7/5 00:00:30",
+    "updatedAt": "2026/7/5 00:11:32",
     "rewardCap": null,
     "tiers": [
       {
@@ -22465,7 +22465,7 @@
     "discoveredAt": "2026/6/29 10:53:16",
     "listUpdatedAt": "2026/7/4 23:49:59",
     "ruleImage": "./assets/activity-rule-1325.png",
-    "updatedAt": "2026/7/5 00:00:33",
+    "updatedAt": "2026/7/5 00:11:35",
     "rewardCap": null,
     "tiers": [
       {
@@ -22536,9 +22536,9 @@
       [
         "2026-07-04",
         4,
-        0,
+        2,
         946,
-        0
+        418
       ],
       [
         "2026-07-05",
@@ -22796,7 +22796,7 @@
     "discoveredAt": "2026/6/29 22:02:23",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1331.png",
-    "updatedAt": "2026/7/5 00:00:36",
+    "updatedAt": "2026/7/5 00:11:38",
     "rewardCap": null,
     "tiers": [
       {
@@ -22915,7 +22915,7 @@
     "discoveredAt": "2026/6/30 11:51:12",
     "listUpdatedAt": "2026/7/4 23:49:59",
     "ruleImage": "./assets/activity-rule-1347.png",
-    "updatedAt": "2026/7/5 00:00:54",
+    "updatedAt": "2026/7/5 00:11:56",
     "rewardCap": null,
     "tiers": [
       {
@@ -22958,22 +22958,22 @@
       [
         "2026-07-03",
         156656,
-        156102,
+        156103,
         4348816.98,
-        4318169.38
+        4318244.38
       ],
       [
         "2026-07-04",
-        169629,
-        160034,
-        4955040,
-        4538168.63
+        169607,
+        161042,
+        4954170.25,
+        4568136.09
       ],
       [
         "2026-07-05",
-        20,
+        512,
         0,
-        559.24,
+        22352.31,
         0
       ],
       [
@@ -23175,7 +23175,7 @@
     "discoveredAt": "2026/6/30 11:51:12",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1352.png",
-    "updatedAt": "2026/7/5 00:00:39",
+    "updatedAt": "2026/7/5 00:11:41",
     "rewardCap": null,
     "tiers": [
       {
@@ -23246,7 +23246,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/4 23:49:59",
     "ruleImage": "./assets/activity-rule-1356.png",
-    "updatedAt": "2026/7/5 00:00:42",
+    "updatedAt": "2026/7/5 00:11:44",
     "rewardCap": null,
     "tiers": [
       {
@@ -23275,22 +23275,22 @@
       [
         "2026-07-03",
         127008,
-        126890,
+        126891,
         3691890.26,
-        3686917.77
+        3686992.77
       ],
       [
         "2026-07-04",
-        137500,
-        130618,
-        4146597.85,
-        3908387.37
+        137477,
+        131409,
+        4145746,
+        3933193.35
       ],
       [
         "2026-07-05",
-        12,
+        422,
         0,
-        351.71,
+        14042.43,
         0
       ],
       [
@@ -23317,7 +23317,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/4 23:50:02",
     "ruleImage": "./assets/activity-rule-1358.png",
-    "updatedAt": "2026/7/5 00:00:45",
+    "updatedAt": "2026/7/5 00:11:47",
     "rewardCap": null,
     "tiers": [
       {
@@ -23360,7 +23360,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/4 23:49:59",
     "ruleImage": "./assets/activity-rule-1359.png",
-    "updatedAt": "2026/7/5 00:00:48",
+    "updatedAt": "2026/7/5 00:11:50",
     "rewardCap": null,
     "tiers": [
       {
@@ -23396,16 +23396,16 @@
       [
         "2026-07-04",
         4040,
-        3850,
+        3880,
         90025.85,
-        85603.86
+        86202.94
       ],
       [
         "2026-07-05",
-        null,
-        null,
-        null,
-        null
+        4,
+        0,
+        79.99,
+        0
       ],
       [
         "2026-07-06",
@@ -23431,7 +23431,7 @@
     "discoveredAt": "2026/6/30 18:00:00",
     "listUpdatedAt": "2026/7/4 23:49:59",
     "ruleImage": "./assets/activity-rule-1360.png",
-    "updatedAt": "2026/7/5 00:00:51",
+    "updatedAt": "2026/7/5 00:11:53",
     "rewardCap": null,
     "tiers": [],
     "rows": [
@@ -23458,16 +23458,16 @@
       ],
       [
         "2026-07-04",
-        6112,
-        5688,
-        163524.55,
-        150913.26
+        6110,
+        5719,
+        163448.79,
+        151948.1
       ],
       [
         "2026-07-05",
-        2,
+        17,
         0,
-        50.58,
+        322.78,
         0
       ],
       [
