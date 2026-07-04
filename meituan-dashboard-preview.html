@@ -913,6 +913,17 @@
     const PAGE_RELOAD_MAX_MS = 5 * 60 * 1000;
     const PUBLIC_RELOAD_MIN_MS = 5 * 60 * 1000;
     const CAP = 600000;
+
+    function isStandalonePublicActivityPage() {
+      return /^https?:$/.test(location.protocol)
+        && !["127.0.0.1", "localhost"].includes(location.hostname)
+        && window.top === window.self;
+    }
+
+    if (isStandalonePublicActivityPage()) {
+      location.replace(new URL("./index.html#activity", location.href).toString());
+    }
+
     const DEFAULT_TIERS = [
       { name: "档一", metric: "amount", threshold: 95378491, rewardType: "rate", rate: 0.002 },
       { name: "档二", metric: "amount", threshold: 104381246, rewardType: "rate", rate: 0.004 },
@@ -960,17 +971,29 @@
         ids.forEach(id => {
           const fileActivity = id === DEFAULT_ACTIVITY.id ? DEFAULT_ACTIVITY : (SAVED_ACTIVITIES[id] || {});
           const browserActivity = browserSaved[id] || {};
+          const fileRows = Array.isArray(fileActivity.rows) && fileActivity.rows.length ? fileActivity.rows : null;
+          const browserRows = Array.isArray(browserActivity.rows) ? browserActivity.rows : [];
+          const fileTiers = Array.isArray(fileActivity.tiers) && fileActivity.tiers.length ? fileActivity.tiers : null;
+          const browserTiers = Array.isArray(browserActivity.tiers) ? browserActivity.tiers : [];
           merged[id] = {
-            ...fileActivity,
             ...browserActivity,
+            ...fileActivity,
             id: String(id),
             title: fileActivity.title || browserActivity.title || `活动 ${id}`,
             activityTime: fileActivity.activityTime || browserActivity.activityTime || "",
+            activityStartTime: fileActivity.activityStartTime ?? browserActivity.activityStartTime ?? null,
+            activityEndTime: fileActivity.activityEndTime ?? browserActivity.activityEndTime ?? null,
+            activityStatus: fileActivity.activityStatus ?? browserActivity.activityStatus ?? null,
+            activityStatusText: fileActivity.activityStatusText || browserActivity.activityStatusText || "",
+            registerStatus: fileActivity.registerStatus ?? browserActivity.registerStatus ?? null,
+            pictureUrl: fileActivity.pictureUrl || browserActivity.pictureUrl || "",
+            discoveredAt: fileActivity.discoveredAt || browserActivity.discoveredAt || "",
+            listUpdatedAt: fileActivity.listUpdatedAt || browserActivity.listUpdatedAt || "",
             ruleImage: fileActivity.ruleImage || browserActivity.ruleImage || "",
             updatedAt: fileActivity.updatedAt || browserActivity.updatedAt || "",
             rewardCap: fileActivity.rewardCap ?? browserActivity.rewardCap ?? null,
-            rows: Array.isArray(fileActivity.rows) && fileActivity.rows.length ? fileActivity.rows : (browserActivity.rows || []),
-            tiers: Array.isArray(fileActivity.tiers) && fileActivity.tiers.length ? fileActivity.tiers : (browserActivity.tiers || []),
+            rows: fileRows || browserRows,
+            tiers: fileTiers || browserTiers,
             overrides: browserActivity.overrides || fileActivity.overrides || {},
             recordSnapshot: fileActivity.recordSnapshot ?? browserActivity.recordSnapshot ?? false
           };

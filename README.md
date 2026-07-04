@@ -9,7 +9,7 @@
 - “激励活动看板”：对应 `meituan-dashboard-preview.html`。
 - “用户内部看板”：本地打开时对应本机实时服务 `http://127.0.0.1:8791/`，公网打开时对应加密公开快照 `business-user-dashboard-prototype.html`。
 
-如果只想单独打开某一个看板，也可以继续直接打开 `meituan-dashboard-preview.html` 或 `business-user-dashboard-prototype.html`。
+本机排查时可以继续直接打开 `meituan-dashboard-preview.html` 或 `business-user-dashboard-prototype.html`；公网请只使用统一入口 `index.html`，单独访问公网 `meituan-dashboard-preview.html` 会自动跳回统一入口。
 其中“用户内部看板”要显示实时数据，需要先确认“业务用户看板服务”已经启动。
 公网打开统一入口时，会先要求输入公网看板访问密码；密码与用户内部看板公网快照使用同一套钥匙串配置。
 
