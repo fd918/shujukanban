@@ -299,6 +299,11 @@
       padding: 0 16px;
     }
 
+    .password-row button:disabled {
+      opacity: .65;
+      cursor: wait;
+    }
+
     .gate-error {
       min-height: 20px;
       margin-top: 10px;
@@ -478,7 +483,8 @@
     }
 
     async function verifyPublicPassword(password) {
-      const res = await fetch(`data/business-dashboard-public.enc.json?_=${Date.now()}`);
+      let res = await fetch(`data/public-auth-check.enc.json?_=${Date.now()}`);
+      if (!res.ok) res = await fetch(`data/business-dashboard-public.enc.json?_=${Date.now()}`);
       if (!res.ok) throw new Error("公网加密数据不存在，暂时无法验证密码。");
       const encrypted = await res.json();
       const salt = base64ToBytes(encrypted.salt);
@@ -495,6 +501,7 @@
     async function unlockPublicAccess(password) {
       gateError.textContent = "";
       try {
+        gateError.textContent = "正在验证密码，请稍候...";
         await verifyPublicPassword(password);
         savePublicPassword(password);
         publicUnlocked = true;
@@ -533,8 +540,16 @@
         gateError.textContent = "请输入访问密码。";
         return;
       }
-      gateError.textContent = "正在验证...";
-      await unlockPublicAccess(password);
+      const button = passwordForm.querySelector("button");
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "进入中...";
+      try {
+        await unlockPublicAccess(password);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
     });
 
     window.addEventListener("hashchange", () => {
