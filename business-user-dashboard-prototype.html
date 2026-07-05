@@ -226,6 +226,24 @@
     .setting { border: 1px solid var(--line); border-radius: 8px; padding: 13px; display: grid; gap: 8px; }
     .setting label { color: var(--muted); font-size: 12px; }
     .inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mobile-filter-toggle { display: none; margin-bottom: 10px; }
+    .chart-wrap { padding: 14px; }
+    .chart-stage { width: 100%; height: 300px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(#fff, #fbfcfe); }
+    .chart-stage svg { width: 100%; height: 100%; display: block; }
+    .chart-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .loading-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, .18);
+    }
+    .loading-mask.open { display: flex; }
+    .loading-card { min-width: 190px; border-radius: 10px; background: #fff; box-shadow: var(--shadow); padding: 16px 18px; text-align: center; font-weight: 700; }
+    .loading-card span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 400; }
 
     .toast {
       position: fixed;
@@ -249,6 +267,13 @@
       .filters, .kpis, .settings-grid, .detail-grid { grid-template-columns: 1fr; }
       .topbar { align-items: start; flex-direction: column; }
       .content { padding: 14px; }
+      .mobile-filter-toggle { display: block; width: 100%; }
+      .filters.mobile-collapsed { display: none; }
+      .source.mobile-collapsed { display: none; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi { padding: 11px; }
+      .kpi strong { font-size: 20px; }
+      .chart-stage { height: 240px; }
     }
   </style>
 </head>
@@ -267,6 +292,7 @@
   </header>
 
   <main class="content">
+    <button class="btn mobile-filter-toggle" id="filterToggle">展开筛选和提示</button>
     <section class="filters">
       <select class="field" id="platformSelect"><option value="all">全部平台</option></select>
       <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
@@ -288,6 +314,23 @@
       <article class="kpi"><label>严重异常</label><strong id="kpiCritical">0</strong><span>可触发立即通知</span></article>
       <article class="kpi"><label>影响订单</label><strong id="kpiImpact">0</strong><span>当前值较基准差额</span></article>
       <article class="kpi"><label>异常客户</label><strong id="kpiUsers">0</strong><span>按用户维度计算</span></article>
+    </section>
+
+    <section class="panel" id="trendPanel">
+      <div class="panel-head">
+        <div>
+          <h2>业务小时趋势</h2>
+          <small>今日、昨日、上周同期 24 小时订单走势</small>
+        </div>
+        <div class="toolbar">
+          <select class="field" id="trendBusinessSelect" style="min-width:260px;"></select>
+          <button class="btn" id="trendRefreshBtn">刷新趋势</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-legend" id="trendLegend"></div>
+        <div class="chart-stage" id="trendChart"></div>
+      </div>
     </section>
 
     <section class="panel">
@@ -412,9 +455,10 @@
   </section>
 
   <div class="toast" id="toast">已刷新</div>
+  <div class="loading-mask" id="loadingMask"><div class="loading-card">正在加载<span id="loadingText">正在请求中台数据，请稍等...</span></div></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailRefreshing: false, detailLatestTime: "", detailStats: null, publicMode: false, publicUserDetails: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailRefreshing: false, detailLatestTime: "", detailStats: null, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {} };
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
@@ -438,6 +482,35 @@
       $("#toast").textContent = text;
       $("#toast").classList.add("show");
       setTimeout(() => $("#toast").classList.remove("show"), 1800);
+    }
+
+    function showLoading(text = "正在请求中台数据，请稍等...") {
+      $("#loadingText").textContent = text;
+      $("#loadingMask").classList.add("open");
+    }
+
+    function hideLoading() {
+      $("#loadingMask").classList.remove("open");
+    }
+
+    function openDatePicker(input) {
+      input.focus();
+      if (typeof input.showPicker === "function") {
+        try { input.showPicker(); } catch {}
+      }
+    }
+
+    async function requestJson(url, options = {}) {
+      let res;
+      try {
+        res = await fetch(url, options);
+      } catch (error) {
+        const target = url.startsWith("http://127.0.0.1") || location.protocol === "file:" ? "本地服务 http://127.0.0.1:8791" : "接口服务";
+        throw new Error(`${target} 连接失败。请先确认“业务用户看板服务.command”已启动；原始错误：${error.message}`);
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || data.message || `接口请求失败：HTTP ${res.status}`);
+      return data;
     }
 
     function setDailyRange(type) {
@@ -584,6 +657,80 @@
       $("#kpiUsers").textContent = fmt(abnormalUsers().length);
     }
 
+    function defaultTrendBusinessId() {
+      const preferred = state.businesses.find(row => row.name?.includes("美团外卖节"));
+      const fallback = state.businesses.find(row => row.platformBusinessId || row.businessId);
+      return String((preferred || fallback)?.platformBusinessId || (preferred || fallback)?.businessId || "");
+    }
+
+    function renderTrendOptions() {
+      const select = $("#trendBusinessSelect");
+      const current = state.trendBusinessId || defaultTrendBusinessId();
+      state.trendBusinessId = current;
+      select.innerHTML = state.businesses
+        .filter(row => row.platformBusinessId || row.businessId)
+        .map(row => {
+          const id = String(row.platformBusinessId || row.businessId);
+          return `<option value="${id}" ${id === current ? "selected" : ""}>${row.platform}｜${row.name}</option>`;
+        }).join("");
+    }
+
+    function renderMobileFilters() {
+      $(".filters").classList.toggle("mobile-collapsed", state.filtersCollapsed);
+      $("#sourceBox").classList.toggle("mobile-collapsed", state.filtersCollapsed);
+      $("#filterToggle").textContent = state.filtersCollapsed ? "展开筛选和提示" : "收起筛选和提示";
+    }
+
+    function renderTrendChart() {
+      const colors = ["#2563eb", "#e88a00", "#16a34a"];
+      const data = state.trendData;
+      $("#trendLegend").innerHTML = data?.series?.length
+        ? data.series.map((item, index) => `<span><i class="legend-dot" style="background:${colors[index]}"></i>${item.label} ${item.date}</span>`).join("")
+        : `<span class="muted">${state.trendLoading ? "趋势加载中..." : "等待选择业务"}</span>`;
+      if (!data?.series?.length) {
+        $("#trendChart").innerHTML = `<div class="source" style="margin:14px;">${state.trendLoading ? "正在加载业务小时趋势..." : "暂无趋势数据"}</div>`;
+        return;
+      }
+      const width = 960, height = 300, pad = { left: 54, right: 18, top: 22, bottom: 34 };
+      const maxValue = Math.max(1, ...data.series.flatMap(item => (item.points || []).map(point => Number(point.orders || 0))));
+      const x = hour => pad.left + (hour / 23) * (width - pad.left - pad.right);
+      const y = value => height - pad.bottom - (Number(value || 0) / maxValue) * (height - pad.top - pad.bottom);
+      const grid = [0, .25, .5, .75, 1].map(rate => {
+        const yy = y(maxValue * rate);
+        return `<line x1="${pad.left}" y1="${yy}" x2="${width - pad.right}" y2="${yy}" stroke="#edf1f6"/><text x="8" y="${yy + 4}" fill="#667085" font-size="11">${fmt(Math.round(maxValue * rate))}</text>`;
+      }).join("");
+      const hourTicks = [0, 3, 6, 9, 12, 15, 18, 21, 23].map(hour => `<text x="${x(hour)}" y="${height - 10}" text-anchor="middle" fill="#667085" font-size="11">${String(hour).padStart(2, "0")}:00</text>`).join("");
+      const paths = data.series.map((item, index) => {
+        const points = item.points || [];
+        const d = points.map((point, i) => `${i ? "L" : "M"}${x(point.hour)} ${y(point.orders)}`).join(" ");
+        return `<path d="${d}" fill="none" stroke="${colors[index]}" stroke-width="2.4"/><g>${points.map(point => `<circle cx="${x(point.hour)}" cy="${y(point.orders)}" r="2.4" fill="${colors[index]}"><title>${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单</title></circle>`).join("")}</g>`;
+      }).join("");
+      $("#trendChart").innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="业务小时订单趋势">${grid}${hourTicks}<line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${height - pad.bottom}" stroke="#d9e0e8"/><line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#d9e0e8"/>${paths}</svg>`;
+    }
+
+    async function loadBusinessTrend(refresh = false) {
+      if (state.publicMode || !state.trendBusinessId) {
+        state.trendData = null;
+        renderTrendChart();
+        return;
+      }
+      state.trendLoading = true;
+      renderTrendChart();
+      try {
+        const params = new URLSearchParams({ platform_business_id: state.trendBusinessId, _: refresh ? Date.now() : "0" });
+        const res = await fetch(apiUrl(`/api/business-hourly-trend?${params.toString()}`));
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "趋势加载失败");
+        state.trendData = data;
+      } catch (error) {
+        state.trendData = null;
+        toast(error.message || "趋势加载失败");
+      } finally {
+        state.trendLoading = false;
+        renderTrendChart();
+      }
+    }
+
     function renderSource() {
       $("#latestTime").textContent = state.source.latestDataTime ? `最新数据：${state.source.latestDataTime}` : "最新数据：等待刷新";
       $("#snapshotInfo").textContent = `自动刷新：${state.config?.refreshSeconds || 60} 秒｜快照：每 ${state.config?.snapshotMinutes || 30} 分钟`;
@@ -632,7 +779,7 @@
           <td>${fmt(row.cmp.impact)}</td>
           <td>${tag(row.cmp.level, row.cmp.label)}</td>
           <td>${fmt(row.users || row.userIds?.length || 0)}</td>
-          <td><button class="link" data-index="${index}">查看用户</button></td>
+          <td><button class="link" data-trend-index="${index}">趋势</button>　<button class="link" data-index="${index}">查看用户</button></td>
         </tr>`;
       }).join("") : `<tr><td colspan="12" class="muted">当前筛选条件下没有业务。</td></tr>`;
     }
@@ -664,6 +811,9 @@
       renderPlatforms();
       renderKpis();
       renderSource();
+      renderTrendOptions();
+      renderTrendChart();
+      renderMobileFilters();
       renderTable();
     }
 
@@ -672,6 +822,7 @@
       state.loading = !hasOldData;
       state.refreshing = hasOldData;
       $("#refreshBtn").textContent = "…";
+      if (manual) showLoading("正在查询中台数据，请稍等...");
       renderSource();
       renderTable();
       try {
@@ -694,8 +845,8 @@
           force: manual ? "1" : "0",
           _: Date.now()
         });
-        const res = await fetch(apiUrl(`/api/live-dashboard?${params.toString()}`));
-        const data = await res.json();
+        const data = await requestJson(apiUrl(`/api/live-dashboard?${params.toString()}`));
+        const oldTrendBusinessId = state.trendBusinessId;
         state.publicMode = false;
         state.config = data.config;
         state.businesses = data.businesses || [];
@@ -703,12 +854,17 @@
         state.businessDaily = data.businessDaily || null;
         state.dateRange = data.dateRange || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
+        if (!state.trendBusinessId || !state.businesses.some(row => String(row.platformBusinessId || row.businessId) === state.trendBusinessId)) {
+          state.trendBusinessId = defaultTrendBusinessId();
+        }
+        if (oldTrendBusinessId !== state.trendBusinessId) state.trendData = null;
         state.loading = false;
         state.refreshing = false;
         fillSettings();
         render();
+        loadBusinessTrend(false);
         if (manual) toast("数据已刷新");
-      } catch {
+      } catch (error) {
         const publicLoaded = await loadPublicSnapshot();
         if (publicLoaded) {
           state.loading = false;
@@ -719,9 +875,10 @@
         state.loading = false;
         state.refreshing = false;
         render();
-        toast("刷新失败");
+        toast(error.message || "刷新失败");
       } finally {
         $("#refreshBtn").textContent = "↻";
+        hideLoading();
       }
     }
 
@@ -820,9 +977,7 @@
     }
 
     async function saveSettings() {
-      const res = await fetch(apiUrl("/api/config"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(collectSettings()) });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "保存失败");
+      const data = await requestJson(apiUrl("/api/config"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(collectSettings()) });
       state.config = data.config;
       $("#feishuWebhook").value = "";
       $("#feishuSecret").value = "";
@@ -836,10 +991,9 @@
       $("#testResult").textContent = "正在发送...";
       try {
         await saveSettings();
-        const res = await fetch(apiUrl("/api/feishu/test"), { method: "POST" });
-        const data = await res.json();
-        $("#testResult").textContent = data.ok ? "测试成功" : data.error || "测试失败";
-        toast(data.ok ? "飞书测试成功" : "飞书测试失败");
+        const data = await requestJson(apiUrl("/api/feishu/test"), { method: "POST" });
+        $("#testResult").textContent = data.message || "测试成功";
+        toast("飞书测试成功");
       } catch (error) {
         $("#testResult").textContent = error.message;
         toast("飞书测试失败");
@@ -858,6 +1012,8 @@
       state.detailMode = "abnormal";
       state.detailScope = "today";
       state.detailSearch = "";
+      state.detailSort = "orders";
+      state.detailSortDir = "desc";
       state.detailUsers = [];
       state.detailHistory = null;
       state.detailStats = null;
@@ -976,13 +1132,25 @@
         <div id="detailResult">${renderDetailResult()}</div>`;
     }
 
+    function detailSortValue(user, key) {
+      if (key === "impact") return user.cmp?.impact || 0;
+      return user.cmp?.today || user.todayOrders || 0;
+    }
+
+    function detailSortButton(key, label) {
+      const active = state.detailSort === key;
+      return `<button class="sort-btn ${active ? "active" : ""}" data-detail-sort="${key}">${label}${active ? (state.detailSortDir === "asc" ? "↑" : "↓") : ""}</button>`;
+    }
+
     function renderDetailResult() {
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
       const abnormal = allUsers.filter(user => user.cmp.level !== "normal");
       const sourceUsers = state.detailMode === "abnormal" ? abnormal : allUsers;
       const keyword = state.detailSearch.toLowerCase();
-      const users = keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers;
+      const users = (keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers)
+        .slice()
+        .sort((a, b) => (detailSortValue(a, state.detailSort) - detailSortValue(b, state.detailSort)) * (state.detailSortDir === "asc" ? 1 : -1));
       const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
       const diff = state.detailScope === "today" ? userOrderSum - Number(row.cmp.today || 0) : null;
       const impactSum = abnormal.filter(user => user.cmp.diff < 0).reduce((sum, user) => sum + user.cmp.impact, 0);
@@ -991,7 +1159,7 @@
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailScopeLabel()}订单</th><th>昨日同时刻</th><th>对比基准</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>影响订单</th><th>状态</th></tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>昨日同时刻</th><th>对比基准</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const yesterday = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null;
@@ -1073,11 +1241,16 @@
     }));
     $("#platformSelect").addEventListener("change", e => { state.platform = e.target.value; render(); });
     $("#searchInput").addEventListener("input", e => { state.search = e.target.value.trim(); render(); });
-    $("#dailyStart").addEventListener("change", e => { state.dailyStart = e.target.value; $("#dailyEnd").focus(); });
+    $("#dailyStart").addEventListener("click", e => openDatePicker(e.target));
+    $("#dailyEnd").addEventListener("click", e => openDatePicker(e.target));
+    $("#dailyStart").addEventListener("change", e => { state.dailyStart = e.target.value; setTimeout(() => openDatePicker($("#dailyEnd")), 120); });
     $("#dailyEnd").addEventListener("change", e => { state.dailyEnd = e.target.value; loadData(true).catch(error => toast(error.message || "刷新失败")); });
     $$("[data-range]").forEach(btn => btn.addEventListener("click", () => setDailyRange(btn.dataset.range)));
     $("#applyBtn").addEventListener("click", () => loadData(true));
     $("#refreshBtn").addEventListener("click", () => loadData(true));
+    $("#filterToggle").addEventListener("click", () => { state.filtersCollapsed = !state.filtersCollapsed; renderMobileFilters(); });
+    $("#trendBusinessSelect").addEventListener("change", e => { state.trendBusinessId = e.target.value; state.trendData = null; loadBusinessTrend(true); });
+    $("#trendRefreshBtn").addEventListener("click", () => loadBusinessTrend(true));
     $("#helpBtn").addEventListener("click", openHelp);
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#closeHelp").addEventListener("click", closeHelp);
@@ -1088,10 +1261,27 @@
     $("#closeDetail").addEventListener("click", closeDetail);
     $("#closeDetailFoot").addEventListener("click", closeDetail);
     $("#businessBody").addEventListener("click", e => {
+      const trend = e.target.closest("[data-trend-index]");
+      if (trend) {
+        const row = filteredBusinesses()[Number(trend.dataset.trendIndex)];
+        state.trendBusinessId = String(row.platformBusinessId || row.businessId || "");
+        renderTrendOptions();
+        loadBusinessTrend(true);
+        document.getElementById("trendPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       const target = e.target.closest("[data-index]");
       if (target) openBusiness(filteredBusinesses()[Number(target.dataset.index)]).catch(error => toast(error.message || "用户明细加载失败"));
     });
     $("#detailBody").addEventListener("click", e => {
+      const detailSort = e.target.closest("[data-detail-sort]");
+      if (detailSort) {
+        state.detailSortDir = state.detailSort === detailSort.dataset.detailSort && state.detailSortDir === "desc" ? "asc" : "desc";
+        state.detailSort = detailSort.dataset.detailSort;
+        const result = $("#detailResult");
+        if (result) result.innerHTML = renderDetailResult();
+        return;
+      }
       const scope = e.target.closest("[data-detail-scope]");
       if (scope && state.detailRow) {
         state.detailScope = scope.dataset.detailScope;
@@ -1135,6 +1325,7 @@
     $("#testFeishuBtn").addEventListener("click", testFeishu);
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
 
+    state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
     loadData(false, true).then(setupAutoRefresh);
   </script>
 </body>

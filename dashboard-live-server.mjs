@@ -68,7 +68,12 @@ const mime = {
 };
 
 function json(res, status, data) {
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" });
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type"
+  });
   res.end(JSON.stringify(data));
 }
 
@@ -565,6 +570,15 @@ function sumTrendUntil(rows, hour) {
   }, 0);
 }
 
+function normalizeHourlyTrend(rows) {
+  const buckets = Array.from({ length: 24 }, (_, hour) => ({ hour, orders: 0 }));
+  for (const item of rows || []) {
+    const hour = Number(String(item.paid_date || item.hour || "").slice(0, 2));
+    if (Number.isFinite(hour) && hour >= 0 && hour < 24) buckets[hour].orders += number(item.value ?? item.orders);
+  }
+  return buckets;
+}
+
 async function mapLimit(items, limit, task) {
   const results = new Array(items.length);
   let index = 0;
@@ -702,6 +716,34 @@ async function fetchBusinessDaily(statuses, query = {}) {
     endDate,
     dates,
     rows: Object.values(rowsById).sort((a, b) => number(b.days[endDate]?.orders) - number(a.days[endDate]?.orders))
+  };
+}
+
+async function fetchBusinessHourlyTrend({ platformBusinessId = "", currentDate = dayKey() }, statuses = []) {
+  const platform = String(platformBusinessId || "");
+  if (!platform) return { ok: false, currentDate, series: [], source: { statuses: [{ name: "业务小时趋势", ok: false, message: "缺少业务平台ID" }] } };
+  const yesterday = shiftDay(currentDate, -1);
+  const lastWeek = shiftDay(currentDate, -7);
+  const requests = [
+    ["今日", currentDate],
+    ["昨日", yesterday],
+    ["上周同期", lastWeek]
+  ].map(([label, date]) => apiCall(`单业务小时趋势-${label}`, "POST", "/api/v2/order-statistic/trend-new", {
+    platform,
+    paid_date: [date, date],
+    filter_field: "order_count"
+  }, 15000).then(result => ({ label, date, result })));
+  const results = await Promise.all(requests);
+  results.forEach(item => statuses.push(item.result));
+  return {
+    ok: results.some(item => item.result.ok),
+    currentDate,
+    platformBusinessId: platform,
+    series: results.map(item => ({
+      label: item.label,
+      date: item.date,
+      points: normalizeHourlyTrend(item.result.data?.data || [])
+    }))
   };
 }
 
@@ -1384,7 +1426,21 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/config" && req.method === "GET") return json(res, 200, await getPublicConfig());
     if (url.pathname === "/api/config" && req.method === "POST") return json(res, 200, { ok: true, config: await saveConfig(await readBody(req)) });
-    if (url.pathname === "/api/feishu/test" && req.method === "POST") return json(res, 200, await testFeishu());
+    if (url.pathname === "/api/feishu/test" && req.method === "POST") {
+      try {
+        return json(res, 200, await testFeishu());
+      } catch (error) {
+        return json(res, 200, { ok: false, error: error.message, latestDataTime: nowText() });
+      }
+    }
+    if (url.pathname === "/api/business-hourly-trend") {
+      const statuses = [];
+      const data = await fetchBusinessHourlyTrend({
+        platformBusinessId: url.searchParams.get("platform_business_id") || url.searchParams.get("business_id") || "",
+        currentDate: parseDay(url.searchParams.get("date") || dayKey())
+      }, statuses);
+      return json(res, 200, { ...data, source: { statuses }, latestDataTime: nowText() });
+    }
     if (url.pathname === "/api/snapshot" && req.method === "POST") {
       const data = await liveDashboard({ recordSnapshot: false });
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily);
