@@ -100,6 +100,11 @@ function daysBetweenInclusive(startDate, endDate) {
   return Math.max(1, Math.round((dateFromDay(endDate) - dateFromDay(startDate)) / 86400000) + 1);
 }
 
+function dayList(startDate, endDate) {
+  const days = daysBetweenInclusive(startDate, endDate);
+  return Array.from({ length: days }, (_, index) => dayKey(addDays(dateFromDay(startDate), index)));
+}
+
 function rangeFromQuery(query = {}) {
   const preset = query.preset || "today";
   const today = dayKey();
@@ -649,6 +654,53 @@ async function fetchBusinessSummary(dateRange, statuses) {
   };
 }
 
+async function fetchBusinessDaily(statuses) {
+  const endDate = dayKey();
+  const startDate = shiftDay(endDate, -6);
+  const dates = dayList(startDate, endDate);
+  const payload = { platform: "", paid_date: [startDate, endDate] };
+  const [orders, commission] = await Promise.all([
+    apiCall("业务每日-按订单", "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "order_valid" }, 20000),
+    apiCall("业务每日-按佣金", "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "settle_amount_valid" }, 20000)
+  ]);
+  statuses.push(orders, commission);
+  const rowsById = {};
+  for (const row of pickArray(orders.data)) {
+    const id = String(row.order_type || row.business_id || row.subtitle || "");
+    rowsById[id] ||= {
+      platform: row.title || row.platform || "未分类",
+      name: row.subtitle || row.business_name || "未命名业务",
+      businessId: id,
+      platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
+      days: {}
+    };
+    for (const date of dates) {
+      rowsById[id].days[date] ||= { orders: 0, commission: 0 };
+      rowsById[id].days[date].orders = number(row[date]);
+    }
+  }
+  for (const row of pickArray(commission.data)) {
+    const id = String(row.order_type || row.business_id || row.subtitle || "");
+    rowsById[id] ||= {
+      platform: row.title || row.platform || "未分类",
+      name: row.subtitle || row.business_name || "未命名业务",
+      businessId: id,
+      platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
+      days: {}
+    };
+    for (const date of dates) {
+      rowsById[id].days[date] ||= { orders: 0, commission: 0 };
+      rowsById[id].days[date].commission = number(row[date]);
+    }
+  }
+  return {
+    startDate,
+    endDate,
+    dates,
+    rows: Object.values(rowsById).sort((a, b) => number(b.days[endDate]?.orders) - number(a.days[endDate]?.orders))
+  };
+}
+
 function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
   const byStatId = new Map(summaryRows.map(row => [String(row.businessId), row]));
   const merged = [];
@@ -732,10 +784,11 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
       }, 30000));
       previousRows = previousRows.concat(...previousRest.filter(item => item.ok).map(item => asList(item.data)));
     }
-    previousById = Object.fromEntries(previousRows.map(row => {
+    previousById = {};
+    previousRows.forEach(row => {
       const id = String(row.uid || row.promotion_id || row.accounts_id || "");
-      return [id, number(row[previousDay] ?? row.period_total)];
-    }));
+      previousById[id] = number(previousById[id]) + number(row[previousDay] ?? row.period_total);
+    });
   }
   const rows = allRows.slice(0, pageSize).map(row => normalizeUser(row, startDate === endDate ? endDate : "period_total"));
   rows.forEach(row => {
@@ -937,11 +990,12 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     }
   }
   const statuses = [];
-  const [userStats, userIndex, businessSummary, businessPages] = await Promise.all([
+  const [userStats, userIndex, businessSummary, businessPages, businessDaily] = await Promise.all([
     apiCall("用户统计汇总", "POST", "/api/v2/dashboard/summary/statistics", {}, 12000),
     apiCall("用户列表", "POST", "/api/v2/dashboard/summary/index", { page: 1, size: 50 }, 25000),
     fetchBusinessSummary(dateRange, statuses),
-    fetchBusinessPages(statuses)
+    fetchBusinessPages(statuses),
+    fetchBusinessDaily(statuses)
   ]);
   statuses.push(userStats, userIndex);
 
@@ -990,7 +1044,8 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     summary,
     hourlyTrend: businessSummary.hourlyTrend,
     businesses: attachBusinessUserSearchText(enrichedBusinesses),
-    users: enrichedUsers
+    users: enrichedUsers,
+    businessDaily
   };
   if (payload.ok && enrichedBusinesses.length) await writeDashboardCache(cacheKey, payload);
   return payload;
@@ -1188,6 +1243,7 @@ async function sanitizePublicDashboard(data) {
     summary: data.summary || null,
     businesses: data.businesses || [],
     users: data.users || [],
+    businessDaily: data.businessDaily || null,
     userDetails: await encryptedPublicUserDetails(dateRange)
   };
 }

@@ -291,6 +291,10 @@
           <small>默认展示全部业务，可在列表内筛选异常类型和排序</small>
         </div>
         <div class="toolbar">
+          <div class="segmented" id="viewTabs">
+            <button class="active" data-view="list">业务列表</button>
+            <button data-view="daily">每日业务数据</button>
+          </div>
           <div class="segmented" id="metricTabs">
             <button class="active" data-metric="orders">订单</button>
             <button data-metric="commission">佣金</button>
@@ -307,7 +311,7 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table>
+        <table id="businessTable">
           <thead>
             <tr>
               <th>序号</th>
@@ -325,6 +329,10 @@
             </tr>
           </thead>
           <tbody id="businessBody"></tbody>
+        </table>
+        <table id="dailyTable" class="hidden">
+          <thead id="dailyHead"></thead>
+          <tbody id="dailyBody"></tbody>
         </table>
       </div>
     </section>
@@ -375,7 +383,7 @@
   <div class="toast" id="toast">已刷新</div>
 
   <script>
-    const state = { metric: "orders", level: "all", sort: "today", sortDir: "desc", platform: "all", search: "", config: null, businesses: [], users: [], source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, detailMode: "abnormal", detailRow: null, detailUsers: [], detailRefreshing: false, detailLatestTime: "", publicMode: false, publicUserDetails: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", config: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, detailMode: "abnormal", detailRow: null, detailUsers: [], detailRefreshing: false, detailLatestTime: "", publicMode: false, publicUserDetails: {} };
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
@@ -517,6 +525,12 @@
     }
 
     function renderTable() {
+      $("#businessTable").classList.toggle("hidden", state.view !== "list");
+      $("#dailyTable").classList.toggle("hidden", state.view !== "daily");
+      if (state.view === "daily") {
+        renderDailyTable();
+        return;
+      }
       const rows = filteredBusinesses();
       $("#currentHeader").textContent = currentMetricLabel();
       $("#baselineHeader").textContent = baselineLabel();
@@ -549,6 +563,29 @@
       }).join("") : `<tr><td colspan="12" class="muted">当前筛选条件下没有业务。</td></tr>`;
     }
 
+    function renderDailyTable() {
+      const daily = state.businessDaily || {};
+      const dates = daily.dates || [];
+      const searchKey = state.search.toLowerCase();
+      let rows = daily.rows || [];
+      if (state.platform !== "all") rows = rows.filter(row => row.platform === state.platform);
+      if (searchKey) rows = rows.filter(row => `${row.platform}${row.name}${row.businessId}${row.platformBusinessId || ""}`.toLowerCase().includes(searchKey));
+      $("#dailyHead").innerHTML = `<tr><th>序号</th><th>平台</th><th>业务名称</th>${dates.map(date => `<th>${date}<br>订单 / 佣金</th>`).join("")}</tr>`;
+      if (state.loading && !rows.length) {
+        $("#dailyBody").innerHTML = `<tr><td colspan="${dates.length + 3}" class="muted">每日业务数据加载中，请稍等...</td></tr>`;
+        return;
+      }
+      $("#dailyBody").innerHTML = rows.length ? rows.map((row, index) => `<tr>
+        <td>${index + 1}</td>
+        <td>${row.platform}</td>
+        <td><strong>${row.name}</strong></td>
+        ${dates.map(date => {
+          const item = row.days?.[date] || {};
+          return `<td>${fmt(item.orders)} / ${money(item.commission)}</td>`;
+        }).join("")}
+      </tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有每日业务数据。</td></tr>`;
+    }
+
     function render() {
       renderPlatforms();
       renderKpis();
@@ -579,6 +616,7 @@
         state.config = data.config;
         state.businesses = data.businesses || [];
         state.users = data.users || [];
+        state.businessDaily = data.businessDaily || null;
         state.dateRange = data.dateRange || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
         state.loading = false;
@@ -614,6 +652,7 @@
         state.config = data.config || state.config || { rules: {} };
         state.businesses = data.businesses || [];
         state.users = [];
+        state.businessDaily = data.businessDaily || null;
         state.publicUserDetails = data.userDetails || {};
         state.dateRange = data.dateRange || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
@@ -802,14 +841,14 @@
         <section class="source ${row.sameTime?.hasSnapshot ? "" : "warn"}"><strong>下钻说明：</strong>${row.sameTime?.hasSnapshot ? "已使用历史快照做同时刻比较。" : "当前业务用户同时刻历史快照不足，用户对比基准临时使用该业务前一日全日数据；服务会继续按设置频率记录业务用户快照。"} 业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，当前业务明细返回 ${fmt(allUsers.length)} 个有数据用户；默认只展示异常用户，可切换全部用户。</section>
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>用户</th><th>${currentMetricLabel()}</th><th>昨日同时刻</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>影响订单</th><th>状态</th></tr></thead>
+            <thead><tr><th>用户</th><th>${currentMetricLabel()}</th><th>昨日全天订单</th><th>昨日同时刻</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>影响订单</th><th>状态</th></tr></thead>
             <tbody>${users.length ? users.map(user => {
               const same = user.sameTime || {};
               const yesterday = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : user.cmp.base;
               const lastWeek = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
               const sevenAvg = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
-              return `<tr><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${yesterday ? fmt(yesterday) : "-"}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pct(user.cmp.ratio)}</td><td>${fmt(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td></tr>`;
-            }).join("") : `<tr><td colspan="8" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的异常用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+              return `<tr><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmt(user.yesterdayOrders)}</td><td>${yesterday ? fmt(yesterday) : "-"}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pct(user.cmp.ratio)}</td><td>${fmt(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td></tr>`;
+            }).join("") : `<tr><td colspan="9" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的异常用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>`;
     }
@@ -839,6 +878,13 @@
       if (!btn) return;
       state.metric = btn.dataset.metric;
       $$("#metricTabs button").forEach(item => item.classList.toggle("active", item === btn));
+      render();
+    });
+    $("#viewTabs").addEventListener("click", e => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      state.view = btn.dataset.view;
+      $$("#viewTabs button").forEach(item => item.classList.toggle("active", item === btn));
       render();
     });
     $("#levelTabs").addEventListener("click", e => {
