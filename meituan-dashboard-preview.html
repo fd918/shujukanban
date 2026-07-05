@@ -121,6 +121,59 @@
       font-size: 13px;
     }
 
+    .label-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .help-dot {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      background: #fff;
+      color: #475467;
+      font-size: 11px;
+      line-height: 1;
+      cursor: help;
+      flex: 0 0 auto;
+    }
+
+    .help-dot::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 8px);
+      z-index: 20;
+      width: min(340px, calc(100vw - 48px));
+      padding: 10px 12px;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(27, 39, 54, .16);
+      color: #344054;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-line;
+      transform: translateX(-50%) translateY(-4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .12s ease, transform .12s ease;
+    }
+
+    .help-dot:hover::after,
+    .help-dot:focus-visible::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     .value {
       margin-top: 10px;
       font-size: 28px;
@@ -696,7 +749,15 @@
         <div class="note">接口当天有效订单实付金额。</div>
       </div>
       <div class="panel kpi">
-        <div class="label" id="today-forecast-label">今日预估</div>
+        <div class="label-row">
+          <span id="today-forecast-label">今日预估</span>
+          <span class="help-dot" tabindex="0" aria-label="今日预估说明" data-tip="今日预估优先级：
+1. 如果你在“预估数据”里手动输入，当天直接用手动值。
+2. 否则用当前活动的半小时快照，按同时间进度曲线预估全天。
+3. 参考日优先级：前一日完整快照、前两日完整快照、上周同日完整快照、最近完整日快照。
+4. 如果完整快照不足，就用历史完整日平均值；再不足时，按当天已过时间进度粗估。
+5. 活动按订单门槛时预估订单数，按 GMV 门槛时预估核销 GMV。">?</span>
+        </div>
         <div class="value positive" id="today-forecast">-</div>
         <div class="note" id="today-forecast-note">等待快照数据。</div>
       </div>
@@ -711,7 +772,15 @@
         <div class="note" id="actual-note">只统计接口已经返回的实际核销金额。</div>
       </div>
       <div class="panel kpi">
-        <div class="label" id="projected-label">预计最终核销</div>
+        <div class="label-row">
+          <span id="projected-label">预计最终核销</span>
+          <span class="help-dot" tabindex="0" aria-label="预计最终说明" data-tip="预计最终的计算：
+1. 已经有接口数据的日期，默认用接口实际值。
+2. 你手动填写过“预估数据”的日期，优先用手动值。
+3. 今日未完整和未来未返回日期，会用“今日预估”的同一套规则自动预估。
+4. 最后把接口实际值、手动预估、自动预估相加。
+5. 活动按订单门槛时汇总订单数，按 GMV 门槛时汇总有效核销 GMV。">?</span>
+        </div>
         <div class="value positive" id="projected-total">-</div>
         <div class="note" id="projected-note">接口默认累计 + 手动输入预估。</div>
       </div>
