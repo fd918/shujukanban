@@ -923,9 +923,6 @@
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
       const abnormal = allUsers.filter(user => user.cmp.level !== "normal");
-      const sourceUsers = state.detailMode === "abnormal" ? abnormal : allUsers;
-      const keyword = state.detailSearch.toLowerCase();
-      const users = keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers;
       const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
       const diff = userOrderSum - Number(row.cmp.today || 0);
       $("#detailBody").innerHTML = `
@@ -945,7 +942,20 @@
           <button class="btn" data-detail-refresh="1">刷新用户</button>
           <span class="muted">${state.detailRefreshing ? "正在刷新用户，当前先保留上次结果" : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || state.source.latestDataTime || "-"}</span>
         </div>
-        <section class="source ${diff === 0 ? "" : "warn"}"><strong>数据校验：</strong>业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，中台明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行；用户明细求和差异 ${fmt(diff)}。</section>
+        <div id="detailResult">${renderDetailResult()}</div>`;
+    }
+
+    function renderDetailResult() {
+      const row = state.detailRow;
+      const allUsers = state.detailUsers || [];
+      const abnormal = allUsers.filter(user => user.cmp.level !== "normal");
+      const sourceUsers = state.detailMode === "abnormal" ? abnormal : allUsers;
+      const keyword = state.detailSearch.toLowerCase();
+      const users = keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers;
+      const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
+      const diff = userOrderSum - Number(row.cmp.today || 0);
+      return `
+        <section class="source ${diff === 0 ? "" : "warn"}"><strong>数据校验：</strong>外层今日订单来自中台业务汇总接口；用户明细求和来自中台“该业务用户订单统计”接口逐页累加。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行；两边接口口径或分页返回不一致时会出现差异，当前差异 ${fmt(diff)}。</section>
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
@@ -1068,7 +1078,8 @@
     $("#detailBody").addEventListener("input", e => {
       if (e.target.id !== "detailSearch") return;
       state.detailSearch = e.target.value.trim();
-      renderDetail(true);
+      const result = $("#detailResult");
+      if (result) result.innerHTML = renderDetailResult();
     });
     $("#settingTabs").addEventListener("click", e => {
       const btn = e.target.closest("button");
