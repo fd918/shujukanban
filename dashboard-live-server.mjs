@@ -804,13 +804,16 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   }
   let previousById = {};
   if (businessId) {
-    const previousDay = shiftDay(endDate, -1);
-    const previous = await apiCall("业务用户前一日基准", "GET", "/api/v2/dashboard/business/user-order-statistics", {
+    const periodDays = dayList(startDate, endDate).length;
+    const previousEnd = shiftDay(startDate, -1);
+    const previousStart = shiftDay(previousEnd, -(periodDays - 1));
+    const previousKey = previousStart === previousEnd ? previousEnd : "period_total";
+    const previous = await apiCall("业务用户前一周期基准", "GET", "/api/v2/dashboard/business/user-order-statistics", {
       order_type: businessId,
       page: 1,
       pre_page: pageSize,
-      start_date: previousDay,
-      end_date: previousDay
+      start_date: previousStart,
+      end_date: previousEnd
     }, 30000);
     statuses.push(previous);
     let previousRows = asList(previous.data);
@@ -820,19 +823,19 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     const previousNeedPages = Math.min(previousTotalPages, Math.ceil(Math.max(pageSize, previousRows.length) / previousPerPage));
     if (previous.ok && previousNeedPages > 1) {
       const previousRestPages = Array.from({ length: previousNeedPages - 1 }, (_, index) => index + 2);
-      const previousRest = await mapLimit(previousRestPages, 8, currentPage => apiCall(`业务用户前一日基准第${currentPage}页`, "GET", "/api/v2/dashboard/business/user-order-statistics", {
+      const previousRest = await mapLimit(previousRestPages, 8, currentPage => apiCall(`业务用户前一周期基准第${currentPage}页`, "GET", "/api/v2/dashboard/business/user-order-statistics", {
         order_type: businessId,
         page: currentPage,
         pre_page: pageSize,
-        start_date: previousDay,
-        end_date: previousDay
+        start_date: previousStart,
+        end_date: previousEnd
       }, 30000));
       previousRows = previousRows.concat(...previousRest.filter(item => item.ok).map(item => asList(item.data)));
     }
     previousById = {};
     previousRows.forEach(row => {
       const id = String(row.uid || row.promotion_id || row.accounts_id || "");
-      previousById[id] = number(previousById[id]) + number(row[previousDay] ?? row.period_total);
+      previousById[id] = number(previousById[id]) + number(row[previousKey] ?? row.period_total);
     });
   }
   const rows = allRows.slice(0, pageSize).map(row => normalizeUser(row, startDate === endDate ? endDate : "period_total"));
