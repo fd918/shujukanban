@@ -1038,7 +1038,21 @@
           ...Object.keys(browserSaved || {})
         ]);
         ids.forEach(id => {
-          const fileActivity = id === DEFAULT_ACTIVITY.id ? DEFAULT_ACTIVITY : (SAVED_ACTIVITIES[id] || {});
+          const savedActivity = SAVED_ACTIVITIES[id] || {};
+          const fileActivity = id === DEFAULT_ACTIVITY.id
+            ? {
+                ...savedActivity,
+                ...DEFAULT_ACTIVITY,
+                activityStartTime: savedActivity.activityStartTime ?? DEFAULT_ACTIVITY.activityStartTime ?? null,
+                activityEndTime: savedActivity.activityEndTime ?? DEFAULT_ACTIVITY.activityEndTime ?? null,
+                activityStatus: savedActivity.activityStatus ?? DEFAULT_ACTIVITY.activityStatus ?? null,
+                activityStatusText: savedActivity.activityStatusText || DEFAULT_ACTIVITY.activityStatusText || "",
+                registerStatus: savedActivity.registerStatus ?? DEFAULT_ACTIVITY.registerStatus ?? null,
+                discoveredAt: savedActivity.discoveredAt || DEFAULT_ACTIVITY.discoveredAt || "",
+                listUpdatedAt: savedActivity.listUpdatedAt || DEFAULT_ACTIVITY.listUpdatedAt || "",
+                recordSnapshot: savedActivity.recordSnapshot ?? DEFAULT_ACTIVITY.recordSnapshot ?? true
+              }
+            : savedActivity;
           const browserActivity = browserSaved[id] || {};
           const fileRows = Array.isArray(fileActivity.rows) && fileActivity.rows.length ? fileActivity.rows : null;
           const browserRows = Array.isArray(browserActivity.rows) ? browserActivity.rows : [];
@@ -1071,7 +1085,7 @@
           ...merged,
           [DEFAULT_ACTIVITY.id]: {
             ...(merged[DEFAULT_ACTIVITY.id] || {}),
-            ...DEFAULT_ACTIVITY,
+            id: DEFAULT_ACTIVITY.id,
             title: DEFAULT_ACTIVITY.title,
             activityTime: DEFAULT_ACTIVITY.activityTime,
             ruleImage: DEFAULT_ACTIVITY.ruleImage,
