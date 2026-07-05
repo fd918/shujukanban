@@ -658,39 +658,43 @@ async function fetchBusinessDaily(statuses) {
   const endDate = dayKey();
   const startDate = shiftDay(endDate, -6);
   const dates = dayList(startDate, endDate);
-  const payload = { platform: "", paid_date: [startDate, endDate] };
-  const [orders, commission] = await Promise.all([
-    apiCall("业务每日-按订单", "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "order_valid" }, 20000),
-    apiCall("业务每日-按佣金", "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "settle_amount_valid" }, 20000)
-  ]);
-  statuses.push(orders, commission);
   const rowsById = {};
-  for (const row of pickArray(orders.data)) {
-    const id = String(row.order_type || row.business_id || row.subtitle || "");
-    rowsById[id] ||= {
-      platform: row.title || row.platform || "未分类",
-      name: row.subtitle || row.business_name || "未命名业务",
-      businessId: id,
-      platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
-      days: {}
-    };
-    for (const date of dates) {
+
+  const dailyResults = await mapLimit(dates, 2, async date => {
+    const payload = { platform: "", paid_date: [date, date] };
+    const [orders, commission] = await Promise.all([
+      apiCall(`业务每日订单-${date}`, "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "order_valid" }, 20000),
+      apiCall(`业务每日佣金-${date}`, "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "settle_amount_valid" }, 20000)
+    ]);
+    statuses.push(orders, commission);
+    return { date, orders, commission };
+  });
+
+  for (const { date, orders, commission } of dailyResults) {
+    for (const row of pickArray(orders.data)) {
+      const id = String(row.order_type || row.business_id || row.subtitle || "");
+      rowsById[id] ||= {
+        platform: row.title || row.platform || "未分类",
+        name: row.subtitle || row.business_name || "未命名业务",
+        businessId: id,
+        platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
+        days: {}
+      };
       rowsById[id].days[date] ||= { orders: 0, commission: 0 };
-      rowsById[id].days[date].orders = number(row[date]);
+      rowsById[id].days[date].orders = number(row[date] ?? row.period_total ?? row.total);
     }
-  }
-  for (const row of pickArray(commission.data)) {
-    const id = String(row.order_type || row.business_id || row.subtitle || "");
-    rowsById[id] ||= {
-      platform: row.title || row.platform || "未分类",
-      name: row.subtitle || row.business_name || "未命名业务",
-      businessId: id,
-      platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
-      days: {}
-    };
-    for (const date of dates) {
+
+    for (const row of pickArray(commission.data)) {
+      const id = String(row.order_type || row.business_id || row.subtitle || "");
+      rowsById[id] ||= {
+        platform: row.title || row.platform || "未分类",
+        name: row.subtitle || row.business_name || "未命名业务",
+        businessId: id,
+        platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
+        days: {}
+      };
       rowsById[id].days[date] ||= { orders: 0, commission: 0 };
-      rowsById[id].days[date].commission = number(row[date]);
+      rowsById[id].days[date].commission = number(row[date] ?? row.period_total ?? row.total);
     }
   }
   return {
