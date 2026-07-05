@@ -1022,7 +1022,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   };
   if (summary.orders || summary.users) lastGood.summary = summary;
 
-  if (recordSnapshot) await maybeRecordSnapshot(businesses, users);
+  if (recordSnapshot) await maybeRecordSnapshot(businesses, users, false, businessDaily);
   const snapshots = await readSnapshots();
   await ensureUserPhoneIndex(statuses);
   const enrichedBusinesses = enrichWithSnapshots(businesses, snapshots, "business", dateRange);
@@ -1055,7 +1055,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   return payload;
 }
 
-async function maybeRecordSnapshot(businesses, users, force = false) {
+async function maybeRecordSnapshot(businesses, users, force = false, businessDaily = null) {
   const config = await readConfig();
   const interval = Math.max(1, Number(config.snapshotMinutes || 30)) * 60 * 1000;
   if (!force && Date.now() - lastSnapshotAt < interval) return false;
@@ -1076,7 +1076,7 @@ async function maybeRecordSnapshot(businesses, users, force = false) {
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
   lastSnapshotAt = Date.now();
   if (config.public?.autoPush) {
-    await publishPublicDashboard({ businesses, users, snapshot, config }).catch(error => {
+    await publishPublicDashboard({ businesses, users, businessDaily, snapshot, config }).catch(error => {
       console.error(`[${nowText()}] 公开看板推送失败：${error.message}`);
       notifyOperationalIssue("公开看板推送失败", error.message, config).catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
     });
@@ -1123,7 +1123,7 @@ async function scheduleSnapshots() {
       if (data.source?.missing?.length) {
         await notifyOperationalIssue("快照异常：接口数据缺失", data.source.missing.join("；"), config);
       }
-      await maybeRecordSnapshot(data.businesses, data.users, true);
+      await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily);
       console.log(`[${nowText()}] 已记录业务用户快照`);
     } catch (error) {
       console.error(`[${nowText()}] 记录快照失败：${error.message}`);
@@ -1338,7 +1338,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/feishu/test" && req.method === "POST") return json(res, 200, await testFeishu());
     if (url.pathname === "/api/snapshot" && req.method === "POST") {
       const data = await liveDashboard({ recordSnapshot: false });
-      const recorded = await maybeRecordSnapshot(data.businesses, data.users, true);
+      const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily);
       return json(res, 200, { ok: true, recorded, latestDataTime: nowText() });
     }
     await serveFile(req, res);
