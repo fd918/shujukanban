@@ -383,6 +383,8 @@
     const pct = n => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}%`;
     const pad = n => String(n).padStart(2, "0");
     const dayText = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const localApiBase = location.protocol === "file:" ? "http://127.0.0.1:8791" : "";
+    const apiUrl = path => `${localApiBase}${path}`;
 
     function currentMetricLabel() {
       const label = state.dateRange?.label || "今日";
@@ -571,7 +573,7 @@
           force: manual ? "1" : "0",
           _: Date.now()
         });
-        const res = await fetch(`/api/live-dashboard?${params.toString()}`);
+        const res = await fetch(apiUrl(`/api/live-dashboard?${params.toString()}`));
         const data = await res.json();
         state.publicMode = false;
         state.config = data.config;
@@ -695,7 +697,7 @@
     }
 
     async function saveSettings() {
-      const res = await fetch("/api/config", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(collectSettings()) });
+      const res = await fetch(apiUrl("/api/config"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(collectSettings()) });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "保存失败");
       state.config = data.config;
@@ -711,7 +713,7 @@
       $("#testResult").textContent = "正在发送...";
       try {
         await saveSettings();
-        const res = await fetch("/api/feishu/test", { method: "POST" });
+        const res = await fetch(apiUrl("/api/feishu/test"), { method: "POST" });
         const data = await res.json();
         $("#testResult").textContent = data.ok ? "测试成功" : data.error || "测试失败";
         toast(data.ok ? "飞书测试成功" : "飞书测试失败");
@@ -722,7 +724,7 @@
     }
 
     async function recordSnapshot() {
-      const res = await fetch("/api/snapshot", { method: "POST" });
+      const res = await fetch(apiUrl("/api/snapshot"), { method: "POST" });
       const data = await res.json();
       toast(data.ok ? "快照已记录" : "快照失败");
       await loadData(false);
@@ -764,7 +766,7 @@
         _: Date.now()
       });
       try {
-        const res = await fetch(`/api/business-users?${params.toString()}`);
+        const res = await fetch(apiUrl(`/api/business-users?${params.toString()}`));
         const data = await res.json();
         state.detailUsers = (data.users || []).map(user => ({ ...user, cmp: compare(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
         state.detailLatestTime = data.latestDataTime || "";
