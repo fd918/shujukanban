@@ -654,9 +654,9 @@ async function fetchBusinessSummary(dateRange, statuses) {
   };
 }
 
-async function fetchBusinessDaily(statuses) {
-  const endDate = dayKey();
-  const startDate = shiftDay(endDate, -6);
+async function fetchBusinessDaily(statuses, query = {}) {
+  const endDate = parseDay(query.daily_end || query.dailyEnd || dayKey());
+  const startDate = parseDay(query.daily_start || query.dailyStart || shiftDay(endDate, -6));
   const dates = dayList(startDate, endDate);
   const rowsById = {};
 
@@ -703,6 +703,47 @@ async function fetchBusinessDaily(statuses) {
     dates,
     rows: Object.values(rowsById).sort((a, b) => number(b.days[endDate]?.orders) - number(a.days[endDate]?.orders))
   };
+}
+
+async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
+  const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize });
+  if (!refresh && userDetailCache.has(cacheKey)) {
+    const cached = userDetailCache.get(cacheKey);
+    statuses.push({ name: "业务用户历史缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
+    return { ...cached, cached: true };
+  }
+  const dates = dayList(startDate, endDate);
+  const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate };
+  const result = await apiCall("业务用户历史", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);
+  statuses.push(result);
+  const firstRows = asList(result.data);
+  const total = number(result.data?.total);
+  const perPage = Math.max(1, number(result.data?.per_page) || firstRows.length || 10);
+  const totalPages = Math.max(1, number(result.data?.total_pages) || Math.ceil(total / perPage));
+  let allRows = firstRows;
+  if (result.ok && totalPages > 1) {
+    const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
+    const rest = await mapLimit(restPages, 8, currentPage => apiCall(`业务用户历史第${currentPage}页`, "GET", "/api/v2/dashboard/business/user-order-statistics", {
+      ...params,
+      page: currentPage
+    }, 30000));
+    const failed = rest.filter(item => !item.ok).length;
+    statuses.push({ name: "业务用户历史翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${totalPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
+    allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
+  }
+  const rows = allRows.map(row => {
+    const normalized = normalizeUser(row, startDate === endDate ? endDate : "period_total");
+    normalized.days = Object.fromEntries(dates.map(date => [date, number(row[date])]));
+    return normalized;
+  });
+  await mapLimit(rows, 8, async row => {
+    const plainPhone = await fetchPlainPhone(row.id);
+    if (plainPhone) row.phone = plainPhone;
+  });
+  const payload = { ok: result.ok, total, dates, rows };
+  userDetailCache.set(cacheKey, payload);
+  scheduleUserDetailCacheSave();
+  return payload;
 }
 
 function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
@@ -999,7 +1040,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     apiCall("用户列表", "POST", "/api/v2/dashboard/summary/index", { page: 1, size: 50 }, 25000),
     fetchBusinessSummary(dateRange, statuses),
     fetchBusinessPages(statuses),
-    fetchBusinessDaily(statuses)
+    fetchBusinessDaily(statuses, query)
   ]);
   statuses.push(userStats, userIndex);
 
@@ -1331,7 +1372,20 @@ const server = createServer(async (req, res) => {
       }, statuses);
       const snapshots = await readSnapshots();
       const users = enrichBusinessUsersWithSnapshots(result.rows, snapshots, url.searchParams.get("business_id") || "", rangeFromQuery({ start_date: startDate, end_date: endDate }));
-      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: nowText(), users, total: result.total, page: result.page, pageSize: result.pageSize, source: { statuses } });
+      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: nowText(), users, total: result.total, userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0), page: result.page, pageSize: result.pageSize, source: { statuses } });
+    }
+    if (url.pathname === "/api/business-users-history") {
+      const statuses = [];
+      const endDate = parseDay(url.searchParams.get("end_date") || dayKey());
+      const startDate = parseDay(url.searchParams.get("start_date") || shiftDay(endDate, -6));
+      const result = await fetchBusinessUserHistory({
+        businessId: url.searchParams.get("business_id") || "",
+        startDate,
+        endDate,
+        pageSize: number(url.searchParams.get("page_size")) || 5000,
+        refresh: url.searchParams.get("refresh") === "1"
+      }, statuses);
+      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: nowText(), dates: result.dates, rows: result.rows, total: result.total, source: { statuses } });
     }
     if (url.pathname === "/api/config" && req.method === "GET") return json(res, 200, await getPublicConfig());
     if (url.pathname === "/api/config" && req.method === "POST") return json(res, 200, { ok: true, config: await saveConfig(await readBody(req)) });

@@ -74,7 +74,7 @@
     .filters {
       padding: 12px;
       display: grid;
-      grid-template-columns: 180px minmax(280px, 1fr) auto;
+      grid-template-columns: 180px minmax(260px, 1fr) 150px 150px auto;
       gap: 10px;
       align-items: center;
     }
@@ -269,6 +269,8 @@
     <section class="filters">
       <select class="field" id="platformSelect"><option value="all">全部平台</option></select>
       <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
+      <input class="field" id="dailyStart" type="date" title="每日数据开始日期">
+      <input class="field" id="dailyEnd" type="date" title="每日数据结束日期">
       <button class="btn primary" id="applyBtn">查询</button>
     </section>
 
@@ -383,7 +385,7 @@
   <div class="toast" id="toast">已刷新</div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", config: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, detailMode: "abnormal", detailRow: null, detailUsers: [], detailRefreshing: false, detailLatestTime: "", publicMode: false, publicUserDetails: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, detailMode: "abnormal", detailSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailRefreshing: false, detailLatestTime: "", detailStats: null, publicMode: false, publicUserDetails: {} };
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
@@ -570,7 +572,7 @@
       let rows = daily.rows || [];
       if (state.platform !== "all") rows = rows.filter(row => row.platform === state.platform);
       if (searchKey) rows = rows.filter(row => `${row.platform}${row.name}${row.businessId}${row.platformBusinessId || ""}`.toLowerCase().includes(searchKey));
-      $("#dailyHead").innerHTML = `<tr><th>序号</th><th>平台</th><th>业务名称</th>${dates.map(date => `<th>${date}<br>订单 / 佣金</th>`).join("")}</tr>`;
+      $("#dailyHead").innerHTML = `<tr><th>序号</th><th>平台</th><th>业务名称</th>${dates.map(date => `<th>${date}<br>${state.metric === "commission" ? "佣金" : "订单"}</th>`).join("")}</tr>`;
       if (state.loading && !rows.length) {
         $("#dailyBody").innerHTML = `<tr><td colspan="${dates.length + 3}" class="muted">每日业务数据加载中，请稍等...</td></tr>`;
         return;
@@ -581,7 +583,7 @@
         <td><strong>${row.name}</strong></td>
         ${dates.map(date => {
           const item = row.days?.[date] || {};
-          return `<td>${fmt(item.orders)} / ${money(item.commission)}</td>`;
+          return `<td>${state.metric === "commission" ? money(item.commission) : fmt(item.orders)}</td>`;
         }).join("")}
       </tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有每日业务数据。</td></tr>`;
     }
@@ -602,10 +604,20 @@
       renderTable();
       try {
         const today = dayText(new Date());
+        if (!state.dailyEnd) state.dailyEnd = today;
+        if (!state.dailyStart) {
+          const start = new Date();
+          start.setDate(start.getDate() - 6);
+          state.dailyStart = dayText(start);
+        }
+        $("#dailyStart").value = state.dailyStart;
+        $("#dailyEnd").value = state.dailyEnd;
         const params = new URLSearchParams({
           preset: "today",
           start_date: today,
           end_date: today,
+          daily_start: state.dailyStart,
+          daily_end: state.dailyEnd,
           cache: preferCache ? "1" : "0",
           force: manual ? "1" : "0",
           _: Date.now()
@@ -772,7 +784,10 @@
     async function openBusiness(row) {
       state.detailRow = row;
       state.detailMode = "abnormal";
+      state.detailSearch = "";
       state.detailUsers = [];
+      state.detailHistory = null;
+      state.detailStats = null;
       state.detailRefreshing = false;
       $("#detailTitle").textContent = row.name;
       $("#detailSub").textContent = `${row.platform}｜${row.cmp.label}`;
@@ -785,6 +800,7 @@
       if (state.publicMode) {
         const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || { rows: [] };
         state.detailUsers = (detail.rows || []).map(user => ({ ...user, cmp: compare(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
+        state.detailStats = { total: detail.total || state.detailUsers.length, userOrderSum: state.detailUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0) };
         state.detailLatestTime = detail.latestDataTime || state.source.latestDataTime || "";
         renderDetail(true);
         return;
@@ -808,6 +824,7 @@
         const res = await fetch(apiUrl(`/api/business-users?${params.toString()}`));
         const data = await res.json();
         state.detailUsers = (data.users || []).map(user => ({ ...user, cmp: compare(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
+        state.detailStats = { total: data.total, userOrderSum: data.userOrderSum };
         state.detailLatestTime = data.latestDataTime || "";
         state.detailRefreshing = false;
         renderDetail(data.cached);
@@ -818,39 +835,93 @@
       }
     }
 
+    async function loadBusinessUserHistory(refresh = false) {
+      if (!state.detailRow || state.publicMode) return;
+      if (state.detailHistory && !refresh) {
+        renderDetail(true);
+        return;
+      }
+      const row = state.detailRow;
+      state.detailRefreshing = true;
+      renderDetail(false);
+      const today = dayText(new Date());
+      const start = state.dailyStart || (() => {
+        const date = new Date();
+        date.setDate(date.getDate() - 6);
+        return dayText(date);
+      })();
+      const params = new URLSearchParams({
+        business_id: row.platformBusinessId || row.businessId || "",
+        start_date: start,
+        end_date: state.dailyEnd || today,
+        page_size: 5000,
+        refresh: refresh ? "1" : "0",
+        _: Date.now()
+      });
+      try {
+        const res = await fetch(apiUrl(`/api/business-users-history?${params.toString()}`));
+        const data = await res.json();
+        state.detailHistory = data;
+        state.detailLatestTime = data.latestDataTime || state.detailLatestTime;
+      } finally {
+        state.detailRefreshing = false;
+        renderDetail(false);
+      }
+    }
+
     function renderDetail(cached = false) {
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
       const abnormal = allUsers.filter(user => user.cmp.level !== "normal");
-      const users = state.detailMode === "abnormal" ? abnormal : allUsers;
+      const sourceUsers = state.detailMode === "abnormal" ? abnormal : allUsers;
+      const keyword = state.detailSearch.toLowerCase();
+      const users = keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers;
+      const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
+      const diff = userOrderSum - Number(row.cmp.today || 0);
       $("#detailBody").innerHTML = `
         <div class="detail-grid">
           <div class="detail"><label>${currentMetricLabel()}</label><strong>${fmt(row.cmp.today)}</strong></div>
-          <div class="detail"><label>对比基准</label><strong>${fmt(row.cmp.base)}</strong></div>
-          <div class="detail"><label>变化比例</label><strong class="${row.cmp.diff < 0 ? "down" : "up"}">${pct(row.cmp.ratio)}</strong></div>
+          <div class="detail"><label>用户明细求和</label><strong class="${diff === 0 ? "" : "down"}">${fmt(userOrderSum)}</strong></div>
+          <div class="detail"><label>求和差异</label><strong class="${diff === 0 ? "" : "down"}">${fmt(diff)}</strong></div>
           <div class="detail"><label>异常 / 全部用户</label><strong>${fmt(abnormal.length)} / ${fmt(allUsers.length)}</strong></div>
         </div>
         <div class="toolbar" style="margin-bottom:10px;">
           <div class="segmented">
             <button class="${state.detailMode === "abnormal" ? "active" : ""}" data-detail-mode="abnormal">异常用户 ${fmt(abnormal.length)}</button>
             <button class="${state.detailMode === "all" ? "active" : ""}" data-detail-mode="all">全部用户 ${fmt(allUsers.length)}</button>
+            <button class="${state.detailMode === "history" ? "active" : ""}" data-detail-mode="history">历史订单</button>
           </div>
+          <input class="field" style="max-width:220px;" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID">
           <button class="btn" data-detail-refresh="1">刷新用户</button>
           <span class="muted">${state.detailRefreshing ? "正在刷新用户，当前先保留上次结果" : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || state.source.latestDataTime || "-"}</span>
         </div>
-        <section class="source ${row.sameTime?.hasSnapshot ? "" : "warn"}"><strong>下钻说明：</strong>${row.sameTime?.hasSnapshot ? "已使用历史快照做同时刻比较。" : "当前业务用户同时刻历史快照不足，用户对比基准临时使用该业务前一日全日数据；服务会继续按设置频率记录业务用户快照。"} 业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，当前业务明细返回 ${fmt(allUsers.length)} 个有数据用户；默认只展示异常用户，可切换全部用户。</section>
+        <section class="source ${row.sameTime?.hasSnapshot ? "" : "warn"}"><strong>下钻说明：</strong>${row.sameTime?.hasSnapshot ? "已使用历史快照做同时刻比较。" : "当前业务用户同时刻历史快照不足，昨日同时刻会临时等于该业务用户昨日全天；服务会继续按设置频率记录业务用户快照。"} 业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，中台明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行；用户明细求和与外层业务订单如不一致，说明中台两个接口口径不同。</section>
+        ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>用户</th><th>${currentMetricLabel()}</th><th>昨日全天订单</th><th>昨日同时刻</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>影响订单</th><th>状态</th></tr></thead>
-            <tbody>${users.length ? users.map(user => {
+            <thead><tr><th>序号</th><th>用户</th><th>${currentMetricLabel()}</th><th>昨日同时刻</th><th>昨日全天订单</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>影响订单</th><th>状态</th></tr></thead>
+            <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const yesterday = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : user.cmp.base;
               const lastWeek = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
               const sevenAvg = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
-              return `<tr><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmt(user.yesterdayOrders)}</td><td>${yesterday ? fmt(yesterday) : "-"}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pct(user.cmp.ratio)}</td><td>${fmt(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td></tr>`;
-            }).join("") : `<tr><td colspan="9" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的异常用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+              return `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${yesterday ? fmt(yesterday) : "-"}</td><td>${fmt(user.yesterdayOrders)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pct(user.cmp.ratio)}</td><td>${fmt(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td></tr>`;
+            }).join("") : `<tr><td colspan="10" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的异常用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
-        </div>`;
+        </div>`}`;
+    }
+
+    function renderUserHistoryTable() {
+      const history = state.detailHistory;
+      if (state.publicMode) return `<section class="source warn"><strong>历史订单：</strong>公网快照暂不包含用户历史订单，请在本机看板中查看。</section>`;
+      if (!history) return `<section class="source"><strong>正在加载：</strong>正在拉取该业务用户最近日期范围的历史订单。</section>`;
+      const dates = history.dates || [];
+      const keyword = state.detailSearch.toLowerCase();
+      const rows = keyword ? (history.rows || []).filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : (history.rows || []);
+      return `<div class="detail-table-wrap"><table class="compact">
+        <thead><tr><th>序号</th><th>用户</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
+        <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
+      </table></div>`;
     }
 
     function setupAutoRefresh() {
@@ -901,6 +972,8 @@
     }));
     $("#platformSelect").addEventListener("change", e => { state.platform = e.target.value; render(); });
     $("#searchInput").addEventListener("input", e => { state.search = e.target.value.trim(); render(); });
+    $("#dailyStart").addEventListener("change", e => { state.dailyStart = e.target.value; });
+    $("#dailyEnd").addEventListener("change", e => { state.dailyEnd = e.target.value; });
     $("#applyBtn").addEventListener("click", () => loadData(true));
     $("#refreshBtn").addEventListener("click", () => loadData(true));
     $("#settingsBtn").addEventListener("click", openSettings);
@@ -917,11 +990,22 @@
       const mode = e.target.closest("[data-detail-mode]");
       if (mode) {
         state.detailMode = mode.dataset.detailMode;
+        if (state.detailMode === "history") loadBusinessUserHistory(false).catch(error => toast(error.message || "用户历史加载失败"));
         renderDetail(true);
         return;
       }
+      const search = e.target.closest("#detailSearch");
+      if (search) return;
       const refresh = e.target.closest("[data-detail-refresh]");
-      if (refresh && state.detailRow) loadBusinessUsers(state.detailRow, true).catch(error => toast(error.message || "用户刷新失败"));
+      if (refresh && state.detailRow) {
+        if (state.detailMode === "history") loadBusinessUserHistory(true).catch(error => toast(error.message || "用户历史刷新失败"));
+        else loadBusinessUsers(state.detailRow, true).catch(error => toast(error.message || "用户刷新失败"));
+      }
+    });
+    $("#detailBody").addEventListener("input", e => {
+      if (e.target.id !== "detailSearch") return;
+      state.detailSearch = e.target.value.trim();
+      renderDetail(true);
     });
     $("#settingTabs").addEventListener("click", e => {
       const btn = e.target.closest("button");
