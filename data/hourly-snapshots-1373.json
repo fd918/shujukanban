@@ -670,5 +670,21 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 233426,
     "cumulativeRedemptionAmount": 6998285.4399999995
+  },
+  {
+    "activityId": "1373",
+    "title": "美团外卖7月4日-7月5日冲锋激励",
+    "metric": "orders",
+    "date": "2026-07-06",
+    "hour": 7,
+    "slotMinute": 0,
+    "dateHour": "2026-07-06 07:00",
+    "recordedAt": "2026/7/6 07:00:23",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 233436,
+    "cumulativeRedemptionAmount": 6998538.890000001
   }
 ]
