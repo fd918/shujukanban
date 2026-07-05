@@ -936,11 +936,7 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
     return {
       ...row,
       sameTime: {
-        yesterday: pick(yesterday) || (row.yesterdaySameTimeOrders || row.yesterdaySameTimeCommission || row.yesterdayOrders || row.yesterdayCommission ? {
-          orders: number(row.yesterdaySameTimeOrders || row.yesterdayOrders),
-          commission: number(row.yesterdaySameTimeCommission || row.yesterdayCommission),
-          source: row.yesterdaySameTimeOrders ? "中台昨日同时刻趋势" : "中台前一日全日"
-        } : null),
+        yesterday: pick(yesterday),
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
         hasSnapshot: Boolean(pick(yesterday) || pick(lastWeek) || avg),
@@ -971,11 +967,7 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
     return {
       ...row,
       sameTime: {
-        yesterday: pick(yesterday) || (row.yesterdayOrders || row.yesterdayCommission ? {
-          orders: number(row.yesterdayOrders),
-          commission: number(row.yesterdayCommission),
-          source: "中台业务用户前一日全日"
-        } : null),
+        yesterday: pick(yesterday),
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
         hasSnapshot: Boolean(pick(yesterday) || pick(lastWeek) || avg),

@@ -74,7 +74,7 @@
     .filters {
       padding: 12px;
       display: grid;
-      grid-template-columns: 180px minmax(260px, 1fr) 150px 150px auto;
+      grid-template-columns: 180px minmax(240px, 1fr) 150px 150px auto auto auto auto;
       gap: 10px;
       align-items: center;
     }
@@ -261,6 +261,7 @@
     <div class="top-actions">
       <div><strong id="latestTime">最新数据：等待刷新</strong><span id="snapshotInfo">快照：等待记录</span></div>
       <button class="icon-btn primary" id="refreshBtn" title="刷新">↻</button>
+      <button class="btn" id="helpBtn">说明</button>
       <button class="btn" id="settingsBtn">设置中心</button>
     </div>
   </header>
@@ -271,6 +272,9 @@
       <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
       <input class="field" id="dailyStart" type="date" title="每日数据开始日期">
       <input class="field" id="dailyEnd" type="date" title="每日数据结束日期">
+      <button class="btn" data-range="7">近七天</button>
+      <button class="btn" data-range="lastWeek">上周</button>
+      <button class="btn" data-range="month">本月</button>
       <button class="btn primary" id="applyBtn">查询</button>
     </section>
 
@@ -350,6 +354,31 @@
     <div class="modal-foot"><button class="btn" id="closeDetailFoot">关闭</button></div>
   </section>
 
+  <section class="modal" id="helpModal">
+    <div class="modal-head">
+      <div><h2>系统说明</h2><small>数据来源、异常规则和快照口径</small></div>
+      <button class="icon-btn" id="closeHelp">×</button>
+    </div>
+    <div class="modal-body">
+      <section class="source">
+        <strong>数据来源：</strong>业务列表来自中台业务列表接口和业务汇总接口；每日业务数据按每一天单独请求中台业务汇总接口；用户明细来自中台业务用户下钻接口；手机号来自中台用户数据接口补全。
+      </section>
+      <section class="source">
+        <strong>当前快照记录：</strong>业务快照记录业务订单、业务佣金、平台和业务名；全局用户快照记录用户订单、佣金和手机号；业务用户快照记录业务ID、用户ID、订单、佣金、手机号和版本。
+      </section>
+      <section class="source">
+        <strong>异常规则：</strong>严重异常为今日为 0 且基准大于 0，或下降比例达到严重阈值，或影响订单达到严重阈值；重点和轻微异常需要比例与影响量同时满足；上升异常用于识别刷量、重复回传或活动爆发。
+      </section>
+      <section class="source warn">
+        <strong>昨日同时刻：</strong>只使用历史快照匹配同一天同一时刻附近的数据。没有对应快照就显示“-”，不会再用昨日全天代替。昨日全天订单只作为单独字段展示，用于人工核对。
+      </section>
+      <section class="source warn">
+        <strong>口径差异：</strong>业务汇总接口、业务用户明细接口、推广用户数不是同一个口径。用户弹窗会显示“用户明细求和”和“求和差异”，用于判断是否和外层业务订单一致。
+      </section>
+    </div>
+    <div class="modal-foot"><button class="btn" id="closeHelpFoot">关闭</button></div>
+  </section>
+
   <section class="modal" id="settingsModal">
     <div class="modal-head">
       <div><h2>设置中心</h2><small>只放配置，不展示业务数据</small></div>
@@ -409,6 +438,27 @@
       $("#toast").textContent = text;
       $("#toast").classList.add("show");
       setTimeout(() => $("#toast").classList.remove("show"), 1800);
+    }
+
+    function setDailyRange(type) {
+      const today = new Date();
+      let start = new Date(today);
+      let end = new Date(today);
+      if (type === "7") {
+        start.setDate(today.getDate() - 6);
+      } else if (type === "lastWeek") {
+        const day = today.getDay() || 7;
+        end.setDate(today.getDate() - day);
+        start = new Date(end);
+        start.setDate(end.getDate() - 6);
+      } else if (type === "month") {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+      }
+      state.dailyStart = dayText(start);
+      state.dailyEnd = dayText(end);
+      $("#dailyStart").value = state.dailyStart;
+      $("#dailyEnd").value = state.dailyEnd;
+      loadData(true).catch(error => toast(error.message || "刷新失败"));
     }
 
     function baseValue(row) {
@@ -895,7 +945,7 @@
           <button class="btn" data-detail-refresh="1">刷新用户</button>
           <span class="muted">${state.detailRefreshing ? "正在刷新用户，当前先保留上次结果" : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || state.source.latestDataTime || "-"}</span>
         </div>
-        <section class="source ${row.sameTime?.hasSnapshot ? "" : "warn"}"><strong>下钻说明：</strong>${row.sameTime?.hasSnapshot ? "已使用历史快照做同时刻比较。" : "当前业务用户同时刻历史快照不足，昨日同时刻会临时等于该业务用户昨日全天；服务会继续按设置频率记录业务用户快照。"} 业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，中台明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行；用户明细求和与外层业务订单如不一致，说明中台两个接口口径不同。</section>
+        <section class="source ${diff === 0 ? "" : "warn"}"><strong>数据校验：</strong>业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，中台明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行；用户明细求和差异 ${fmt(diff)}。</section>
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
