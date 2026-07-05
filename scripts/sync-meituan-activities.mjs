@@ -7,6 +7,7 @@ const envPath = resolve(root, ".env");
 const htmlPath = resolve(root, "meituan-dashboard-preview.html");
 const savedActivitiesPath = resolve(root, "data/saved-activities.json");
 const activityListPath = resolve(root, "data/activity-list.json");
+const configPath = resolve(root, "data/watch-config.json");
 const endpoint = "https://media.meituan.com/ipc/pcActivityList?yodaReady=h5&csecplatform=4&csecversion=4.2.4";
 
 const statusMap = {
@@ -220,6 +221,38 @@ function mergeActivities(fetched) {
   return saved;
 }
 
+function enableOngoingAutoRefresh(saved) {
+  const fallback = {
+    intervalMinutes: 30,
+    primaryActivityId: 1199,
+    activityIds: [],
+    autoPush: true
+  };
+  const current = readJson(configPath, fallback);
+  const ids = new Set(
+    (Array.isArray(current.activityIds) ? current.activityIds : [])
+      .map(id => Number(id))
+      .filter(id => Number.isFinite(id) && id > 0)
+  );
+  let enabledCount = 0;
+  Object.values(saved).forEach(activity => {
+    if (Number(activity.activityStatus) !== 2) return;
+    const id = Number(activity.id);
+    if (!Number.isFinite(id) || id <= 0) return;
+    if (!ids.has(id) || activity.recordSnapshot !== true) enabledCount += 1;
+    ids.add(id);
+    activity.recordSnapshot = true;
+  });
+  const next = {
+    ...fallback,
+    ...current,
+    activityIds: [...ids].sort((a, b) => a - b)
+  };
+  writeJson(configPath, next);
+  writeJson(savedActivitiesPath, saved);
+  return enabledCount;
+}
+
 function replaceBetween(source, startMarker, endMarker, replacement) {
   const start = source.indexOf(startMarker);
   const end = source.indexOf(endMarker, start);
@@ -249,6 +282,7 @@ async function main() {
   all.forEach(activity => byId.set(activity.id, { ...(byId.get(activity.id) || {}), ...activity }));
   const fetched = [...byId.values()].sort((a, b) => Number(a.id) - Number(b.id));
   const saved = mergeActivities(fetched);
+  const autoEnabled = enableOngoingAutoRefresh(saved);
   const counts = fetched.reduce((acc, activity) => {
     if (activity.activityStatus === 1) acc.upcoming += 1;
     else if (activity.activityStatus === 2) acc.ongoing += 1;
@@ -261,7 +295,7 @@ async function main() {
     activities: fetched
   });
   updateHtml(saved);
-  console.log(`已同步活动列表：未开始 ${counts.upcoming} 个，进行中 ${counts.ongoing} 个，已结束 ${counts.ended} 个。`);
+  console.log(`已同步活动列表：未开始 ${counts.upcoming} 个，进行中 ${counts.ongoing} 个，已结束 ${counts.ended} 个；已确保 ${counts.ongoing} 个进行中活动开启自动刷新，本次新增 ${autoEnabled} 个。`);
 }
 
 main().catch(error => {
