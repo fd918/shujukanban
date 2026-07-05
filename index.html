@@ -226,6 +226,7 @@
     }
 
     .viewer {
+      position: relative;
       min-width: 0;
       min-height: 0;
       display: grid;
@@ -238,6 +239,25 @@
       border: 0;
       display: block;
       background: #fff;
+    }
+
+    .frame-loading {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .frame-loading.show {
+      display: flex;
     }
 
     .gate {
@@ -394,6 +414,7 @@
     </aside>
 
     <main class="viewer">
+      <div class="frame-loading" id="frameLoading">正在加载看板数据...</div>
       <iframe id="boardFrame" title="激励活动看板" src="about:blank"></iframe>
     </main>
   </div>
@@ -415,6 +436,7 @@
 
     const shell = document.getElementById("shell");
     const frame = document.getElementById("boardFrame");
+    const frameLoading = document.getElementById("frameLoading");
     const openCurrent = document.getElementById("openCurrent");
     const navButtons = Array.from(document.querySelectorAll(".nav-btn"));
     const collapseBtn = document.getElementById("collapseBtn");
@@ -428,19 +450,35 @@
       return isLocalAccess ? board.localUrl : board.publicUrl;
     }
 
-    function publicFrameUrl(url) {
+    function publicFrameUrl(url, { fresh = false } = {}) {
       if (isLocalAccess || url === "about:blank") return url;
+      if (!fresh) return url;
       const next = new URL(url, location.href);
       next.searchParams.set("ts", String(Date.now()));
       return next.toString();
     }
 
-    function setBoard(boardKey, shouldUpdateHash = true) {
+    function showFrameLoading(text = "正在加载看板数据...") {
+      frameLoading.textContent = text;
+      frameLoading.classList.add("show");
+    }
+
+    function hideFrameLoading() {
+      frameLoading.classList.remove("show");
+    }
+
+    function setBoard(boardKey, shouldUpdateHash = true, options = {}) {
       const resolvedKey = boards[boardKey] ? boardKey : "activity";
       const board = boards[resolvedKey];
       const url = boardUrl(board);
 
-      frame.src = publicUnlocked ? publicFrameUrl(url) : "about:blank";
+      if (publicUnlocked) {
+        showFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : "正在加载用户看板...");
+        frame.src = publicFrameUrl(url, { fresh: Boolean(options.fresh) });
+      } else {
+        frame.src = "about:blank";
+        hideFrameLoading();
+      }
       frame.title = board.title;
       openCurrent.href = url;
 
@@ -520,13 +558,23 @@
     async function initPublicGate() {
       if (isLocalAccess) return;
       const cached = cachedPublicPassword();
-      if (cached && await unlockPublicAccess(cached)) return;
+      if (cached) {
+        publicUnlocked = true;
+        passwordGate.classList.remove("show");
+        setBoard(location.hash.replace("#", "") || "activity", false);
+        return;
+      }
       passwordGate.classList.add("show");
       passwordInput.focus();
     }
 
     navButtons.forEach((button) => {
       button.addEventListener("click", () => setBoard(button.dataset.board));
+    });
+
+    frame.addEventListener("load", () => {
+      if (frame.src === "about:blank") return;
+      hideFrameLoading();
     });
 
     collapseBtn.addEventListener("click", () => {
