@@ -622,7 +622,7 @@
       let rows = daily.rows || [];
       if (state.platform !== "all") rows = rows.filter(row => row.platform === state.platform);
       if (searchKey) rows = rows.filter(row => `${row.platform}${row.name}${row.businessId}${row.platformBusinessId || ""}`.toLowerCase().includes(searchKey));
-      $("#dailyHead").innerHTML = `<tr><th>序号</th><th>平台</th><th>业务名称</th>${dates.map(date => `<th>${date}<br>${state.metric === "commission" ? "佣金" : "订单"}</th>`).join("")}</tr>`;
+      $("#dailyHead").innerHTML = `<tr><th>序号</th><th>平台</th><th>业务名称</th>${dates.map(date => `<th>${date}</th>`).join("")}</tr>`;
       if (state.loading && !rows.length) {
         $("#dailyBody").innerHTML = `<tr><td colspan="${dates.length + 3}" class="muted">每日业务数据加载中，请稍等...</td></tr>`;
         return;
@@ -988,10 +988,19 @@
       $("#modalMask").classList.remove("open");
       $("#settingsModal").classList.remove("open");
     }
+    function openHelp() {
+      $("#modalMask").classList.add("open");
+      $("#helpModal").classList.add("open");
+    }
+    function closeHelp() {
+      $("#modalMask").classList.remove("open");
+      $("#helpModal").classList.remove("open");
+    }
     function closeDetail() {
       $("#modalMask").classList.remove("open");
       $("#detailModal").classList.remove("open");
       $("#settingsModal").classList.remove("open");
+      $("#helpModal").classList.remove("open");
     }
 
     $("#metricTabs").addEventListener("click", e => {
@@ -1022,11 +1031,15 @@
     }));
     $("#platformSelect").addEventListener("change", e => { state.platform = e.target.value; render(); });
     $("#searchInput").addEventListener("input", e => { state.search = e.target.value.trim(); render(); });
-    $("#dailyStart").addEventListener("change", e => { state.dailyStart = e.target.value; });
-    $("#dailyEnd").addEventListener("change", e => { state.dailyEnd = e.target.value; });
+    $("#dailyStart").addEventListener("change", e => { state.dailyStart = e.target.value; $("#dailyEnd").focus(); });
+    $("#dailyEnd").addEventListener("change", e => { state.dailyEnd = e.target.value; loadData(true).catch(error => toast(error.message || "刷新失败")); });
+    $$("[data-range]").forEach(btn => btn.addEventListener("click", () => setDailyRange(btn.dataset.range)));
     $("#applyBtn").addEventListener("click", () => loadData(true));
     $("#refreshBtn").addEventListener("click", () => loadData(true));
+    $("#helpBtn").addEventListener("click", openHelp);
     $("#settingsBtn").addEventListener("click", openSettings);
+    $("#closeHelp").addEventListener("click", closeHelp);
+    $("#closeHelpFoot").addEventListener("click", closeHelp);
     $("#closeSettings").addEventListener("click", closeSettings);
     $("#cancelSettings").addEventListener("click", closeSettings);
     $("#modalMask").addEventListener("click", closeDetail);
