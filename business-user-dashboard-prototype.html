@@ -1355,8 +1355,12 @@
     function renderDetail(cached = false) {
       const row = state.detailRow;
       const allUsers = state.detailScope === "month" && state.detailMonthAnalysis?.rows ? state.detailMonthAnalysis.rows : (state.detailUsers || []);
-      const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
-      const upUsers = allUsers.filter(user => user.cmp.level === "up");
+      const downUsers = state.detailScope === "month"
+        ? allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item?.diff < 0 && item?.level !== "normal"))
+        : allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
+      const upUsers = state.detailScope === "month"
+        ? allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item?.level === "up"))
+        : allUsers.filter(user => user.cmp.level === "up");
       const abnormal = downUsers;
       const impactSum = downUsers.reduce((sum, user) => sum + Number(user.cmp.impact || 0), 0);
       const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
@@ -1423,11 +1427,12 @@
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>${compareBaseLabel()}</th><th>${previousPeriodLabel()}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>原因</th></tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>${compareBaseLabel()}</th><th>上周同时刻</th><th>${previousPeriodLabel()}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>原因</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
-              return `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${fmt(user.yesterdayOrders)}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td><td>${user.cmp.reason || "-"}</td></tr>`;
-            }).join("") : `<tr><td colspan="9" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+              const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
+              return `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${fmt(user.yesterdayOrders)}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td><td>${user.cmp.reason || "-"}</td></tr>`;
+            }).join("") : `<tr><td colspan="10" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>`}`;
     }
