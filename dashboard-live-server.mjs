@@ -1100,7 +1100,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   };
   if (summary.orders || summary.users) lastGood.summary = summary;
 
-  if (recordSnapshot) await maybeRecordSnapshot(businesses, users, false, businessDaily);
+  if (recordSnapshot) await maybeRecordSnapshot(businesses, users, false, businessDaily, summary);
   const snapshots = await readSnapshots();
   await ensureUserPhoneIndex(statuses);
   const enrichedBusinesses = enrichWithSnapshots(businesses, snapshots, "business", dateRange);
@@ -1133,7 +1133,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   return payload;
 }
 
-async function maybeRecordSnapshot(businesses, users, force = false, businessDaily = null) {
+async function maybeRecordSnapshot(businesses, users, force = false, businessDaily = null, summary = null) {
   const config = await readConfig();
   const interval = Math.max(1, Number(config.snapshotMinutes || 30)) * 60 * 1000;
   if (!force && Date.now() - lastSnapshotAt < interval) return false;
@@ -1154,7 +1154,7 @@ async function maybeRecordSnapshot(businesses, users, force = false, businessDai
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
   lastSnapshotAt = Date.now();
   if (config.public?.autoPush) {
-    await publishPublicDashboard({ businesses, users, businessDaily, snapshot, config }).catch(error => {
+    await publishPublicDashboard({ businesses, users, businessDaily, summary, snapshot, config }).catch(error => {
       console.error(`[${nowText()}] 公开看板推送失败：${error.message}`);
       notifyOperationalIssue("公开看板推送失败", error.message, config).catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
     });
@@ -1460,7 +1460,7 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/snapshot" && req.method === "POST") {
       const data = await liveDashboard({ recordSnapshot: false });
-      const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily);
+      const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary);
       return json(res, 200, { ok: true, recorded, latestDataTime: nowText() });
     }
     await serveFile(req, res);
