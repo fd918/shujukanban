@@ -449,7 +449,8 @@
     const gateError = document.getElementById("gateError");
     let publicUnlocked = isLocalAccess;
     let activeBoardKey = "activity";
-    let loadingTimer = null;
+    let loadingDelayTimer = null;
+    let loadingHideTimer = null;
     const loadedBoards = new Set();
 
     function boardUrl(board) {
@@ -464,16 +465,29 @@
       return next.toString();
     }
 
+    function clearFrameLoadingTimers() {
+      if (loadingDelayTimer) clearTimeout(loadingDelayTimer);
+      if (loadingHideTimer) clearTimeout(loadingHideTimer);
+      loadingDelayTimer = null;
+      loadingHideTimer = null;
+    }
+
     function showFrameLoading(text = "正在加载看板数据...") {
-      if (loadingTimer) clearTimeout(loadingTimer);
+      clearFrameLoadingTimers();
       frameLoading.textContent = text;
       frameLoading.classList.add("show");
-      loadingTimer = setTimeout(hideFrameLoading, 8000);
+      loadingHideTimer = setTimeout(hideFrameLoading, 5000);
+    }
+
+    function scheduleFrameLoading(text = "正在加载看板数据...", delayMs = 1500) {
+      clearFrameLoadingTimers();
+      frameLoading.textContent = text;
+      frameLoading.classList.remove("show");
+      loadingDelayTimer = setTimeout(() => showFrameLoading(text), delayMs);
     }
 
     function hideFrameLoading() {
-      if (loadingTimer) clearTimeout(loadingTimer);
-      loadingTimer = null;
+      clearFrameLoadingTimers();
       frameLoading.classList.remove("show");
     }
 
@@ -493,7 +507,7 @@
       if (publicUnlocked) {
         activateFrame(resolvedKey);
         if (shouldLoad) {
-          showFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : "正在加载用户看板...");
+          scheduleFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : "正在加载用户看板...");
           frame.src = publicFrameUrl(url, { fresh: Boolean(options.fresh) });
         } else {
           hideFrameLoading();
