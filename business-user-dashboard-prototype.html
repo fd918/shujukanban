@@ -109,6 +109,7 @@
     .source.warn { border-color: #fed7aa; background: #fff7ed; color: #92400e; }
 
     .kpis { margin-top: 14px; display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }
+    .kpis.overview-collapsed, #trendPanel.overview-collapsed { display: none; }
     .kpi { padding: 14px; display: grid; gap: 8px; }
     .kpi label { color: var(--muted); font-size: 12px; }
     .kpi strong { font-size: 24px; }
@@ -311,6 +312,7 @@
     <div class="top-actions">
       <div><strong id="latestTime">最新数据：等待刷新</strong><span id="snapshotInfo">快照：等待记录</span></div>
       <button class="icon-btn primary" id="refreshBtn" title="刷新">↻</button>
+      <button class="btn" id="overviewToggle">收起概览</button>
       <button class="btn" id="helpBtn">说明</button>
       <button class="btn hidden" id="settingsBtn">设置中心</button>
     </div>
@@ -485,7 +487,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -806,6 +808,12 @@
       $("#levelTabs").classList.toggle("hidden", state.view === "daily");
     }
 
+    function renderOverviewToggle() {
+      $(".kpis").classList.toggle("overview-collapsed", state.overviewCollapsed);
+      $("#trendPanel").classList.toggle("overview-collapsed", state.overviewCollapsed);
+      $("#overviewToggle").textContent = state.overviewCollapsed ? "展开概览" : "收起概览";
+    }
+
     function renderTrendChart() {
       const colors = ["#2563eb", "#e88a00", "#16a34a"];
       const data = state.trendData;
@@ -944,6 +952,7 @@
       renderTrendChart();
       renderMobileFilters();
       renderLocalControls();
+      renderOverviewToggle();
       renderTable();
     }
 
@@ -1559,6 +1568,11 @@
     $$("[data-range]").forEach(btn => btn.addEventListener("click", () => setDailyRange(btn.dataset.range)));
     $("#applyBtn").addEventListener("click", () => loadData(true));
     $("#refreshBtn").addEventListener("click", () => loadData(true));
+    $("#overviewToggle").addEventListener("click", () => {
+      state.overviewCollapsed = !state.overviewCollapsed;
+      localStorage.setItem("businessDashboardOverviewCollapsed", state.overviewCollapsed ? "1" : "0");
+      renderOverviewToggle();
+    });
     $("#filterToggle").addEventListener("click", () => { state.filtersCollapsed = !state.filtersCollapsed; renderMobileFilters(); });
     $("#trendBusinessSelect").addEventListener("change", e => { state.trendBusinessId = e.target.value; state.trendData = null; loadBusinessTrend(true); });
     $("#trendRefreshBtn").addEventListener("click", () => loadBusinessTrend(true));
@@ -1662,6 +1676,7 @@
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
+    state.overviewCollapsed = localStorage.getItem("businessDashboardOverviewCollapsed") === "1";
     loadData(false, true).then(setupAutoRefresh);
   </script>
 </body>
