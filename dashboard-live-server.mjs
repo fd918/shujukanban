@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { extname, join } from "node:path";
 import { promisify } from "node:util";
+import { gzipSync } from "node:zlib";
 
 const execFileAsync = promisify(execFile);
 const BASE_URL = "https://adminalliance.yunzhanxinxi.com";
@@ -1492,11 +1493,12 @@ async function encryptPublicPayload(payload) {
   const iterations = 600000;
   const key = pbkdf2Sync(password, salt, iterations, 32, "sha256");
   const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const plaintext = Buffer.from(JSON.stringify(payload), "utf8");
+  const plaintext = gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
   const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   return {
     version: 1,
     algorithm: "AES-256-GCM",
+    compression: "gzip",
     kdf: "PBKDF2-SHA256",
     iterations,
     salt: salt.toString("base64"),

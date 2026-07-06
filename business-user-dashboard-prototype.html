@@ -1079,6 +1079,13 @@
       return Uint8Array.from(atob(value), char => char.charCodeAt(0));
     }
 
+    async function decodePublicPayload(plain, compression) {
+      if (compression !== "gzip") return new TextDecoder().decode(plain);
+      if (!("DecompressionStream" in window)) throw new Error("当前浏览器不支持 gzip 解压");
+      const stream = new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return await new Response(stream).text();
+    }
+
     async function derivePublicKey(password, salt, iterations) {
       const baseKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
       return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, baseKey, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
@@ -1114,8 +1121,9 @@
           combined.set(tag, ciphertext.length);
           const key = await derivePublicKey(password, salt, encrypted.iterations || 200000);
           const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, combined);
+          const text = await decodePublicPayload(plain, encrypted.compression);
           savePublicPassword(password);
-          return JSON.parse(new TextDecoder().decode(plain));
+          return JSON.parse(text);
         } catch {
           localStorage.removeItem("businessDashboardPublicPassword");
           password = "";
