@@ -4,6 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>业务异常监控</title>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      if (params.get("embed") !== "1" && window.top === window.self) {
+        location.replace(new URL("index.html#business", location.href).toString());
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg: #f4f6f8;

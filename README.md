@@ -7,9 +7,9 @@
 优先直接打开 `index.html`，这是统一入口，左侧可以切换看板，也可以点击左上角按钮收起侧边栏，让看板展示区域最大化：
 
 - “激励活动看板”：对应 `meituan-dashboard-preview.html`。
-- “用户内部看板”：本地打开时对应本机实时服务 `http://127.0.0.1:8791/`，公网打开时对应加密公开快照 `business-user-dashboard-prototype.html`。
+- “用户内部看板”：本地打开时由统一入口嵌入本机实时服务 `http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1`，公网打开时由统一入口嵌入加密公开快照。
 
-本机排查时可以继续直接打开 `meituan-dashboard-preview.html` 或 `business-user-dashboard-prototype.html`；公网请只使用统一入口 `index.html`，单独访问公网 `meituan-dashboard-preview.html` 会自动跳回统一入口。
+日常只使用统一入口 `index.html`；单独访问 `business-user-dashboard-prototype.html` 会自动跳回统一入口的“用户内部看板”。
 其中“用户内部看板”要显示实时数据，需要先确认“业务用户看板服务”已经启动。
 公网打开统一入口时，会先要求输入公网看板访问密码；密码与用户内部看板公网快照使用同一套钥匙串配置。
 
@@ -100,7 +100,7 @@ logs/background-refresh-error.log
 ~/Desktop/业务用户看板服务.command
 ```
 
-这个入口用于控制 `http://127.0.0.1:8791/` 的业务用户实时看板：
+这个入口用于控制 `http://127.0.0.1:8791/` 的统一看板入口：
 
 - “查看服务状态”：查看开机自启服务是否正在运行。
 - “启动服务 / 停止服务 / 重启服务”：手动控制本地接口代理。
@@ -173,7 +173,7 @@ data/business-user-detail-cache.json
 公网看板地址：
 
 ```text
-https://fd918.github.io/shujukanban/business-user-dashboard-prototype.html
+https://fd918.github.io/shujukanban/index.html#business
 ```
 
 公网数据文件已加密，输入访问密码后可展示业务汇总和用户明细。公网不会明文发布账号密码、飞书 Webhook、飞书签名密钥、本地配置或原始快照文件。

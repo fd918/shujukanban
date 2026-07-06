@@ -1362,8 +1362,8 @@ async function publishPublicDashboard(data) {
 }
 
 async function pushPublicDashboard() {
-  await runCommand("git", ["add", ".gitignore", "README.md", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
-  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
+  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
+  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
   if (!status) {
     console.log(`[${nowText()}] 业务看板公开文件没有变化，跳过 GitHub 推送。`);
     return false;
@@ -1376,7 +1376,7 @@ async function pushPublicDashboard() {
 
 async function serveFile(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const file = url.pathname === "/" ? "business-user-dashboard-prototype.html" : decodeURIComponent(url.pathname.slice(1));
+  const file = url.pathname === "/" ? "index.html" : decodeURIComponent(url.pathname.slice(1));
   const path = join(ROOT, file);
   try {
     const content = await readFile(path);

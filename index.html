@@ -405,12 +405,7 @@
         </button>
       </nav>
 
-      <div class="side-foot">
-        <a class="open-link" id="openCurrent" href="./meituan-dashboard-preview.html" target="_blank" rel="noopener">
-          <span aria-hidden="true">↗</span>
-          <span class="open-text">单独打开</span>
-        </a>
-      </div>
+      <div class="side-foot"></div>
     </aside>
 
     <main class="viewer">
@@ -429,15 +424,14 @@
       },
       business: {
         title: "用户内部看板",
-        localUrl: "http://127.0.0.1:8791/",
-        publicUrl: "./business-user-dashboard-prototype.html"
+        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1",
+        publicUrl: "./business-user-dashboard-prototype.html?embed=1"
       }
     };
 
     const shell = document.getElementById("shell");
     const frame = document.getElementById("boardFrame");
     const frameLoading = document.getElementById("frameLoading");
-    const openCurrent = document.getElementById("openCurrent");
     const navButtons = Array.from(document.querySelectorAll(".nav-btn"));
     const collapseBtn = document.getElementById("collapseBtn");
     const passwordGate = document.getElementById("passwordGate");
@@ -480,8 +474,6 @@
         hideFrameLoading();
       }
       frame.title = board.title;
-      openCurrent.href = url;
-
       navButtons.forEach((button) => {
         button.setAttribute("aria-selected", String(button.dataset.board === resolvedKey));
       });
