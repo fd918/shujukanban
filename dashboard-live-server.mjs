@@ -26,6 +26,7 @@ let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
 let snapshotTimer = null;
 let lastSnapshotAt = 0;
+let lastSnapshotSlotKey = "";
 let lastGood = { businesses: [], users: [], summary: null, hourlyTrend: [] };
 const userDetailCache = new Map();
 const userPhoneCache = new Map();
@@ -151,6 +152,66 @@ function rangeFromQuery(query = {}) {
 function minuteOfDay(date = new Date()) {
   const parts = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(date);
   return Number(parts.find(item => item.type === "hour")?.value || 0) * 60 + Number(parts.find(item => item.type === "minute")?.value || 0);
+}
+
+function snapshotSlot(date = new Date(), intervalMinutes = 30) {
+  const interval = Math.max(1, Number(intervalMinutes || 30));
+  const minute = Math.floor(minuteOfDay(date) / interval) * interval;
+  const hourText = String(Math.floor(minute / 60)).padStart(2, "0");
+  const minuteText = String(minute % 60).padStart(2, "0");
+  const day = dayKey(date);
+  return {
+    day,
+    minuteOfDay: minute,
+    key: `${day}-${String(minute).padStart(4, "0")}`,
+    label: `${day} ${hourText}:${minuteText}`
+  };
+}
+
+function nextSnapshotDelayMs(intervalMinutes = 30) {
+  const interval = Math.max(1, Number(intervalMinutes || 30));
+  const now = new Date();
+  const minute = minuteOfDay(now);
+  const seconds = now.getSeconds();
+  const milliseconds = now.getMilliseconds();
+  let nextMinute = (Math.floor(minute / interval) + 1) * interval;
+  if (minute % interval === 0 && seconds < 10) nextMinute = minute;
+  const next = new Date(now);
+  if (nextMinute >= 1440) {
+    next.setDate(next.getDate() + 1);
+    next.setHours(0, 0, 1, 0);
+  } else {
+    next.setHours(Math.floor(nextMinute / 60), nextMinute % 60, nextMinute === minute ? Math.max(seconds + 1, 1) : 1, 0);
+  }
+  return Math.max(1000, next.getTime() - now.getTime() - milliseconds);
+}
+
+function expectedSnapshotSlots(day = dayKey(), intervalMinutes = 30) {
+  const interval = Math.max(1, Number(intervalMinutes || 30));
+  return Array.from({ length: Math.ceil(1440 / interval) }, (_, index) => {
+    const minute = index * interval;
+    const hourText = String(Math.floor(minute / 60)).padStart(2, "0");
+    const minuteText = String(minute % 60).padStart(2, "0");
+    return {
+      day,
+      minuteOfDay: minute,
+      key: `${day}-${String(minute).padStart(4, "0")}`,
+      label: `${day} ${hourText}:${minuteText}`
+    };
+  });
+}
+
+function manualSnapshotSlot(date = new Date()) {
+  const minute = minuteOfDay(date);
+  const hourText = String(Math.floor(minute / 60)).padStart(2, "0");
+  const minuteText = String(minute % 60).padStart(2, "0");
+  const day = dayKey(date);
+  return {
+    day,
+    minuteOfDay: minute,
+    key: `${day}-manual-${Date.now()}`,
+    label: `${day} 手动 ${hourText}:${minuteText}`
+  };
 }
 
 function addDays(date, days) {
@@ -1133,19 +1194,30 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   return payload;
 }
 
-async function maybeRecordSnapshot(businesses, users, force = false, businessDaily = null, summary = null) {
+async function maybeRecordSnapshot(businesses, users, force = false, businessDaily = null, summary = null, options = {}) {
   const config = await readConfig();
-  const interval = Math.max(1, Number(config.snapshotMinutes || 30)) * 60 * 1000;
+  const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
+  const interval = intervalMinutes * 60 * 1000;
+  const slot = options.manual ? manualSnapshotSlot() : (options.slot || snapshotSlot(new Date(), intervalMinutes));
   if (!force && Date.now() - lastSnapshotAt < interval) return false;
+  if (!options.manual && lastSnapshotSlotKey === slot.key) return false;
+  const recentSnapshots = await readSnapshots(200);
+  if (!options.manual && recentSnapshots.some(item => item.snapshotSlotKey === slot.key || (item.day === slot.day && item.minuteOfDay === slot.minuteOfDay))) {
+    lastSnapshotSlotKey = slot.key;
+    return false;
+  }
   const dateRange = rangeFromQuery();
   await warmBusinessUserDetails(businesses, dateRange);
-  const previousSnapshot = (await readSnapshots(1))[0] || null;
+  const previousSnapshot = recentSnapshots.at(-1) || null;
   await mkdir(join(ROOT, "data"), { recursive: true });
   const snapshot = {
     createdAt: new Date().toISOString(),
     createdAtText: nowText(),
-    day: dayKey(),
-    minuteOfDay: minuteOfDay(),
+    day: slot.day,
+    minuteOfDay: slot.minuteOfDay,
+    snapshotSlotKey: slot.key,
+    snapshotSlotLabel: slot.label,
+    actualMinuteOfDay: minuteOfDay(),
     business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: row.todayCommission }])),
     users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission }])),
     businessUsers: cachedBusinessUsersSnapshot(dateRange)
@@ -1153,6 +1225,7 @@ async function maybeRecordSnapshot(businesses, users, force = false, businessDai
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
   lastSnapshotAt = Date.now();
+  if (!options.manual) lastSnapshotSlotKey = slot.key;
   if (config.public?.autoPush) {
     await publishPublicDashboard({ businesses, users, businessDaily, summary, snapshot, config }).catch(error => {
       console.error(`[${nowText()}] 公开看板推送失败：${error.message}`);
@@ -1192,24 +1265,30 @@ async function checkSnapshotHealth(snapshot, previousSnapshot, config = defaultC
 }
 
 async function scheduleSnapshots() {
-  if (snapshotTimer) clearInterval(snapshotTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
   const config = await readConfig();
-  const ms = Math.max(1, Number(config.snapshotMinutes || 30)) * 60 * 1000;
-  snapshotTimer = setInterval(async () => {
+  const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
+  const run = async () => {
+    const slot = snapshotSlot(new Date(), intervalMinutes);
     try {
       const data = await liveDashboard({ recordSnapshot: false });
       if (data.source?.missing?.length) {
         await notifyOperationalIssue("快照异常：接口数据缺失", data.source.missing.join("；"), config);
       }
-      await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily);
-      console.log(`[${nowText()}] 已记录业务用户快照`);
+      const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { slot });
+      console.log(`[${nowText()}] ${recorded ? `已记录业务用户快照：${slot.label}` : `跳过重复快照：${slot.label}`}`);
     } catch (error) {
       console.error(`[${nowText()}] 记录快照失败：${error.message}`);
       readConfig()
         .then(config => notifyOperationalIssue("快照异常：记录失败", error.message, config))
         .catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
+    } finally {
+      snapshotTimer = setTimeout(run, nextSnapshotDelayMs(intervalMinutes));
     }
-  }, ms);
+  };
+  const delay = nextSnapshotDelayMs(intervalMinutes);
+  snapshotTimer = setTimeout(run, delay);
+  console.log(`[${nowText()}] 快照调度已对齐自然时间槽：每 ${intervalMinutes} 分钟，约 ${Math.round(delay / 1000)} 秒后执行下一次。`);
 }
 
 async function getPublicConfig() {
@@ -1409,7 +1488,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (req.method === "OPTIONS") return json(res, 204, {});
   try {
-    if (url.pathname === "/api/live-dashboard") return json(res, 200, await liveDashboard({ query: Object.fromEntries(url.searchParams.entries()) }));
+    if (url.pathname === "/api/live-dashboard") return json(res, 200, await liveDashboard({ recordSnapshot: false, query: Object.fromEntries(url.searchParams.entries()) }));
     if (url.pathname === "/api/business-users") {
       const statuses = [];
       const startDate = parseDay(url.searchParams.get("start_date") || dayKey());
@@ -1460,8 +1539,33 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/snapshot" && req.method === "POST") {
       const data = await liveDashboard({ recordSnapshot: false });
-      const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary);
+      const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { manual: true });
       return json(res, 200, { ok: true, recorded, latestDataTime: nowText() });
+    }
+    if (url.pathname === "/api/snapshot-slots") {
+      const config = await readConfig();
+      const day = parseDay(url.searchParams.get("day") || dayKey());
+      const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
+      const snapshots = (await readSnapshots()).filter(item => item.day === day);
+      const bySlot = new Map(snapshots.map(item => [item.snapshotSlotKey || `${item.day}-${String(item.minuteOfDay).padStart(4, "0")}`, item]));
+      const slots = expectedSnapshotSlots(day, intervalMinutes).map(slot => {
+        const snapshot = bySlot.get(slot.key);
+        return {
+          ...slot,
+          recorded: Boolean(snapshot),
+          createdAtText: snapshot?.createdAtText || "",
+          actualMinuteOfDay: snapshot?.actualMinuteOfDay ?? snapshot?.minuteOfDay ?? null,
+          businessCount: snapshot ? Object.keys(snapshot.business || {}).length : 0
+        };
+      });
+      return json(res, 200, {
+        ok: true,
+        day,
+        intervalMinutes,
+        totalSlots: slots.length,
+        recordedSlots: slots.filter(item => item.recorded).length,
+        slots
+      });
     }
     await serveFile(req, res);
   } catch (error) {
