@@ -35,6 +35,7 @@ let userPhoneIndexLoadedAt = 0;
 let userPhoneIndexPromise = null;
 let lastOperationalAlert = { key: "", at: 0 };
 let startupWarmupRunning = false;
+let publicHistoryWarmupRunning = false;
 let detailCacheSaveTimer = null;
 
 const defaultConfig = {
@@ -997,28 +998,34 @@ function publicHistoryRange() {
 }
 
 async function warmBusinessUserHistories(businesses) {
+  if (publicHistoryWarmupRunning) return;
+  publicHistoryWarmupRunning = true;
   const rows = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
-  if (!rows.length) return;
-  const range = publicHistoryRange();
-  let warmed = 0;
-  await mapLimit(rows, 4, async row => {
-    const statuses = [];
-    const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
-    try {
-      await fetchBusinessUserHistory({
-        businessId: row.platformBusinessId || row.businessId || "",
-        startDate: range.startDate,
-        endDate: range.endDate,
-        pageSize,
-        enrichPhones: false,
-        refresh: false
-      }, statuses);
-      warmed += 1;
-    } catch (error) {
-      console.error(`[${nowText()}] 预热业务用户历史失败：${row.name} ${error.message}`);
-    }
-  });
-  console.log(`[${nowText()}] 已预热公网业务用户历史：${warmed}/${rows.length}`);
+  try {
+    if (!rows.length) return;
+    const range = publicHistoryRange();
+    let warmed = 0;
+    await mapLimit(rows, 4, async row => {
+      const statuses = [];
+      const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
+      try {
+        await fetchBusinessUserHistory({
+          businessId: row.platformBusinessId || row.businessId || "",
+          startDate: range.startDate,
+          endDate: range.endDate,
+          pageSize,
+          enrichPhones: false,
+          refresh: false
+        }, statuses);
+        warmed += 1;
+      } catch (error) {
+        console.error(`[${nowText()}] 预热业务用户历史失败：${row.name} ${error.message}`);
+      }
+    });
+    console.log(`[${nowText()}] 已预热公网业务用户历史：${warmed}/${rows.length}`);
+  } finally {
+    publicHistoryWarmupRunning = false;
+  }
 }
 
 async function warmStartupData() {
@@ -1447,7 +1454,11 @@ async function encryptedPublicBusinessTrends(businesses = []) {
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
   await warmBusinessUserDetails(data.businesses || [], dateRange);
-  await warmBusinessUserHistories(data.businesses || []);
+  const historyWarmup = warmBusinessUserHistories(data.businesses || []);
+  await Promise.race([
+    historyWarmup,
+    new Promise(resolve => setTimeout(resolve, 45000))
+  ]);
   return {
     ok: true,
     latestDataTime: nowText(),
