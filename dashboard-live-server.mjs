@@ -808,7 +808,7 @@ async function fetchBusinessHourlyTrend({ platformBusinessId = "", currentDate =
   };
 }
 
-async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
+async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize });
   if (!refresh && userDetailCache.has(cacheKey)) {
     const cached = userDetailCache.get(cacheKey);
@@ -839,10 +839,12 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
     normalized.days = Object.fromEntries(dates.map(date => [date, number(row[date])]));
     return normalized;
   });
-  await mapLimit(rows, 8, async row => {
-    const plainPhone = await fetchPlainPhone(row.id);
-    if (plainPhone) row.phone = plainPhone;
-  });
+  if (enrichPhones) {
+    await mapLimit(rows, 8, async row => {
+      const plainPhone = await fetchPlainPhone(row.id);
+      if (plainPhone) row.phone = plainPhone;
+    });
+  }
   const payload = { ok: result.ok, total, dates, rows };
   userDetailCache.set(cacheKey, payload);
   scheduleUserDetailCacheSave();
@@ -999,7 +1001,7 @@ async function warmBusinessUserHistories(businesses) {
   if (!rows.length) return;
   const range = publicHistoryRange();
   let warmed = 0;
-  await mapLimit(rows, 1, async row => {
+  await mapLimit(rows, 4, async row => {
     const statuses = [];
     const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
     try {
@@ -1008,6 +1010,7 @@ async function warmBusinessUserHistories(businesses) {
         startDate: range.startDate,
         endDate: range.endDate,
         pageSize,
+        enrichPhones: false,
         refresh: false
       }, statuses);
       warmed += 1;
