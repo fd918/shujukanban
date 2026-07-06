@@ -82,7 +82,7 @@
     .filters {
       padding: 12px;
       display: grid;
-      grid-template-columns: 180px minmax(240px, 1fr) 150px 150px auto auto auto auto;
+      grid-template-columns: 180px minmax(240px, 1fr);
       gap: 10px;
       align-items: center;
     }
@@ -108,7 +108,7 @@
     }
     .source.warn { border-color: #fed7aa; background: #fff7ed; color: #92400e; }
 
-    .kpis { margin-top: 14px; display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 12px; }
+    .kpis { margin-top: 14px; display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }
     .kpi { padding: 14px; display: grid; gap: 8px; }
     .kpi label { color: var(--muted); font-size: 12px; }
     .kpi strong { font-size: 24px; }
@@ -240,6 +240,22 @@
     .chart-stage svg { width: 100%; height: 100%; display: block; }
     .chart-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .trend-toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) auto; gap: 8px; align-items: center; }
+    .daily-controls { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .daily-controls.open { display: flex; }
+    .chart-tooltip {
+      position: fixed;
+      z-index: 95;
+      display: none;
+      pointer-events: none;
+      background: #111827;
+      color: #fff;
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 12px;
+      box-shadow: var(--shadow);
+      white-space: nowrap;
+    }
     .loading-mask {
       position: fixed;
       inset: 0;
@@ -295,7 +311,7 @@
       <div><strong id="latestTime">最新数据：等待刷新</strong><span id="snapshotInfo">快照：等待记录</span></div>
       <button class="icon-btn primary" id="refreshBtn" title="刷新">↻</button>
       <button class="btn" id="helpBtn">说明</button>
-      <button class="btn" id="settingsBtn">设置中心</button>
+      <button class="btn hidden" id="settingsBtn">设置中心</button>
     </div>
   </header>
 
@@ -304,12 +320,6 @@
     <section class="filters">
       <select class="field" id="platformSelect"><option value="all">全部平台</option></select>
       <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
-      <input class="field" id="dailyStart" type="date" title="每日数据开始日期">
-      <input class="field" id="dailyEnd" type="date" title="每日数据结束日期">
-      <button class="btn" data-range="7">近七天</button>
-      <button class="btn" data-range="lastWeek">上周</button>
-      <button class="btn" data-range="month">本月</button>
-      <button class="btn primary" id="applyBtn">查询</button>
     </section>
 
     <section class="source" id="sourceBox">
@@ -318,10 +328,9 @@
 
     <section class="kpis">
       <article class="kpi"><label>全部业务</label><strong id="kpiTotalBusiness">0</strong><span>当前接入的业务总数</span></article>
-      <article class="kpi"><label>异常业务</label><strong id="kpiAbnormal">0</strong><span>按当前列表规则计算</span></article>
-      <article class="kpi"><label>严重异常</label><strong id="kpiCritical">0</strong><span>可触发立即通知</span></article>
-      <article class="kpi"><label>影响订单</label><strong id="kpiImpact">0</strong><span>当前值较基准差额</span></article>
-      <article class="kpi"><label>异常客户</label><strong id="kpiUsers">0</strong><span>按用户维度计算</span></article>
+      <article class="kpi"><label>全部订单数</label><strong id="kpiTotalOrders">0</strong><span>今日全部业务订单</span></article>
+      <article class="kpi"><label>全部GMV</label><strong id="kpiTotalGmv">0</strong><span>今日全部业务成交金额</span></article>
+      <article class="kpi"><label>异常业务</label><strong id="kpiAbnormal">0</strong><span>按当前异常规则计算</span></article>
     </section>
 
     <section class="panel" id="trendPanel">
@@ -330,7 +339,7 @@
           <h2>业务小时趋势</h2>
           <small>今日、昨日、上周同期 24 小时订单走势</small>
         </div>
-        <div class="toolbar">
+        <div class="trend-toolbar">
           <select class="field" id="trendBusinessSelect" style="min-width:260px;"></select>
           <button class="btn" id="trendRefreshBtn">刷新趋势</button>
         </div>
@@ -351,6 +360,14 @@
           <div class="segmented" id="viewTabs">
             <button class="active" data-view="list">业务列表</button>
             <button data-view="daily">每日业务数据</button>
+          </div>
+          <div class="daily-controls" id="dailyControls">
+            <input class="field" id="dailyStart" type="date" title="每日数据开始日期">
+            <input class="field" id="dailyEnd" type="date" title="每日数据结束日期">
+            <button class="btn" data-range="7">近七天</button>
+            <button class="btn" data-range="lastWeek">上周</button>
+            <button class="btn" data-range="month">本月</button>
+            <button class="btn primary" id="applyBtn">查询</button>
           </div>
           <div class="segmented" id="metricTabs">
             <button class="active" data-metric="orders">订单</button>
@@ -464,9 +481,10 @@
 
   <div class="toast" id="toast">已刷新</div>
   <div class="loading-mask" id="loadingMask"><div class="loading-card">正在加载<span id="loadingText">正在请求中台数据，请稍等...</span></div></div>
+  <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailRefreshing: false, detailLatestTime: "", detailStats: null, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailRefreshing: false, detailLatestTime: "", detailStats: null, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
@@ -475,6 +493,7 @@
     const pad = n => String(n).padStart(2, "0");
     const dayText = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
     const localApiBase = location.protocol === "file:" ? "http://127.0.0.1:8791" : "";
+    const isLocalSettings = location.protocol === "file:" || ["127.0.0.1", "localhost"].includes(location.hostname);
     const apiUrl = path => `${localApiBase}${path}`;
 
     function currentMetricLabel() {
@@ -539,7 +558,7 @@
       state.dailyEnd = dayText(end);
       $("#dailyStart").value = state.dailyStart;
       $("#dailyEnd").value = state.dailyEnd;
-      loadData(true).catch(error => toast(error.message || "刷新失败"));
+      toast("已选择日期范围，点击查询后刷新");
     }
 
     function rangeForDetailScope(scope = state.detailScope) {
@@ -578,6 +597,26 @@
     function compare(row) {
       const today = Number(todayValue(row));
       const base = Number(baseValue(row));
+      const diff = today - base;
+      const impact = Math.abs(diff);
+      const ratio = base ? diff / base * 100 : today ? 100 : 0;
+      const rules = state.config?.rules || {};
+      let level = "normal", label = "正常";
+      if (!base && !today) [level, label] = ["missing", "数据缺失"];
+      else if (diff > 0 && ratio >= rules.upPct && impact >= rules.upOrders) [level, label] = ["up", "上升异常"];
+      else if (diff < 0) {
+        const drop = Math.abs(ratio);
+        if (today === 0 && base > 0) [level, label] = ["critical", "严重异常"];
+        else if (drop >= rules.criticalPct || impact >= rules.criticalOrders) [level, label] = ["critical", "严重异常"];
+        else if (drop >= rules.majorPct && impact >= rules.majorOrders) [level, label] = ["major", "重点异常"];
+        else if (drop >= rules.minorPct && impact >= rules.minorOrders) [level, label] = ["minor", "轻微异常"];
+      }
+      return { today, base, diff, impact, ratio, level, label };
+    }
+
+    function compareDetailUser(row) {
+      const today = Number(row.todayOrders || 0);
+      const base = Number(row.yesterdayOrders || 0);
       const diff = today - base;
       const impact = Math.abs(diff);
       const ratio = base ? diff / base * 100 : today ? 100 : 0;
@@ -656,13 +695,11 @@
 
     function renderKpis() {
       const biz = state.businesses.map(compare).filter(item => item.level !== "normal");
-      const critical = biz.filter(item => item.level === "critical");
-      const impact = biz.filter(item => item.diff < 0).reduce((sum, item) => sum + item.impact, 0);
+      const summary = state.summary || {};
       $("#kpiTotalBusiness").textContent = fmt(state.businesses.length);
+      $("#kpiTotalOrders").textContent = fmt(summary.orders ?? state.businesses.reduce((sum, row) => sum + Number(row.todayOrders || 0), 0));
+      $("#kpiTotalGmv").textContent = money(summary.paidAmount ?? summary.totalAmount ?? state.businesses.reduce((sum, row) => sum + Number(row.todayAmount || 0), 0));
       $("#kpiAbnormal").textContent = fmt(biz.length);
-      $("#kpiCritical").textContent = fmt(critical.length);
-      $("#kpiImpact").textContent = fmt(impact);
-      $("#kpiUsers").textContent = fmt(abnormalUsers().length);
     }
 
     function defaultTrendBusinessId() {
@@ -689,6 +726,11 @@
       $("#filterToggle").textContent = state.filtersCollapsed ? "展开筛选和提示" : "收起筛选和提示";
     }
 
+    function renderLocalControls() {
+      $("#settingsBtn").classList.toggle("hidden", !isLocalSettings);
+      $("#dailyControls").classList.toggle("open", state.view === "daily");
+    }
+
     function renderTrendChart() {
       const colors = ["#2563eb", "#e88a00", "#16a34a"];
       const data = state.trendData;
@@ -711,24 +753,28 @@
       const paths = data.series.map((item, index) => {
         const points = item.points || [];
         const d = points.map((point, i) => `${i ? "L" : "M"}${x(point.hour)} ${y(point.orders)}`).join(" ");
-        return `<path d="${d}" fill="none" stroke="${colors[index]}" stroke-width="2.4"/><g>${points.map(point => `<circle cx="${x(point.hour)}" cy="${y(point.orders)}" r="2.4" fill="${colors[index]}"><title>${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单</title></circle>`).join("")}</g>`;
+        return `<path d="${d}" fill="none" stroke="${colors[index]}" stroke-width="2.4"/><g>${points.map(point => `<circle cx="${x(point.hour)}" cy="${y(point.orders)}" r="3.2" fill="${colors[index]}" data-tip="${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单"><title>${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单</title></circle>`).join("")}</g>`;
       }).join("");
       $("#trendChart").innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="业务小时订单趋势">${grid}${hourTicks}<line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${height - pad.bottom}" stroke="#d9e0e8"/><line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#d9e0e8"/>${paths}</svg>`;
     }
 
     async function loadBusinessTrend(refresh = false) {
-      if (state.publicMode || !state.trendBusinessId) {
+      if (!state.trendBusinessId) {
         state.trendData = null;
+        renderTrendChart();
+        return;
+      }
+      if (state.publicMode) {
+        state.trendData = state.publicBusinessTrends[String(state.trendBusinessId)] || null;
+        if (!state.trendData) toast("公网快照暂未包含该业务趋势，请在本机查看或等待下一次快照发布。");
         renderTrendChart();
         return;
       }
       state.trendLoading = true;
       renderTrendChart();
       try {
-        const params = new URLSearchParams({ platform_business_id: state.trendBusinessId, _: refresh ? Date.now() : "0" });
-        const res = await fetch(apiUrl(`/api/business-hourly-trend?${params.toString()}`));
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || "趋势加载失败");
+        const params = new URLSearchParams({ platform_business_id: state.trendBusinessId, _: Date.now() });
+        const data = await requestJson(apiUrl(`/api/business-hourly-trend?${params.toString()}`));
         state.trendData = data;
       } catch (error) {
         state.trendData = null;
@@ -787,7 +833,7 @@
           <td>${fmt(row.cmp.impact)}</td>
           <td>${tag(row.cmp.level, row.cmp.label)}</td>
           <td>${fmt(row.users || row.userIds?.length || 0)}</td>
-          <td><button class="link" data-trend-index="${index}">趋势</button>　<button class="link" data-index="${index}">查看用户</button></td>
+          <td><button class="link" data-index="${index}">查看用户</button></td>
         </tr>`;
       }).join("") : `<tr><td colspan="12" class="muted">当前筛选条件下没有业务。</td></tr>`;
     }
@@ -822,6 +868,7 @@
       renderTrendOptions();
       renderTrendChart();
       renderMobileFilters();
+      renderLocalControls();
       renderTable();
     }
 
@@ -857,6 +904,7 @@
         const oldTrendBusinessId = state.trendBusinessId;
         state.publicMode = false;
         state.config = data.config;
+        state.summary = data.summary || null;
         state.businesses = data.businesses || [];
         state.users = data.users || [];
         state.businessDaily = data.businessDaily || null;
@@ -870,7 +918,7 @@
         state.refreshing = false;
         fillSettings();
         render();
-        loadBusinessTrend(false);
+        loadBusinessTrend(true);
         if (manual) toast("数据已刷新");
       } catch (error) {
         const publicLoaded = await loadPublicSnapshot();
@@ -899,12 +947,16 @@
         if (!data) return false;
         state.publicMode = true;
         state.config = data.config || state.config || { rules: {} };
+        state.summary = data.summary || null;
         state.businesses = data.businesses || [];
         state.users = [];
         state.businessDaily = data.businessDaily || null;
         state.publicUserDetails = data.userDetails || {};
+        state.publicBusinessTrends = data.businessTrends || {};
         state.dateRange = data.dateRange || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
+        state.trendBusinessId = state.trendBusinessId || defaultTrendBusinessId();
+        state.trendData = state.publicBusinessTrends[String(state.trendBusinessId)] || null;
         return true;
       } catch {
         return false;
@@ -1036,7 +1088,7 @@
     async function loadBusinessUsers(row, refresh = false) {
       if (state.publicMode) {
         const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || { rows: [] };
-        state.detailUsers = (detail.rows || []).map(user => ({ ...user, cmp: compare(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
+        state.detailUsers = (detail.rows || []).map(user => ({ ...user, cmp: compareDetailUser(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
         state.detailStats = { total: detail.total || state.detailUsers.length, userOrderSum: state.detailUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0) };
         state.detailLatestTime = detail.latestDataTime || state.source.latestDataTime || "";
         renderDetail(true);
@@ -1061,7 +1113,7 @@
       try {
         const res = await fetch(apiUrl(`/api/business-users?${params.toString()}`));
         const data = await res.json();
-        state.detailUsers = (data.users || []).map(user => ({ ...user, cmp: compare(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
+        state.detailUsers = (data.users || []).map(user => ({ ...user, cmp: compareDetailUser(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
         state.detailStats = { total: data.total, userOrderSum: data.userOrderSum };
         state.detailLatestTime = data.latestDataTime || "";
         state.detailRefreshing = false;
@@ -1117,7 +1169,7 @@
       $("#detailBody").innerHTML = `
         <div class="detail-grid">
           <div class="detail"><label>${detailScopeLabel()}订单</label><strong>${fmt(userOrderSum)}</strong></div>
-          <div class="detail"><label>对比基准合计</label><strong>${fmt(baselineSum)}</strong></div>
+          <div class="detail"><label>上一周期订单</label><strong>${fmt(baselineSum)}</strong></div>
           <div class="detail"><label>异常影响订单</label><strong class="${impactSum ? "down" : ""}">${fmt(impactSum)}</strong></div>
           <div class="detail"><label>异常 / 全部用户</label><strong>${fmt(abnormal.length)} / ${fmt(allUsers.length)}</strong></div>
         </div>
@@ -1163,11 +1215,11 @@
       const diff = state.detailScope === "today" ? userOrderSum - Number(row.cmp.today || 0) : null;
       const impactSum = abnormal.filter(user => user.cmp.diff < 0).reduce((sum, user) => sum + user.cmp.impact, 0);
       return `
-        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}，异常影响订单合计 ${fmt(impactSum)}。外层今日订单来自中台业务汇总接口；用户明细求和来自中台“该业务用户订单统计”接口逐页累加。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行${diff === null ? "。" : `；两边接口口径或分页返回不一致时会出现差异，当前差异 ${fmt(diff)}。`}</section>
+        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}，异常影响订单合计 ${fmt(impactSum)}。上一周期订单是当前维度的对比基准：今日异常=昨日全天订单，本周/上周/本月异常=上一段等长周期订单；昨日同时刻只作为快照参考，没有快照显示“-”。外层今日订单来自中台业务汇总接口；用户明细求和来自中台“该业务用户订单统计”接口逐页累加。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行${diff === null ? "。" : `；两边接口口径或分页返回不一致时会出现差异，当前差异 ${fmt(diff)}。`}</section>
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>昨日同时刻</th><th>对比基准</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th></tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>昨日同时刻</th><th>上一周期订单</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const yesterday = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null;
@@ -1252,13 +1304,26 @@
     $("#dailyStart").addEventListener("click", e => openDatePicker(e.target));
     $("#dailyEnd").addEventListener("click", e => openDatePicker(e.target));
     $("#dailyStart").addEventListener("change", e => { state.dailyStart = e.target.value; setTimeout(() => openDatePicker($("#dailyEnd")), 120); });
-    $("#dailyEnd").addEventListener("change", e => { state.dailyEnd = e.target.value; loadData(true).catch(error => toast(error.message || "刷新失败")); });
+    $("#dailyEnd").addEventListener("change", e => { state.dailyEnd = e.target.value; });
     $$("[data-range]").forEach(btn => btn.addEventListener("click", () => setDailyRange(btn.dataset.range)));
     $("#applyBtn").addEventListener("click", () => loadData(true));
     $("#refreshBtn").addEventListener("click", () => loadData(true));
     $("#filterToggle").addEventListener("click", () => { state.filtersCollapsed = !state.filtersCollapsed; renderMobileFilters(); });
     $("#trendBusinessSelect").addEventListener("change", e => { state.trendBusinessId = e.target.value; state.trendData = null; loadBusinessTrend(true); });
     $("#trendRefreshBtn").addEventListener("click", () => loadBusinessTrend(true));
+    $("#trendChart").addEventListener("mousemove", e => {
+      const target = e.target.closest("[data-tip]");
+      const tip = $("#chartTooltip");
+      if (!target) {
+        tip.style.display = "none";
+        return;
+      }
+      tip.textContent = target.dataset.tip;
+      tip.style.left = `${e.clientX + 12}px`;
+      tip.style.top = `${e.clientY + 12}px`;
+      tip.style.display = "block";
+    });
+    $("#trendChart").addEventListener("mouseleave", () => { $("#chartTooltip").style.display = "none"; });
     $("#helpBtn").addEventListener("click", openHelp);
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#closeHelp").addEventListener("click", closeHelp);
@@ -1269,15 +1334,6 @@
     $("#closeDetail").addEventListener("click", closeDetail);
     $("#closeDetailFoot").addEventListener("click", closeDetail);
     $("#businessBody").addEventListener("click", e => {
-      const trend = e.target.closest("[data-trend-index]");
-      if (trend) {
-        const row = filteredBusinesses()[Number(trend.dataset.trendIndex)];
-        state.trendBusinessId = String(row.platformBusinessId || row.businessId || "");
-        renderTrendOptions();
-        loadBusinessTrend(true);
-        document.getElementById("trendPanel").scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
       const target = e.target.closest("[data-index]");
       if (target) openBusiness(filteredBusinesses()[Number(target.dataset.index)]).catch(error => toast(error.message || "用户明细加载失败"));
     });

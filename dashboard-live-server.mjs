@@ -1303,6 +1303,22 @@ async function encryptedPublicUserDetails(dateRange) {
   return details;
 }
 
+async function encryptedPublicBusinessTrends(businesses = []) {
+  const preferred = businesses.find(row => String(row.name || "").includes("美团外卖节"));
+  const fallback = businesses.find(row => row.platformBusinessId || row.businessId);
+  const row = preferred || fallback;
+  const id = String(row?.platformBusinessId || row?.businessId || "");
+  if (!id) return {};
+  const statuses = [];
+  try {
+    const trend = await fetchBusinessHourlyTrend({ platformBusinessId: id, currentDate: dayKey() }, statuses);
+    return trend.ok ? { [id]: trend } : {};
+  } catch (error) {
+    console.error(`[${nowText()}] 生成公网业务趋势失败：${error.message}`);
+    return {};
+  }
+}
+
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
   await warmBusinessUserDetails(data.businesses || [], dateRange);
@@ -1326,6 +1342,7 @@ async function sanitizePublicDashboard(data) {
     businesses: data.businesses || [],
     users: data.users || [],
     businessDaily: data.businessDaily || null,
+    businessTrends: await encryptedPublicBusinessTrends(data.businesses || []),
     userDetails: await encryptedPublicUserDetails(dateRange)
   };
 }
