@@ -241,8 +241,9 @@
     .chart-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     .trend-toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) auto; gap: 8px; align-items: center; }
-    .daily-controls { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .daily-controls { display: none; gap: 8px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); background: #f8fafc; border-radius: 8px; padding: 8px; }
     .daily-controls.open { display: flex; }
+    .daily-controls .field { width: 154px; }
     .chart-tooltip {
       position: fixed;
       z-index: 95;
@@ -459,10 +460,10 @@
         <button data-tab="feishu">飞书通知</button>
       </div>
       <div id="tabRules" class="settings-grid">
-        <div class="setting"><strong>轻微下降异常</strong><label>比例和影响量同时满足</label><div class="inline"><input class="field" id="minorPct" type="number"><input class="field" id="minorOrders" type="number"></div></div>
-        <div class="setting"><strong>重点下降异常</strong><label>进入优先处理</label><div class="inline"><input class="field" id="majorPct" type="number"><input class="field" id="majorOrders" type="number"></div></div>
-        <div class="setting"><strong>严重下降异常</strong><label>可立即飞书通知</label><div class="inline"><input class="field" id="criticalPct" type="number"><input class="field" id="criticalOrders" type="number"></div></div>
-        <div class="setting"><strong>上升异常</strong><label>识别刷量、重复回传或活动爆发</label><div class="inline"><input class="field" id="upPct" type="number"><input class="field" id="upOrders" type="number"></div></div>
+        <div class="setting"><strong>轻微下降异常</strong><label>下降比例和影响订单同时达到，才算轻微</label><div class="inline"><input class="field" id="minorPct" type="number"><input class="field" id="minorOrders" type="number"></div></div>
+        <div class="setting"><strong>重点下降异常</strong><label>下降比例和影响订单同时达到，才算重点</label><div class="inline"><input class="field" id="majorPct" type="number"><input class="field" id="majorOrders" type="number"></div></div>
+        <div class="setting"><strong>严重下降异常</strong><label>下降比例或影响订单任一达到，就算严重</label><div class="inline"><input class="field" id="criticalPct" type="number"><input class="field" id="criticalOrders" type="number"></div></div>
+        <div class="setting"><strong>上升异常</strong><label>上升比例和增加订单同时达到，才算上升</label><div class="inline"><input class="field" id="upPct" type="number"><input class="field" id="upOrders" type="number"></div></div>
       </div>
       <div id="tabSnapshot" class="settings-grid hidden">
         <div class="setting"><strong>页面自动刷新频率</strong><label>控制页面多久自动请求一次中台最新数据</label><select class="field" id="refreshSeconds"><option value="30">每 30 秒</option><option value="60">每 60 秒</option><option value="120">每 2 分钟</option><option value="300">每 5 分钟</option></select></div>
@@ -484,7 +485,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -495,6 +496,10 @@
     const pctValue = n => n === null || n === undefined ? "-" : pct(n);
     const pad = n => String(n).padStart(2, "0");
     const dayText = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const parseDateText = value => {
+      const [year, month, day] = String(value || "").split("-").map(Number);
+      return new Date(year, (month || 1) - 1, day || 1);
+    };
     const localApiBase = location.protocol === "file:" ? "http://127.0.0.1:8791" : "";
     const isLocalSettings = location.protocol === "file:" || ["127.0.0.1", "localhost"].includes(location.hostname);
     const apiUrl = path => `${localApiBase}${path}`;
@@ -584,6 +589,20 @@
       loadBusinessUserHistory(true).catch(error => toast(error.message || "用户历史加载失败"));
     }
 
+    function addDays(date, days) {
+      const next = new Date(date);
+      next.setDate(next.getDate() + days);
+      return next;
+    }
+
+    function sumDays(days = {}, startDate, endDate) {
+      let sum = 0;
+      for (let date = new Date(startDate); date <= endDate; date = addDays(date, 1)) {
+        sum += Number(days[dayText(date)] || 0);
+      }
+      return sum;
+    }
+
     function rangeForDetailScope(scope = state.detailScope) {
       const today = new Date();
       let start = new Date(today);
@@ -603,15 +622,15 @@
     }
 
     function detailScopeLabel() {
-      return { today: "今日", week: "本周", lastWeek: "上周", month: "本月" }[state.detailScope] || "今日";
+      return { today: "今日", month: "本月" }[state.detailScope] || "今日";
     }
 
     function previousPeriodLabel(scope = state.detailScope) {
-      return { today: "昨日订单", week: "上周订单", lastWeek: "上上周订单", month: "上一周期订单" }[scope] || "上一周期订单";
+      return { today: "昨日订单", month: "上月订单" }[scope] || "对比订单";
     }
 
     function compareBaseLabel(scope = state.detailScope) {
-      return { today: "昨日同时刻", week: "上周订单", lastWeek: "上上周订单", month: "上一周期订单" }[scope] || "对比基准";
+      return { today: "昨日同时刻", month: "上月订单" }[scope] || "对比基准";
     }
 
     function detailCacheKey(row = state.detailRow, scope = state.detailScope) {
@@ -652,35 +671,40 @@
       return { today, base, diff, impact, ratio, level, label };
     }
 
+    function classifyChange({ current, base, labelPrefix = "" }) {
+      const today = Number(current || 0);
+      if (base === null || base === undefined || base === "") {
+        return { today, base: null, diff: null, impact: null, ratio: null, level: "normal", label: "正常", reason: "缺少对比基准，不参与异常判定" };
+      }
+      const baseValue = Number(base || 0);
+      const diff = today - baseValue;
+      const impact = Math.abs(diff);
+      const ratio = baseValue ? diff / baseValue * 100 : today ? 100 : 0;
+      const rules = state.config?.rules || {};
+      if (!baseValue && !today) return { today, base: baseValue, diff, impact, ratio, level: "missing", label: "数据缺失", reason: "当前和基准都为 0" };
+      if (Math.abs(ratio) <= 10) return { today, base: baseValue, diff, impact, ratio, level: "normal", label: "正常", reason: "波动在 10% 以内，按正常处理" };
+      if (diff > 0 && ratio >= rules.upPct && impact >= rules.upOrders) {
+        return { today, base: baseValue, diff, impact, ratio, level: "up", label: "上升异常", reason: `${labelPrefix}高 ${pct(ratio)}，增加 ${fmt(impact)} 单` };
+      }
+      if (diff < 0) {
+        const drop = Math.abs(ratio);
+        let level = "normal", label = "正常", reason = `${labelPrefix}低 ${Math.round(drop * 10) / 10}%，减少 ${fmt(impact)} 单`;
+        if (today === 0 && baseValue > 0) [level, label, reason] = ["critical", "严重异常", `${reason}；当前为 0`];
+        else if (drop >= rules.criticalPct) [level, label, reason] = ["critical", "严重异常", `${reason}；下降比例达到严重阈值 ${rules.criticalPct}%`];
+        else if (impact >= rules.criticalOrders) [level, label, reason] = ["critical", "严重异常", `${reason}；影响订单达到严重阈值 ${fmt(rules.criticalOrders)}`];
+        else if (drop >= rules.majorPct && impact >= rules.majorOrders) [level, label, reason] = ["major", "重点异常", `${reason}；比例和影响量达到重点阈值`];
+        else if (drop >= rules.minorPct && impact >= rules.minorOrders) [level, label, reason] = ["minor", "轻微异常", `${reason}；比例和影响量达到轻微阈值`];
+        return { today, base: baseValue, diff, impact, ratio, level, label, reason };
+      }
+      return { today, base: baseValue, diff, impact, ratio, level: "normal", label: "正常", reason: "未达到异常阈值" };
+    }
+
     function compareDetailUser(row) {
       const today = Number(row.todayOrders || 0);
       const same = row.sameTime || {};
       const sameBase = same.yesterday?.orders;
       const rawBase = state.detailScope === "today" ? sameBase : row.yesterdayOrders;
-      if (rawBase === null || rawBase === undefined || rawBase === "") {
-        return { today, base: null, diff: null, impact: null, ratio: null, level: "normal", label: "正常", reason: "缺少同时刻基准，不参与异常判定" };
-      }
-      const base = Number(rawBase || 0);
-      const diff = today - base;
-      const impact = Math.abs(diff);
-      const ratio = base ? diff / base * 100 : today ? 100 : 0;
-      const rules = state.config?.rules || {};
-      let level = "normal", label = "正常", reason = `波动在 10% 以内，按正常处理`;
-      if (!base && !today) [level, label] = ["missing", "数据缺失"];
-      else if (Math.abs(ratio) <= 10) [level, label] = ["normal", "正常"];
-      else if (diff > 0 && ratio >= rules.upPct && impact >= rules.upOrders) {
-        [level, label] = ["up", "上升异常"];
-        reason = `${detailScopeLabel()}比${compareBaseLabel()}高 ${pct(ratio)}，增加 ${fmt(impact)} 单`;
-      }
-      else if (diff < 0) {
-        const drop = Math.abs(ratio);
-        reason = `${detailScopeLabel()}比${compareBaseLabel()}低 ${Math.round(drop * 10) / 10}%，减少 ${fmt(impact)} 单`;
-        if (today === 0 && base > 0) [level, label] = ["critical", "严重异常"];
-        else if (drop >= rules.criticalPct || impact >= rules.criticalOrders) [level, label] = ["critical", "严重异常"];
-        else if (drop >= rules.majorPct && impact >= rules.majorOrders) [level, label] = ["major", "重点异常"];
-        else if (drop >= rules.minorPct && impact >= rules.minorOrders) [level, label] = ["minor", "轻微异常"];
-      }
-      return { today, base, diff, impact, ratio, level, label, reason };
+      return classifyChange({ current: today, base: rawBase, labelPrefix: `${detailScopeLabel()}比${compareBaseLabel()}` });
     }
 
     function tag(level, label) {
@@ -778,6 +802,8 @@
     function renderLocalControls() {
       $("#settingsBtn").classList.toggle("hidden", !isLocalSettings);
       $("#dailyControls").classList.toggle("open", state.view === "daily");
+      $(".filters").classList.toggle("hidden", state.view === "daily");
+      $("#levelTabs").classList.toggle("hidden", state.view === "daily");
     }
 
     function renderTrendChart() {
@@ -1155,6 +1181,7 @@
       state.detailHistory = null;
       state.detailHistoryStart = "";
       state.detailHistoryEnd = "";
+      state.detailMonthAnalysis = null;
       state.detailStats = null;
       state.detailRefreshing = false;
       state.detailLoadingLabel = "";
@@ -1175,6 +1202,7 @@
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";
         renderDetail(true);
+        if (state.detailScope === "month" && !state.detailMonthAnalysis) loadDetailMonthAnalysis(row, false).catch(error => toast(error.message || "本月用户分析加载失败"));
         return;
       }
       if (state.publicMode) {
@@ -1212,6 +1240,7 @@
         state.detailLoadingLabel = "";
         state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
         renderDetail(data.cached);
+        if (state.detailScope === "month") loadDetailMonthAnalysis(row, refresh).catch(error => toast(error.message || "本月用户分析加载失败"));
       } catch (error) {
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";
@@ -1256,9 +1285,76 @@
       }
     }
 
+    async function loadDetailMonthAnalysis(row = state.detailRow, refresh = false) {
+      if (!row || state.publicMode) return;
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const params = new URLSearchParams({
+        business_id: row.platformBusinessId || row.businessId || "",
+        start_date: dayText(start),
+        end_date: dayText(today),
+        page_size: 5000,
+        refresh: refresh ? "1" : "0",
+        _: Date.now()
+      });
+      state.detailRefreshing = true;
+      renderDetail(false);
+      try {
+        const res = await fetch(apiUrl(`/api/business-users-history?${params.toString()}`));
+        const data = await res.json();
+        state.detailMonthAnalysis = buildMonthAnalysis(data);
+        state.detailLatestTime = data.latestDataTime || state.detailLatestTime;
+      } finally {
+        state.detailRefreshing = false;
+        renderDetail(false);
+      }
+    }
+
+    function buildMonthAnalysis(history) {
+      const today = new Date();
+      const day = today.getDay() || 7;
+      const weekStart = addDays(today, -day + 1);
+      const lastWeekStart = addDays(weekStart, -7);
+      const lastWeekEnd = addDays(weekStart, -1);
+      const prevWeekStart = addDays(weekStart, -14);
+      const prevWeekEnd = addDays(weekStart, -8);
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const prevMonthEnd = addDays(monthStart, -1);
+      const rows = (history.rows || []).map(user => {
+        const days = user.days || {};
+        const weekOrders = sumDays(days, weekStart, today);
+        const lastWeekOrders = sumDays(days, lastWeekStart, lastWeekEnd);
+        const prevWeekOrders = sumDays(days, prevWeekStart, prevWeekEnd);
+        const monthOrders = sumDays(days, monthStart, today);
+        const prevMonthOrders = sumDays(days, prevMonthStart, prevMonthEnd);
+        const weekCmp = classifyChange({ current: weekOrders, base: lastWeekOrders, labelPrefix: "本周比上周" });
+        const lastWeekCmp = classifyChange({ current: lastWeekOrders, base: prevWeekOrders, labelPrefix: "上周比上上周" });
+        const monthCmp = classifyChange({ current: monthOrders, base: prevMonthOrders, labelPrefix: "本月比上月" });
+        const candidates = [monthCmp, weekCmp, lastWeekCmp].filter(item => item.level !== "normal" && item.level !== "missing");
+        const primary = candidates.sort((a, b) => rank(b.level) - rank(a.level) || Number(b.impact || 0) - Number(a.impact || 0))[0] || monthCmp;
+        const reasons = [weekCmp, lastWeekCmp, monthCmp]
+          .filter(item => item.reason && item.level !== "normal")
+          .map(item => item.reason);
+        return {
+          ...user,
+          weekOrders,
+          lastWeekOrders,
+          prevWeekOrders,
+          monthOrders,
+          prevMonthOrders,
+          weekCmp,
+          lastWeekCmp,
+          monthCmp,
+          cmp: { ...primary, today: monthOrders, reason: reasons.length ? reasons.join("；") : "本周、本月均未达到异常阈值" }
+        };
+      });
+      return { rows, latestDataTime: history.latestDataTime || "" };
+    }
+
     function renderDetail(cached = false) {
       const row = state.detailRow;
-      const allUsers = state.detailUsers || [];
+      const allUsers = state.detailScope === "month" && state.detailMonthAnalysis?.rows ? state.detailMonthAnalysis.rows : (state.detailUsers || []);
       const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
       const upUsers = allUsers.filter(user => user.cmp.level === "up");
       const abnormal = downUsers;
@@ -1282,8 +1378,6 @@
           </div>
           <div class="segmented ${state.detailMode === "history" ? "hidden" : ""}">
             <button class="${state.detailScope === "today" ? "active" : ""}" data-detail-scope="today">今日</button>
-            <button class="${state.detailScope === "week" ? "active" : ""}" data-detail-scope="week">本周</button>
-            <button class="${state.detailScope === "lastWeek" ? "active" : ""}" data-detail-scope="lastWeek">上周</button>
             <button class="${state.detailScope === "month" ? "active" : ""}" data-detail-scope="month">本月</button>
           </div>
           <input class="field" style="max-width:220px;" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID">
@@ -1295,7 +1389,14 @@
 
     function detailSortValue(user, key) {
       if (key === "impact") return user.cmp?.impact ?? -1;
+      if (key === "ratio") return user.cmp?.ratio ?? -999999;
       return user.cmp?.today || user.todayOrders || 0;
+    }
+
+    function monthSortValue(user, key) {
+      if (key === "impact") return Math.max(Number(user.weekCmp?.impact || 0), Number(user.monthCmp?.impact || 0));
+      if (key === "ratio") return user.monthCmp?.ratio ?? -999999;
+      return user.monthOrders || 0;
     }
 
     function detailSortButton(key, label) {
@@ -1304,6 +1405,7 @@
     }
 
     function renderDetailResult() {
+      if (state.detailScope === "month" && state.detailMode !== "history") return renderMonthAnalysisResult();
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
       const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
@@ -1321,15 +1423,50 @@
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>${compareBaseLabel()}</th><th>${previousPeriodLabel()}</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>原因</th></tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>${compareBaseLabel()}</th><th>${previousPeriodLabel()}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>原因</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
-              const lastWeek = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
-              const sevenAvg = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
-              return `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${fmt(user.yesterdayOrders)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td><td>${user.cmp.reason || "-"}</td></tr>`;
-            }).join("") : `<tr><td colspan="11" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+              return `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${fmt(user.yesterdayOrders)}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td><td>${user.cmp.reason || "-"}</td></tr>`;
+            }).join("") : `<tr><td colspan="9" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>`}`;
+    }
+
+    function renderMonthAnalysisResult() {
+      const analysis = state.detailMonthAnalysis;
+      if (!analysis) return `<section class="source"><strong>正在加载：</strong>正在按用户每日订单计算本周、上周、本月和上月表现。</section>`;
+      const allUsers = analysis.rows || [];
+      const downUsers = allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item.diff < 0 && item.level !== "normal"));
+      const upUsers = allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item.level === "up"));
+      const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "up" ? upUsers : allUsers;
+      const keyword = state.detailSearch.toLowerCase();
+      const users = (keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers)
+        .slice()
+        .sort((a, b) => (monthSortValue(a, state.detailSort) - monthSortValue(b, state.detailSort)) * (state.detailSortDir === "asc" ? 1 : -1));
+      return `
+        <section class="source"><strong>本月综合评估：</strong>本表按用户每日订单重新汇总。本周对比上周，上周对比上上周，本月对比上月；10% 以内按正常处理。原因列会合并该用户命中的周/月异常原因。</section>
+        <div class="detail-table-wrap">
+          <table class="compact">
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "本周订单")}</th><th>上周订单</th><th>本周变化比例</th><th>本周影响订单</th><th>上上周订单</th><th>上周变化比例</th><th>上周影响订单</th><th>本月订单</th><th>上月订单</th><th>${detailSortButton("ratio", "本月变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>综合原因</th></tr></thead>
+            <tbody>${users.length ? users.map((user, index) => `<tr>
+              <td>${index + 1}</td>
+              <td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
+              <td>${fmt(user.weekOrders)}</td>
+              <td>${fmt(user.lastWeekOrders)}</td>
+              <td class="${user.weekCmp.diff < 0 ? "down" : user.weekCmp.diff > 0 ? "up" : ""}">${pctValue(user.weekCmp.ratio)}</td>
+              <td>${fmtValue(user.weekCmp.impact)}</td>
+              <td>${fmt(user.prevWeekOrders)}</td>
+              <td class="${user.lastWeekCmp.diff < 0 ? "down" : user.lastWeekCmp.diff > 0 ? "up" : ""}">${pctValue(user.lastWeekCmp.ratio)}</td>
+              <td>${fmtValue(user.lastWeekCmp.impact)}</td>
+              <td>${fmt(user.monthOrders)}</td>
+              <td>${fmt(user.prevMonthOrders)}</td>
+              <td class="${user.monthCmp.diff < 0 ? "down" : user.monthCmp.diff > 0 ? "up" : ""}">${pctValue(user.monthCmp.ratio)}</td>
+              <td>${fmtValue(Math.max(Number(user.weekCmp.impact || 0), Number(user.monthCmp.impact || 0)))}</td>
+              <td>${tag(user.cmp.level, user.cmp.label)}</td>
+              <td>${user.cmp.reason || "-"}</td>
+            </tr>`).join("") : `<tr><td colspan="15" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
+          </table>
+        </div>`;
     }
 
     function renderUserHistoryTable() {
@@ -1462,8 +1599,8 @@
           return;
         }
         state.detailScope = scope.dataset.detailScope;
-        state.detailMode = "abnormal";
         state.detailHistory = null;
+        state.detailMonthAnalysis = null;
         loadBusinessUsers(state.detailRow, false).catch(error => toast(error.message || "用户明细加载失败"));
         return;
       }
@@ -1490,7 +1627,10 @@
       const refresh = e.target.closest("[data-detail-refresh]");
       if (refresh && state.detailRow) {
         if (state.detailMode === "history") loadBusinessUserHistory(true).catch(error => toast(error.message || "用户历史刷新失败"));
-        else loadBusinessUsers(state.detailRow, true).catch(error => toast(error.message || "用户刷新失败"));
+        else {
+          state.detailMonthAnalysis = null;
+          loadBusinessUsers(state.detailRow, true).catch(error => toast(error.message || "用户刷新失败"));
+        }
       }
     });
     $("#detailBody").addEventListener("input", e => {
