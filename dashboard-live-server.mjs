@@ -991,7 +991,7 @@ async function warmBusinessUserDetails(businesses, dateRange) {
 function publicHistoryRange() {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  return { startDate: dayText(start), endDate: dayKey(today) };
+  return { startDate: dayKey(start), endDate: dayKey(today) };
 }
 
 async function warmBusinessUserHistories(businesses) {
