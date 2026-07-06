@@ -1585,7 +1585,13 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/snapshot" && req.method === "POST") {
       const data = await liveDashboard({ recordSnapshot: false });
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { manual: true });
-      return json(res, 200, { ok: true, recorded, latestDataTime: nowText() });
+      const config = await readConfig();
+      let published = true;
+      await publishPublicDashboard({ ...data, snapshot: null, config }).catch(error => {
+        published = false;
+        console.error(`[${nowText()}] 手动公开看板推送失败：${error.message}`);
+      });
+      return json(res, 200, { ok: true, recorded, published, latestDataTime: nowText() });
     }
     if (url.pathname === "/api/snapshot-slots") {
       const config = await readConfig();
