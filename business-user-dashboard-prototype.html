@@ -484,7 +484,8 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailRefreshing: false, detailLatestTime: "", detailStats: null, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
+    const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
@@ -581,6 +582,14 @@
 
     function detailScopeLabel() {
       return { today: "今日", week: "本周", lastWeek: "上周", month: "本月" }[state.detailScope] || "今日";
+    }
+
+    function previousPeriodLabel(scope = state.detailScope) {
+      return { today: "昨日订单", week: "上周订单", lastWeek: "上上周订单", month: "上一周期订单" }[scope] || "上一周期订单";
+    }
+
+    function detailCacheKey(row = state.detailRow, scope = state.detailScope) {
+      return `${row?.platformBusinessId || row?.businessId || ""}|${scope}`;
     }
 
     function baseValue(row) {
@@ -735,7 +744,7 @@
       const colors = ["#2563eb", "#e88a00", "#16a34a"];
       const data = state.trendData;
       $("#trendLegend").innerHTML = data?.series?.length
-        ? data.series.map((item, index) => `<span><i class="legend-dot" style="background:${colors[index]}"></i>${item.label} ${item.date}</span>`).join("")
+        ? data.series.map((item, index) => `<span><i class="legend-dot" style="background:${colors[index]}"></i>${item.label} ${item.date}</span>`).join("") + `<span class="muted">来源：中台小时趋势接口</span>`
         : `<span class="muted">${state.trendLoading ? "趋势加载中..." : "等待选择业务"}</span>`;
       if (!data?.series?.length) {
         $("#trendChart").innerHTML = `<div class="source" style="margin:14px;">${state.trendLoading ? "正在加载业务小时趋势..." : "暂无趋势数据"}</div>`;
@@ -877,7 +886,7 @@
       state.loading = !hasOldData;
       state.refreshing = hasOldData;
       $("#refreshBtn").textContent = "…";
-      if (manual) showLoading("正在查询中台数据，请稍等...");
+      if (manual && !hasOldData) showLoading("正在查询中台数据，请稍等...");
       renderSource();
       renderTable();
       try {
@@ -938,28 +947,56 @@
       }
     }
 
+    function applyPublicSnapshot(data) {
+      state.publicMode = true;
+      state.config = data.config || state.config || { rules: {} };
+      state.summary = data.summary || null;
+      state.businesses = data.businesses || [];
+      state.users = [];
+      state.businessDaily = data.businessDaily || null;
+      state.publicUserDetails = data.userDetails || {};
+      state.publicBusinessTrends = data.businessTrends || {};
+      state.dateRange = data.dateRange || null;
+      state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
+      state.trendBusinessId = state.trendBusinessId || defaultTrendBusinessId();
+      state.trendData = state.publicBusinessTrends[String(state.trendBusinessId)] || null;
+    }
+
+    function loadCachedPublicPayload() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(PUBLIC_PAYLOAD_CACHE_KEY) || "{}");
+        if (saved.expiresAt > Date.now() && saved.payload?.businesses?.length) return saved.payload;
+      } catch {}
+      return null;
+    }
+
+    function saveCachedPublicPayload(payload) {
+      try {
+        localStorage.setItem(PUBLIC_PAYLOAD_CACHE_KEY, JSON.stringify({
+          payload,
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
+        }));
+      } catch {}
+    }
+
     async function loadPublicSnapshot() {
+      const cached = loadCachedPublicPayload();
+      if (cached && !state.businesses.length) {
+        applyPublicSnapshot(cached);
+        state.loading = false;
+        render();
+      }
       try {
         const res = await fetch(`data/business-dashboard-public.enc.json?_=${Date.now()}`);
-        if (!res.ok) return false;
+        if (!res.ok) return Boolean(cached);
         const encrypted = await res.json();
         const data = await decryptPublicSnapshot(encrypted);
-        if (!data) return false;
-        state.publicMode = true;
-        state.config = data.config || state.config || { rules: {} };
-        state.summary = data.summary || null;
-        state.businesses = data.businesses || [];
-        state.users = [];
-        state.businessDaily = data.businessDaily || null;
-        state.publicUserDetails = data.userDetails || {};
-        state.publicBusinessTrends = data.businessTrends || {};
-        state.dateRange = data.dateRange || null;
-        state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
-        state.trendBusinessId = state.trendBusinessId || defaultTrendBusinessId();
-        state.trendData = state.publicBusinessTrends[String(state.trendBusinessId)] || null;
+        if (!data) return Boolean(cached);
+        applyPublicSnapshot(data);
+        saveCachedPublicPayload(data);
         return true;
       } catch {
-        return false;
+        return Boolean(cached);
       }
     }
 
@@ -1078,6 +1115,7 @@
       state.detailHistory = null;
       state.detailStats = null;
       state.detailRefreshing = false;
+      state.detailLoadingLabel = "";
       $("#detailTitle").textContent = row.name;
       $("#detailSub").textContent = `${row.platform}｜${row.cmp.label}`;
       $("#modalMask").classList.add("open");
@@ -1086,17 +1124,29 @@
     }
 
     async function loadBusinessUsers(row, refresh = false) {
+      const cacheKey = detailCacheKey(row);
+      const cachedDetail = state.detailCache[cacheKey];
+      if (!refresh && cachedDetail) {
+        state.detailUsers = cachedDetail.users;
+        state.detailStats = cachedDetail.stats;
+        state.detailLatestTime = cachedDetail.latestTime;
+        state.detailRefreshing = false;
+        state.detailLoadingLabel = "";
+        renderDetail(true);
+        return;
+      }
       if (state.publicMode) {
         const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || { rows: [] };
         state.detailUsers = (detail.rows || []).map(user => ({ ...user, cmp: compareDetailUser(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
         state.detailStats = { total: detail.total || state.detailUsers.length, userOrderSum: state.detailUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0) };
         state.detailLatestTime = detail.latestDataTime || state.source.latestDataTime || "";
+        state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
         renderDetail(true);
         return;
       }
-      const hasOldUsers = refresh && state.detailUsers.length > 0;
       state.detailRefreshing = true;
-      if (hasOldUsers) renderDetail(false);
+      state.detailLoadingLabel = `${detailScopeLabel()}用户`;
+      if (state.detailUsers.length > 0) renderDetail(false);
       else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在从中台按当前业务拉取用户明细；首次加载会自动翻页并补齐明文手机号，之后默认使用缓存，点“刷新用户”才重新请求。</section>`;
       const today = dayText(new Date());
       const scopeRange = rangeForDetailScope();
@@ -1117,9 +1167,12 @@
         state.detailStats = { total: data.total, userOrderSum: data.userOrderSum };
         state.detailLatestTime = data.latestDataTime || "";
         state.detailRefreshing = false;
+        state.detailLoadingLabel = "";
+        state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
         renderDetail(data.cached);
       } catch (error) {
         state.detailRefreshing = false;
+        state.detailLoadingLabel = "";
         renderDetail(false);
         throw error;
       }
@@ -1162,16 +1215,19 @@
     function renderDetail(cached = false) {
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
-      const abnormal = allUsers.filter(user => user.cmp.level !== "normal");
-      const impactSum = abnormal.filter(user => user.cmp.diff < 0).reduce((sum, user) => sum + user.cmp.impact, 0);
+      const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
+      const upUsers = allUsers.filter(user => user.cmp.level === "up");
+      const abnormal = downUsers;
+      const impactSum = downUsers.reduce((sum, user) => sum + user.cmp.impact, 0);
       const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
       const baselineSum = allUsers.reduce((sum, user) => sum + Number(user.cmp?.base || 0), 0);
+      const netDiff = userOrderSum - baselineSum;
       $("#detailBody").innerHTML = `
         <div class="detail-grid">
           <div class="detail"><label>${detailScopeLabel()}订单</label><strong>${fmt(userOrderSum)}</strong></div>
-          <div class="detail"><label>上一周期订单</label><strong>${fmt(baselineSum)}</strong></div>
-          <div class="detail"><label>异常影响订单</label><strong class="${impactSum ? "down" : ""}">${fmt(impactSum)}</strong></div>
-          <div class="detail"><label>异常 / 全部用户</label><strong>${fmt(abnormal.length)} / ${fmt(allUsers.length)}</strong></div>
+          <div class="detail"><label>${previousPeriodLabel()}</label><strong>${fmt(baselineSum)}</strong></div>
+          <div class="detail"><label>下降影响订单</label><strong class="${impactSum ? "down" : ""}">${fmt(impactSum)}</strong></div>
+          <div class="detail"><label>净变化订单</label><strong class="${netDiff < 0 ? "down" : netDiff > 0 ? "up" : ""}">${fmt(netDiff)}</strong></div>
         </div>
         <div class="toolbar" style="margin-bottom:10px;">
           <div class="segmented">
@@ -1181,13 +1237,14 @@
             <button class="${state.detailScope === "month" ? "active" : ""}" data-detail-scope="month">本月异常</button>
           </div>
           <div class="segmented">
-            <button class="${state.detailMode === "abnormal" ? "active" : ""}" data-detail-mode="abnormal">异常用户 ${fmt(abnormal.length)}</button>
+            <button class="${state.detailMode === "abnormal" ? "active" : ""}" data-detail-mode="abnormal">下降异常 ${fmt(downUsers.length)}</button>
+            <button class="${state.detailMode === "up" ? "active" : ""}" data-detail-mode="up">上升用户 ${fmt(upUsers.length)}</button>
             <button class="${state.detailMode === "all" ? "active" : ""}" data-detail-mode="all">全部用户 ${fmt(allUsers.length)}</button>
             <button class="${state.detailMode === "history" ? "active" : ""}" data-detail-mode="history">历史订单</button>
           </div>
           <input class="field" style="max-width:220px;" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID">
           <button class="btn" data-detail-refresh="1">刷新用户</button>
-          <span class="muted">${state.detailRefreshing ? "正在刷新用户，当前先保留上次结果" : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || state.source.latestDataTime || "-"}</span>
+          <span class="muted">${state.detailRefreshing ? `正在刷新${state.detailLoadingLabel || "用户"}，当前先保留上次结果` : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || state.source.latestDataTime || "-"}</span>
         </div>
         <div id="detailResult">${renderDetailResult()}</div>`;
     }
@@ -1205,28 +1262,29 @@
     function renderDetailResult() {
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
-      const abnormal = allUsers.filter(user => user.cmp.level !== "normal");
-      const sourceUsers = state.detailMode === "abnormal" ? abnormal : allUsers;
+      const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
+      const upUsers = allUsers.filter(user => user.cmp.level === "up");
+      const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "up" ? upUsers : allUsers;
       const keyword = state.detailSearch.toLowerCase();
       const users = (keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers)
         .slice()
         .sort((a, b) => (detailSortValue(a, state.detailSort) - detailSortValue(b, state.detailSort)) * (state.detailSortDir === "asc" ? 1 : -1));
       const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
       const diff = state.detailScope === "today" ? userOrderSum - Number(row.cmp.today || 0) : null;
-      const impactSum = abnormal.filter(user => user.cmp.diff < 0).reduce((sum, user) => sum + user.cmp.impact, 0);
+      const impactSum = downUsers.reduce((sum, user) => sum + user.cmp.impact, 0);
       return `
-        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}，异常影响订单合计 ${fmt(impactSum)}。上一周期订单是当前维度的对比基准：今日异常=昨日全天订单，本周/上周/本月异常=上一段等长周期订单；昨日同时刻只作为快照参考，没有快照显示“-”。外层今日订单来自中台业务汇总接口；用户明细求和来自中台“该业务用户订单统计”接口逐页累加。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行${diff === null ? "。" : `；两边接口口径或分页返回不一致时会出现差异，当前差异 ${fmt(diff)}。`}</section>
+        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}，下降影响订单合计 ${fmt(impactSum)}。${previousPeriodLabel()}是当前维度的对比基准；昨日同时刻只作为快照参考，没有快照显示“-”。业务列表影响量是业务整体净差，用户下降影响是下降用户的损失合计，会上升用户抵消前的影响，通常不能直接相等。外层今日订单来自中台业务汇总接口；用户明细求和来自中台“该业务用户订单统计”接口逐页累加。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，当前已加载 ${fmt(allUsers.length)} 行${diff === null ? "。" : `；两边接口口径或分页返回不一致时会出现差异，当前差异 ${fmt(diff)}。`}</section>
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>昨日同时刻</th><th>上一周期订单</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th></tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>昨日同时刻</th><th>${previousPeriodLabel()}</th><th>上周同时刻</th><th>近7日同期均值</th><th>变化比例</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const yesterday = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null;
               const lastWeek = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
               const sevenAvg = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
               return `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${yesterday !== null ? fmt(yesterday) : "-"}</td><td>${fmt(user.yesterdayOrders)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${sevenAvg !== null ? fmt(sevenAvg) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pct(user.cmp.ratio)}</td><td>${fmt(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td></tr>`;
-            }).join("") : `<tr><td colspan="10" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的异常用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+            }).join("") : `<tr><td colspan="10" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>`}`;
     }
@@ -1348,10 +1406,13 @@
       }
       const scope = e.target.closest("[data-detail-scope]");
       if (scope && state.detailRow) {
+        if (state.publicMode && scope.dataset.detailScope !== "today" && !state.detailCache[detailCacheKey(state.detailRow, scope.dataset.detailScope)]) {
+          toast("公网快照暂只包含今日用户明细；本周、本月请在本地看板查看。");
+          return;
+        }
         state.detailScope = scope.dataset.detailScope;
         state.detailMode = "abnormal";
         state.detailHistory = null;
-        state.detailUsers = [];
         loadBusinessUsers(state.detailRow, false).catch(error => toast(error.message || "用户明细加载失败"));
         return;
       }
