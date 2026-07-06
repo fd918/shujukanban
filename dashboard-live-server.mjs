@@ -988,6 +988,36 @@ async function warmBusinessUserDetails(businesses, dateRange) {
   console.log(`[${nowText()}] 已预热业务用户明细缓存：${warmed}/${rows.length}`);
 }
 
+function publicHistoryRange() {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  return { startDate: dayText(start), endDate: dayKey(today) };
+}
+
+async function warmBusinessUserHistories(businesses) {
+  const rows = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
+  if (!rows.length) return;
+  const range = publicHistoryRange();
+  let warmed = 0;
+  await mapLimit(rows, 1, async row => {
+    const statuses = [];
+    const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
+    try {
+      await fetchBusinessUserHistory({
+        businessId: row.platformBusinessId || row.businessId || "",
+        startDate: range.startDate,
+        endDate: range.endDate,
+        pageSize,
+        refresh: false
+      }, statuses);
+      warmed += 1;
+    } catch (error) {
+      console.error(`[${nowText()}] 预热业务用户历史失败：${row.name} ${error.message}`);
+    }
+  });
+  console.log(`[${nowText()}] 已预热公网业务用户历史：${warmed}/${rows.length}`);
+}
+
 async function warmStartupData() {
   if (startupWarmupRunning) return;
   startupWarmupRunning = true;
@@ -1368,9 +1398,22 @@ async function encryptedPublicUserDetails(dateRange) {
   for (const [cacheKey, payload] of userDetailCache.entries()) {
     try {
       const key = JSON.parse(cacheKey);
+      const id = String(key.businessId || "");
+      if (!id) continue;
+      if (key.type === "history") {
+        details[id] = details[id] || {};
+        details[id].history = {
+          latestDataTime: nowText(),
+          total: payload.total || payload.rows?.length || 0,
+          dates: payload.dates || [],
+          rows: payload.rows || []
+        };
+        continue;
+      }
       if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
-      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, key.businessId, dateRange);
-      details[String(key.businessId)] = {
+      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange);
+      details[id] = {
+        ...(details[id] || {}),
         latestDataTime: nowText(),
         total: payload.total || rows.length,
         rows
@@ -1401,6 +1444,7 @@ async function encryptedPublicBusinessTrends(businesses = []) {
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
   await warmBusinessUserDetails(data.businesses || [], dateRange);
+  await warmBusinessUserHistories(data.businesses || []);
   return {
     ok: true,
     latestDataTime: nowText(),
@@ -1431,7 +1475,8 @@ async function encryptPublicPayload(payload) {
   if (!password) throw new Error("缺少公网看板访问密码，请先写入钥匙串。");
   const salt = randomBytes(16);
   const iv = randomBytes(12);
-  const key = pbkdf2Sync(password, salt, 200000, 32, "sha256");
+  const iterations = 600000;
+  const key = pbkdf2Sync(password, salt, iterations, 32, "sha256");
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const plaintext = Buffer.from(JSON.stringify(payload), "utf8");
   const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
@@ -1439,7 +1484,7 @@ async function encryptPublicPayload(payload) {
     version: 1,
     algorithm: "AES-256-GCM",
     kdf: "PBKDF2-SHA256",
-    iterations: 200000,
+    iterations,
     salt: salt.toString("base64"),
     iv: iv.toString("base64"),
     tag: cipher.getAuthTag().toString("base64"),

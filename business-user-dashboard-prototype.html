@@ -1221,6 +1221,7 @@
         state.detailLatestTime = detail.latestDataTime || state.source.latestDataTime || "";
         state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
         renderDetail(true);
+        if (state.detailScope === "month") loadDetailMonthAnalysis(row, false).catch(error => toast(error.message || "本月用户分析加载失败"));
         return;
       }
       state.detailRefreshing = true;
@@ -1259,7 +1260,20 @@
     }
 
     async function loadBusinessUserHistory(refresh = false) {
-      if (!state.detailRow || state.publicMode) return;
+      if (!state.detailRow) return;
+      if (state.publicMode) {
+        const row = state.detailRow;
+        const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || {};
+        if (detail.history) {
+          state.detailHistory = detail.history;
+          state.detailLatestTime = detail.history.latestDataTime || state.detailLatestTime;
+          renderDetail(true);
+          return;
+        }
+        renderDetail(true);
+        toast("公网快照暂未包含该业务历史订单，请等待下一次快照发布。");
+        return;
+      }
       if (state.detailHistory && !refresh) {
         renderDetail(true);
         return;
@@ -1295,7 +1309,19 @@
     }
 
     async function loadDetailMonthAnalysis(row = state.detailRow, refresh = false) {
-      if (!row || state.publicMode) return;
+      if (!row) return;
+      if (state.publicMode) {
+        const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || {};
+        if (detail.history) {
+          state.detailMonthAnalysis = buildMonthAnalysis(detail.history);
+          state.detailLatestTime = detail.history.latestDataTime || state.detailLatestTime;
+          renderDetail(true);
+          return;
+        }
+        renderDetail(true);
+        toast("公网快照暂未包含该业务本月分析，请等待下一次快照发布。");
+        return;
+      }
       const today = new Date();
       const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const params = new URLSearchParams({
@@ -1485,7 +1511,6 @@
 
     function renderUserHistoryTable() {
       const history = state.detailHistory;
-      if (state.publicMode) return `<section class="source warn"><strong>历史订单：</strong>公网快照暂不包含用户历史订单，请在本机看板中查看。</section>`;
       if (!history) return `<section class="source"><strong>正在加载：</strong>正在拉取该业务用户最近日期范围的历史订单。</section>`;
       const dates = history.dates || [];
       const keyword = state.detailSearch.toLowerCase();
@@ -1613,10 +1638,6 @@
       }
       const scope = e.target.closest("[data-detail-scope]");
       if (scope && state.detailRow) {
-        if (state.publicMode && scope.dataset.detailScope !== "today" && !state.detailCache[detailCacheKey(state.detailRow, scope.dataset.detailScope)]) {
-          toast("公网快照暂只包含今日用户明细；本周、本月请在本地看板查看。");
-          return;
-        }
         state.detailScope = scope.dataset.detailScope;
         state.detailHistory = null;
         state.detailMonthAnalysis = null;
