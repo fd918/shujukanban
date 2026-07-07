@@ -584,7 +584,7 @@
         setBoard(location.hash.replace("#", "") || "activity", false);
         return true;
       } catch (error) {
-        localStorage.removeItem("businessDashboardPublicPassword");
+        if (!error?.message?.startsWith("公网")) localStorage.removeItem("businessDashboardPublicPassword");
         gateError.textContent = error?.message?.startsWith("公网") ? error.message : "密码错误或公网数据解密失败，请重新输入。";
         passwordInput.focus();
         passwordInput.select();

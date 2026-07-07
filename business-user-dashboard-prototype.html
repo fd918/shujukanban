@@ -1065,7 +1065,7 @@
         const res = await fetch(`data/business-dashboard-public.enc.json?_=${Date.now()}`);
         if (!res.ok) return Boolean(cached);
         const encrypted = await res.json();
-        const data = await decryptPublicSnapshot(encrypted);
+        const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
         if (!data) return Boolean(cached);
         applyPublicSnapshot(data);
         saveCachedPublicPayload(data);
@@ -1106,10 +1106,10 @@
       }));
     }
 
-    async function decryptPublicSnapshot(encrypted) {
+    async function decryptPublicSnapshot(encrypted, { clearOnFailure = true, promptOnMissing = true } = {}) {
       let password = cachedPublicPassword();
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        if (!password) password = window.prompt("请输入公网看板访问密码");
+        if (!password && promptOnMissing) password = window.prompt("请输入公网看板访问密码");
         if (!password) return null;
         try {
           const salt = base64ToBytes(encrypted.salt);
@@ -1125,9 +1125,10 @@
           savePublicPassword(password);
           return JSON.parse(text);
         } catch {
-          localStorage.removeItem("businessDashboardPublicPassword");
+          if (clearOnFailure) localStorage.removeItem("businessDashboardPublicPassword");
           password = "";
-          toast("密码错误或公网数据解密失败");
+          if (clearOnFailure) toast("密码错误或公网数据解密失败");
+          else break;
         }
       }
       return null;
