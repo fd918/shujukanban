@@ -12,8 +12,10 @@ const envPath = resolve(root, ".env");
 const configPath = resolve(root, "data/watch-config.json");
 const overridesPath = resolve(root, "data/manual-overrides.json");
 const savedActivitiesPath = resolve(root, "data/saved-activities.json");
+const feishuNotifyLogPath = resolve(root, "data/feishu-notify-log.json");
 const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook";
 const FEISHU_SECRET_SERVICE = "com.tanwenjie.business-dashboard.feishu.secret";
+const PUBLIC_DASHBOARD_URL = process.env.MEITUAN_PUBLIC_DASHBOARD_URL || "https://fd918.github.io/shujukanban/#activity";
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 const manualRefreshIntervalMs = 60 * 1000;
 const refreshTimeoutMs = Number(process.env.MEITUAN_REFRESH_TIMEOUT_MS || 120000);
@@ -27,6 +29,7 @@ const lastManualRefreshAtByActivity = new Map();
 const manualRefreshQueue = [];
 let refreshTimer = null;
 let activityListSyncTimer = null;
+let feishuNotifyTimer = null;
 let lastMeituanAuthAlertAt = 0;
 
 function nowText() {
@@ -38,7 +41,8 @@ function readConfig() {
     intervalMinutes: 30,
     primaryActivityId: 1199,
     activityIds: [1199],
-    autoPush: false
+    autoPush: false,
+    feishuNotifyTimes: ["12:00", "22:00"]
   };
   if (!existsSync(configPath)) return fallback;
   try {
@@ -47,11 +51,29 @@ function readConfig() {
     return {
       ...fallback,
       ...parsed,
-      activityIds: [...new Set(ids.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0))]
+      activityIds: [...new Set(ids.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0))],
+      feishuNotifyTimes: normalizeNotifyTimes(parsed.feishuNotifyTimes || fallback.feishuNotifyTimes)
     };
   } catch {
     return fallback;
   }
+}
+
+function normalizeNotifyTimes(value) {
+  const list = Array.isArray(value) ? value : String(value || "").split(/[,，\s]+/);
+  const normalized = list
+    .map(item => String(item || "").trim())
+    .filter(Boolean)
+    .map(item => {
+      const match = item.match(/^(\d{1,2}):(\d{2})$/);
+      if (!match) return "";
+      const hour = Number(match[1]);
+      const minute = Number(match[2]);
+      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return "";
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    })
+    .filter(Boolean);
+  return [...new Set(normalized)].sort();
 }
 
 function readJson(path, fallback) {
@@ -126,17 +148,27 @@ async function readSecret(service) {
 }
 
 async function sendFeishuText(text) {
+  return sendFeishuPayload({
+    msg_type: "text",
+    content: { text }
+  });
+}
+
+async function sendFeishuCard(card) {
+  return sendFeishuPayload({
+    msg_type: "interactive",
+    card
+  });
+}
+
+async function sendFeishuPayload(payload) {
   const webhook = await readSecret(FEISHU_WEBHOOK_SERVICE);
   const secret = await readSecret(FEISHU_SECRET_SERVICE);
   if (!webhook) {
-    console.error(`[${nowText()}] 美团接口失效提醒未发送：飞书 Webhook 未配置。`);
+    console.error(`[${nowText()}] 飞书消息未发送：飞书 Webhook 未配置。`);
     return;
   }
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const payload = {
-    msg_type: "text",
-    content: { text }
-  };
   if (secret) {
     payload.timestamp = timestamp;
     payload.sign = createHmac("sha256", `${timestamp}\n${secret}`).update("").digest("base64");
@@ -236,6 +268,10 @@ function normalizeConfigUpdate(update = {}) {
   };
   if (Number.isFinite(interval) && interval >= 1) next.intervalMinutes = Math.round(interval);
   if (typeof update.autoPush === "boolean") next.autoPush = update.autoPush;
+  if (Array.isArray(update.feishuNotifyTimes) || typeof update.feishuNotifyTimes === "string") {
+    const times = normalizeNotifyTimes(update.feishuNotifyTimes);
+    if (times.length) next.feishuNotifyTimes = times;
+  }
   if (Array.isArray(update.activityIds)) {
     next.activityIds = [...new Set(update.activityIds.map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0))].sort((a, b) => a - b);
   }
