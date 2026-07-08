@@ -970,11 +970,11 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   return payload;
 }
 
-async function warmBusinessUserDetails(businesses, dateRange) {
+async function warmBusinessUserDetails(businesses, dateRange, { refresh = false } = {}) {
   const rows = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
   if (!rows.length) return;
   let warmed = 0;
-  await mapLimit(rows, 2, async row => {
+  await mapLimit(rows, 4, async row => {
     const statuses = [];
     const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
     try {
@@ -986,7 +986,7 @@ async function warmBusinessUserDetails(businesses, dateRange) {
         pageSize,
         sortField: dateRange.startDate === dateRange.endDate ? dateRange.endDate : "period_total",
         sortOrder: "desc",
-        refresh: false
+        refresh
       }, statuses);
       warmed += 1;
     } catch (error) {
@@ -1012,13 +1012,12 @@ async function warmBusinessUserHistories(businesses) {
     let warmed = 0;
     await mapLimit(rows, 4, async row => {
       const statuses = [];
-      const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
       try {
         await fetchBusinessUserHistory({
           businessId: row.platformBusinessId || row.businessId || "",
           startDate: range.startDate,
           endDate: range.endDate,
-          pageSize,
+          pageSize: 5000,
           enrichPhones: false,
           refresh: false
         }, statuses);
@@ -1044,6 +1043,7 @@ async function warmStartupData() {
     const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
     const data = await liveDashboard({ recordSnapshot: false, query: { preset: "today", start_date: dateRange.startDate, end_date: dateRange.endDate, force: "1" } });
     await warmBusinessUserDetails(data.businesses, dateRange);
+    warmBusinessUserHistories(data.businesses).catch(error => console.error(`[${nowText()}] 启动预热用户历史失败：${error.message}`));
     console.log(`[${nowText()}] 启动预热完成`);
   } catch (error) {
     console.error(`[${nowText()}] 启动预热失败：${error.message}`);
@@ -1460,6 +1460,32 @@ async function encryptedPublicUserDetails(dateRange) {
       // Ignore old cache keys that are not JSON.
     }
   }
+  for (const detail of Object.values(details)) {
+    if (!detail?.history?.rows?.length || !detail?.rows?.length) continue;
+    const today = dateRange.endDate;
+    if (!detail.history.dates.includes(today)) detail.history.dates.push(today);
+    const currentById = new Map(detail.rows.map(row => [String(row.id || ""), row]));
+    const historyIds = new Set();
+    detail.history.rows.forEach(row => {
+      const id = String(row.id || "");
+      historyIds.add(id);
+      const current = currentById.get(id);
+      if (!current) return;
+      row.days = { ...(row.days || {}), [today]: number(current.todayOrders) };
+      row.todayOrders = number(row.days[today]);
+      row.phone = current.phone || row.phone;
+      row.version = current.version || row.version;
+    });
+    currentById.forEach((current, id) => {
+      if (historyIds.has(id)) return;
+      detail.history.rows.push({
+        ...current,
+        days: { [today]: number(current.todayOrders) }
+      });
+    });
+    detail.history.latestDataTime = detail.latestDataTime || detail.history.latestDataTime;
+    detail.history.total = detail.history.rows.length;
+  }
   return details;
 }
 
@@ -1481,12 +1507,8 @@ async function encryptedPublicBusinessTrends(businesses = []) {
 
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
-  await warmBusinessUserDetails(data.businesses || [], dateRange);
-  const historyWarmup = warmBusinessUserHistories(data.businesses || []);
-  await Promise.race([
-    historyWarmup,
-    new Promise(resolve => setTimeout(resolve, 45000))
-  ]);
+  await warmBusinessUserDetails(data.businesses || [], dateRange, { refresh: true });
+  warmBusinessUserHistories(data.businesses || []).catch(error => console.error(`[${nowText()}] 公网用户历史后台预热失败：${error.message}`));
   return {
     ok: true,
     latestDataTime: nowText(),

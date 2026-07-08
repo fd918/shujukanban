@@ -641,7 +641,7 @@
     }
 
     function detailCacheKey(row = state.detailRow, scope = state.detailScope) {
-      return `${row?.platformBusinessId || row?.businessId || ""}|${scope}`;
+      return `${row?.platformBusinessId || row?.businessId || ""}|${scope}|${state.source?.latestDataTime || ""}`;
     }
 
     function baseValue(row) {
@@ -1001,6 +1001,7 @@
         state.businessDaily = data.businessDaily || null;
         state.dateRange = data.dateRange || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
+        state.detailCache = {};
         if (!state.trendBusinessId || !state.businesses.some(row => String(row.platformBusinessId || row.businessId) === state.trendBusinessId)) {
           state.trendBusinessId = defaultTrendBusinessId();
         }
@@ -1030,6 +1031,7 @@
     }
 
     function applyPublicSnapshot(data) {
+      const previousDataTime = state.source?.latestDataTime || "";
       state.publicMode = true;
       state.config = data.config || state.config || { rules: {} };
       state.summary = data.summary || null;
@@ -1040,6 +1042,11 @@
       state.publicBusinessTrends = data.businessTrends || {};
       state.dateRange = data.dateRange || null;
       state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
+      if (previousDataTime && previousDataTime !== state.source.latestDataTime) {
+        state.detailCache = {};
+        state.detailHistory = null;
+        state.detailMonthAnalysis = null;
+      }
       state.trendBusinessId = state.trendBusinessId || defaultTrendBusinessId();
       state.trendData = state.publicBusinessTrends[String(state.trendBusinessId)] || null;
     }
