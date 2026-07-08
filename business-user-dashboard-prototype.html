@@ -644,6 +644,12 @@
       return `${row?.platformBusinessId || row?.businessId || ""}|${scope}|${state.source?.latestDataTime || ""}`;
     }
 
+    function findCurrentBusiness(row = state.detailRow) {
+      if (!row) return null;
+      const id = String(row.platformBusinessId || row.businessId || "");
+      return state.businesses.find(item => String(item.platformBusinessId || item.businessId || "") === id || String(item.businessId || "") === id) || row;
+    }
+
     function baseValue(row) {
       const same = row.sameTime || {};
       if (state.metric === "commission") return same.yesterday?.commission ?? same.lastWeek?.commission ?? same.sevenDayAvg?.commission ?? null;
@@ -965,6 +971,7 @@
 
     async function loadData(manual = false, preferCache = false) {
       const hasOldData = state.businesses.length > 0;
+      const previousDataTime = state.source?.latestDataTime || "";
       state.loading = !hasOldData;
       state.refreshing = hasOldData;
       $("#refreshBtn").textContent = "…";
@@ -1010,6 +1017,7 @@
         state.refreshing = false;
         fillSettings();
         render();
+        syncOpenDetailAfterDataUpdate(previousDataTime, true);
         loadBusinessTrend(true);
         if (manual) toast("数据已刷新");
       } catch (error) {
@@ -1049,6 +1057,7 @@
       }
       state.trendBusinessId = state.trendBusinessId || defaultTrendBusinessId();
       state.trendData = state.publicBusinessTrends[String(state.trendBusinessId)] || null;
+      syncOpenDetailAfterDataUpdate(previousDataTime, false);
     }
 
     function loadCachedPublicPayload() {
@@ -1229,6 +1238,22 @@
       $("#modalMask").classList.add("open");
       $("#detailModal").classList.add("open");
       await loadBusinessUsers(row, false);
+    }
+
+    function syncOpenDetailAfterDataUpdate(previousDataTime, forceRefresh = false) {
+      if (!state.detailRow || !$("#detailModal").classList.contains("open")) return;
+      if (previousDataTime && previousDataTime === state.source?.latestDataTime) return;
+      const current = findCurrentBusiness(state.detailRow);
+      state.detailRow = { ...current, cmp: compare(current) };
+      $("#detailTitle").textContent = state.detailRow.name;
+      $("#detailSub").textContent = `${state.detailRow.platform}｜${state.detailRow.cmp.label}`;
+      state.detailLoadingLabel = state.detailMode === "history" ? "历史订单" : `${detailScopeLabel()}用户`;
+      if (state.detailMode === "history") {
+        loadBusinessUserHistory(forceRefresh).catch(error => toast(error.message || "用户历史刷新失败"));
+        return;
+      }
+      if (state.detailScope === "month") state.detailMonthAnalysis = null;
+      loadBusinessUsers(state.detailRow, forceRefresh).catch(error => toast(error.message || "用户明细刷新失败"));
     }
 
     async function loadBusinessUsers(row, refresh = false) {
