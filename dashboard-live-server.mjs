@@ -1077,6 +1077,15 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
   return rows.map(row => {
     const id = String(type === "business" ? row.businessId : row.id);
     const pick = snap => snap?.[type]?.[id] || null;
+    const snapshotYesterday = pick(yesterday);
+    const apiYesterday = type === "business" && (row.yesterdaySameTimeOrders || row.yesterdaySameTimeCommission)
+      ? {
+          name: row.name,
+          platform: row.platform,
+          orders: number(row.yesterdaySameTimeOrders),
+          commission: number(row.yesterdaySameTimeCommission)
+        }
+      : null;
     const sevenValues = recent.map(pick).filter(Boolean);
     const avg = sevenValues.length
       ? {
@@ -1087,11 +1096,11 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
     return {
       ...row,
       sameTime: {
-        yesterday: pick(yesterday),
+        yesterday: apiYesterday || snapshotYesterday,
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
-        hasSnapshot: Boolean(pick(yesterday) || pick(lastWeek) || avg),
-        hasApiBaseline: Boolean(row.yesterdaySameTimeOrders || row.yesterdayOrders)
+        hasSnapshot: Boolean(snapshotYesterday || pick(lastWeek) || avg),
+        hasApiBaseline: Boolean(apiYesterday || row.yesterdayOrders)
       }
     };
   });
