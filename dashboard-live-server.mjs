@@ -1308,15 +1308,28 @@ async function checkSnapshotHealth(snapshot, previousSnapshot, config = defaultC
     return prev && (number(prev.orders) > 0 || number(item.orders) > 0);
   });
   if (comparable.length < 20) return;
+  const focusComparable = focusSnapshotBusinesses(comparable);
+  const changedFocus = focusComparable.filter(([id, item]) => number(previousSnapshot.business[id].orders) !== number(item.orders));
+  if (changedFocus.length) return;
   const same = comparable.filter(([id, item]) => number(previousSnapshot.business[id].orders) === number(item.orders));
   const ratio = same.length / comparable.length;
   if (ratio >= 0.95 && snapshot.minuteOfDay !== previousSnapshot.minuteOfDay) {
     await notifyOperationalIssue(
       "快照异常：大量业务数据未变化",
-      `本次有 ${same.length}/${comparable.length} 个活跃业务订单数与上一条快照完全一致，可能是中台接口返回旧数据。`,
+      `本次有 ${same.length}/${comparable.length} 个活跃业务订单数与上一条快照完全一致，且重点业务也未变化。重点业务按“美团外卖节、闪购、当前订单量前 5”判断，可能是中台接口返回旧数据。`,
       config
     );
   }
+}
+
+function focusSnapshotBusinesses(comparable) {
+  const keywordItems = comparable.filter(([, item]) => /美团外卖节|闪购/.test(String(item.name || "")));
+  const topItems = [...comparable]
+    .sort((a, b) => number(b[1].orders) - number(a[1].orders))
+    .slice(0, 5);
+  const picked = new Map();
+  [...keywordItems, ...topItems].forEach(([id, item]) => picked.set(id, [id, item]));
+  return [...picked.values()];
 }
 
 async function scheduleSnapshots() {
