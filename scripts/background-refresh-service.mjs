@@ -281,6 +281,203 @@ function normalizeConfigUpdate(update = {}) {
   return next;
 }
 
+function todayYmd() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+}
+
+function dateOffset(date, offset) {
+  const target = new Date(`${date}T00:00:00+08:00`);
+  target.setDate(target.getDate() + offset);
+  return target.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+}
+
+function activeMetric(activity = {}) {
+  return activity.tiers?.find(tier => tier.metric)?.metric || "amount";
+}
+
+function rowMetricValue(row, metric) {
+  return metric === "orders" ? (row?.[2] || 0) : (row?.[4] || 0);
+}
+
+function validMetricValue(row, metric) {
+  return metric === "orders" ? (row?.[1] || 0) : (row?.[3] || 0);
+}
+
+function latestActualDate(rows = []) {
+  return rows.filter(row => row[4] != null).map(row => row[0]).sort().pop();
+}
+
+function isIncompleteToday(row, rows = []) {
+  return row?.[4] != null && row[0] === todayYmd() && row[0] === latestActualDate(rows);
+}
+
+function historicalRedemptionRate(rows = [], metric, beforeDate) {
+  const completeRows = rows.filter(row => row[0] < beforeDate && row[4] != null && !isIncompleteToday(row, rows) && validMetricValue(row, metric) > 0);
+  const validTotal = completeRows.reduce((sum, row) => sum + validMetricValue(row, metric), 0);
+  const redemptionTotal = completeRows.reduce((sum, row) => sum + rowMetricValue(row, metric), 0);
+  if (validTotal > 0 && redemptionTotal > 0) return Math.max(0, Math.min(1, redemptionTotal / validTotal));
+  return 0.99;
+}
+
+function averageHistoricalValidMetric(rows = [], metric, beforeDate) {
+  const values = rows
+    .filter(row => row[0] < beforeDate && row[4] != null && !isIncompleteToday(row, rows))
+    .map(row => validMetricValue(row, metric))
+    .filter(value => value > 0);
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function estimateRow(row, rows, metric, overrides = {}) {
+  const date = row[0];
+  const manual = Number(overrides[date] || 0);
+  if (manual > 0) return { value: manual, source: "手动预估" };
+  if (row[4] != null && !isIncompleteToday(row, rows)) return { value: rowMetricValue(row, metric), source: "接口实际" };
+  const rate = historicalRedemptionRate(rows, metric, date);
+  const sameWeekRow = rows.find(item => item[0] === dateOffset(date, -7));
+  if (sameWeekRow && sameWeekRow[4] != null && !isIncompleteToday(sameWeekRow, rows) && validMetricValue(sameWeekRow, metric) > 0) {
+    return { value: validMetricValue(sameWeekRow, metric) * rate, source: "上周同日×核销率" };
+  }
+  const average = averageHistoricalValidMetric(rows, metric, date);
+  if (average != null) return { value: average * rate, source: "历史均值×核销率" };
+  const validCurrent = validMetricValue(row, metric);
+  return { value: validCurrent > 0 ? Math.max(rowMetricValue(row, metric), validCurrent * rate) : rowMetricValue(row, metric), source: "当前有效×核销率" };
+}
+
+function money(value) {
+  return Number(value || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function wan(value) {
+  const amount = Number(value || 0);
+  if (Math.abs(amount) < 100000) {
+    return `${amount.toLocaleString("zh-CN", { maximumFractionDigits: 2 })} 元`;
+  }
+  return `${money(amount / 10000)} 万`;
+}
+
+function metricText(value, metric) {
+  if (metric === "orders") return `${Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: 0 })} 单`;
+  return wan(value);
+}
+
+function rewardRuleText(tier = {}) {
+  if (tier.rewardType === "per_order") return `每单 ${money(tier.perOrderReward || 0)} 元`;
+  if (tier.rewardType === "fixed") return `固定奖励 ${money(tier.fixedReward || 0)} 元`;
+  return `${((tier.rate || 0) * 100).toFixed(2).replace(/\.?0+$/, "")}%`;
+}
+
+function rewardFor(tier = {}, progress, rewardCap = Infinity) {
+  if (progress < Number(tier.threshold || 0)) return 0;
+  let reward = 0;
+  if (tier.rewardType === "per_order") reward = progress * (tier.perOrderReward || 0);
+  else if (tier.rewardType === "fixed") reward = tier.fixedReward || 0;
+  else reward = progress * (tier.rate || 0);
+  return Math.min(reward, rewardCap || Infinity);
+}
+
+function activityUrl(activityId) {
+  return `${PUBLIC_DASHBOARD_URL}${PUBLIC_DASHBOARD_URL.includes("?") ? "&" : "?"}activityId=${encodeURIComponent(activityId)}`;
+}
+
+function buildActivityNotifySummary(activity = {}) {
+  const rows = Array.isArray(activity.rows) ? activity.rows : [];
+  const overrides = activity.overrides || readJson(overridesPath, {})[activity.id] || {};
+  const metric = activeMetric(activity);
+  const today = todayYmd();
+  const todayRow = rows.find(row => row[0] === today) || rows.filter(row => row[4] != null).sort((a, b) => a[0].localeCompare(b[0])).pop() || rows[0] || [today, null, null, null, null];
+  const displayDate = todayRow[0] || today;
+  const todayActual = rowMetricValue(todayRow, metric);
+  const todayEstimate = estimateRow(todayRow, rows, metric, overrides);
+  const actualTotal = rows.reduce((sum, row) => sum + (isIncompleteToday(row, rows) ? 0 : rowMetricValue(row, metric)), 0);
+  const projectedTotal = rows.reduce((sum, row) => sum + estimateRow(row, rows, metric, overrides).value, 0);
+  const futureUnfilled = rows.filter(row => (row[4] == null || isIncompleteToday(row, rows)) && !overrides[row[0]]).length;
+  const rate = historicalRedemptionRate(rows, metric, displayDate);
+  const tiers = [...(activity.tiers || [])].sort((a, b) => Number(a.threshold || 0) - Number(b.threshold || 0));
+  const cap = activity.rewardCap || Infinity;
+  const tierLines = tiers.length ? tiers.map(tier => {
+    const projectedGap = Math.max(0, Number(tier.threshold || 0) - projectedTotal);
+    const projectedOver = Math.max(0, projectedTotal - Number(tier.threshold || 0));
+    const dailyNeed = futureUnfilled > 0 ? projectedGap / futureUnfilled : projectedGap;
+    const status = projectedOver > 0
+      ? `预计超出 ${metricText(projectedOver, metric)}`
+      : (futureUnfilled > 0 ? `还差日均 ${metricText(dailyNeed, metric)}/天` : `最终还差 ${metricText(projectedGap, metric)}`);
+    return `**${tier.name}｜${rewardRuleText(tier)}**\n门槛：${metricText(tier.threshold, metric)}｜${status}｜预计奖励：${wan(rewardFor(tier, projectedTotal, cap))}`;
+  }) : ["当前活动暂未读取到档位规则。"];
+  const reached = tiers.filter(tier => projectedTotal >= Number(tier.threshold || 0)).pop();
+  const next = tiers.find(tier => projectedTotal < Number(tier.threshold || 0));
+  const projectedTier = reached ? `${reached.name}（${rewardRuleText(reached)}）` : (next ? `未达档，首档 ${metricText(next.threshold, metric)}` : "未读取到档位");
+  return {
+    metric,
+    displayDate,
+    todayActual,
+    todayEstimate,
+    actualTotal,
+    projectedTotal,
+    rate,
+    projectedTier,
+    tierLines
+  };
+}
+
+function buildActivityFeishuCard(activity = {}) {
+  const summary = buildActivityNotifySummary(activity);
+  const metricLabel = summary.metric === "orders" ? "核销订单数" : "核销 GMV";
+  const title = activity.title || `活动 ${activity.id}`;
+  const elements = [
+    {
+      tag: "div",
+      text: {
+        tag: "lark_md",
+        content: `**${title}**\n活动时间：${activity.activityTime || "未获取"}\n数据截至：${activity.updatedAt || nowText()}\n预估档次：${summary.projectedTier}`
+      }
+    },
+    { tag: "hr" },
+    {
+      tag: "column_set",
+      flex_mode: "none",
+      background_style: "default",
+      columns: [
+        { tag: "column", width: "weighted", weight: 1, elements: [{ tag: "div", text: { tag: "lark_md", content: `**今日${metricLabel}**\n${metricText(summary.todayActual, summary.metric)}` } }] },
+        { tag: "column", width: "weighted", weight: 1, elements: [{ tag: "div", text: { tag: "lark_md", content: `**今日预估${metricLabel}**\n${metricText(summary.todayEstimate.value, summary.metric)}` } }] },
+        { tag: "column", width: "weighted", weight: 1, elements: [{ tag: "div", text: { tag: "lark_md", content: `**历史核销率**\n${(summary.rate * 100).toFixed(2)}%` } }] },
+        { tag: "column", width: "weighted", weight: 1, elements: [{ tag: "div", text: { tag: "lark_md", content: `**预计最终${metricLabel}**\n${metricText(summary.projectedTotal, summary.metric)}` } }] }
+      ]
+    },
+    { tag: "hr" },
+    {
+      tag: "div",
+      text: {
+        tag: "lark_md",
+        content: summary.tierLines.join("\n\n")
+      }
+    },
+    {
+      tag: "note",
+      elements: [{ tag: "plain_text", content: `预估口径：有效数据预估后 × 历史完整日核销率；手动输入优先。今日来源：${summary.todayEstimate.source}。` }]
+    },
+    {
+      tag: "action",
+      actions: [
+        {
+          tag: "button",
+          text: { tag: "plain_text", content: "打开看板" },
+          type: "primary",
+          url: activityUrl(activity.id)
+        }
+      ]
+    }
+  ];
+  return {
+    config: { wide_screen_mode: true },
+    header: {
+      template: "orange",
+      title: { tag: "plain_text", content: `美团活动日报｜${title}` }
+    },
+    elements
+  };
+}
+
 function runCommand(command, args, options = {}) {
   return new Promise((resolvePromise, reject) => {
     const { timeoutMs = 0, ...spawnOptions } = options;
@@ -558,6 +755,7 @@ function startRefreshServer() {
         const body = await readBody(req);
         const config = normalizeConfigUpdate(body);
         scheduleNextRun();
+        scheduleNextFeishuNotify();
         sendJson(res, 200, { ok: true, config });
         return;
       }
@@ -673,6 +871,68 @@ async function runOnce() {
   }
 }
 
+function notifySlotKey(date, time) {
+  return `${date} ${time}`;
+}
+
+function nextFeishuNotifyAt() {
+  const now = new Date();
+  const times = normalizeNotifyTimes(readConfig().feishuNotifyTimes || ["12:00", "22:00"]);
+  const candidates = times.map(time => {
+    const [hour, minute] = time.split(":").map(Number);
+    const date = new Date(now);
+    date.setHours(hour, minute, 0, 0);
+    if (date <= now) date.setDate(date.getDate() + 1);
+    return { date, time };
+  });
+  return candidates.sort((a, b) => a.date - b.date)[0];
+}
+
+async function sendScheduledFeishuNotifications(sendTime = "") {
+  const normalizedTimes = normalizeNotifyTimes(readConfig().feishuNotifyTimes || ["12:00", "22:00"]);
+  const slotTime = normalizedTimes.includes(sendTime) ? sendTime : (normalizedTimes[0] || "12:00");
+  const date = todayYmd();
+  const key = notifySlotKey(date, slotTime);
+  const log = readJson(feishuNotifyLogPath, {});
+  if (log[key]) {
+    console.log(`[${nowText()}] 飞书日报 ${key} 已发送过，跳过。`);
+    scheduleNextFeishuNotify();
+    return;
+  }
+
+  const activities = readJson(savedActivitiesPath, {});
+  const targets = Object.values(activities).filter(activity => activity && activity.feishuNotify);
+  if (!targets.length) {
+    console.log(`[${nowText()}] 没有开启飞书通知的活动，跳过日报。`);
+    log[key] = { sentAt: nowText(), activityIds: [] };
+    writeJson(feishuNotifyLogPath, log);
+    scheduleNextFeishuNotify();
+    return;
+  }
+
+  const sentIds = [];
+  for (const activity of targets) {
+    try {
+      await sendFeishuCard(buildActivityFeishuCard(activity));
+      sentIds.push(String(activity.id));
+      console.log(`[${nowText()}] 已发送活动 ${activity.id} 飞书日报。`);
+    } catch (error) {
+      console.error(`[${nowText()}] 活动 ${activity.id} 飞书日报发送失败：${error.message}`);
+    }
+  }
+  log[key] = { sentAt: nowText(), activityIds: sentIds };
+  writeJson(feishuNotifyLogPath, log);
+  scheduleNextFeishuNotify();
+}
+
+function scheduleNextFeishuNotify() {
+  if (feishuNotifyTimer) clearTimeout(feishuNotifyTimer);
+  const next = nextFeishuNotifyAt();
+  if (!next) return;
+  feishuNotifyTimer = setTimeout(() => sendScheduledFeishuNotifications(next.time), Math.max(1000, next.date.getTime() - Date.now()));
+  console.log(`[${nowText()}] 下次飞书日报：${next.date.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}`);
+}
+
 function scheduleNextRun() {
   if (refreshTimer) clearTimeout(refreshTimer);
   const interval = Math.max(1, readConfig().intervalMinutes);
@@ -700,4 +960,5 @@ function scheduleNextActivityListSync() {
 const config = readConfig();
 console.log(`[${nowText()}] 美团看板后台服务启动，每 ${config.intervalMinutes} 分钟刷新一次。`);
 startRefreshServer();
+scheduleNextFeishuNotify();
 runOnce().finally(() => syncActivityList());
