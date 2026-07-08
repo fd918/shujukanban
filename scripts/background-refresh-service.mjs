@@ -221,7 +221,8 @@ function saveActivity(activity = {}) {
     tiers: Array.isArray(activity.tiers) && activity.tiers.length ? activity.tiers : (previous.tiers || []),
     rows: Array.isArray(activity.rows) && activity.rows.length ? activity.rows : (previous.rows || []),
     overrides: previous.overrides || activity.overrides || {},
-    recordSnapshot: activity.recordSnapshot ?? previous.recordSnapshot ?? false
+    recordSnapshot: activity.recordSnapshot ?? previous.recordSnapshot ?? false,
+    feishuNotify: activity.feishuNotify ?? previous.feishuNotify ?? false
   };
   writeJson(savedActivitiesPath, saved);
   return saved;

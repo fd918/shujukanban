@@ -432,7 +432,8 @@ async function main() {
     ...savedActivity,
     ...activityBlock,
     overrides: savedActivity.overrides || activityBlock.overrides || {},
-    recordSnapshot: savedActivity.recordSnapshot ?? process.env.MEITUAN_RECORD_SNAPSHOT === "true"
+    recordSnapshot: savedActivity.recordSnapshot ?? process.env.MEITUAN_RECORD_SNAPSHOT === "true",
+    feishuNotify: savedActivity.feishuNotify ?? false
   };
   writeJson(savedActivitiesPath, savedActivities);
   html = replaceBetween(
