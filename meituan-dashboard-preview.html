@@ -406,14 +406,31 @@
     }
 
     .text-input,
-    .select-input {
+    .select-input,
+    .textarea-input {
       width: 100%;
-      height: 36px;
       padding: 6px 8px;
       border: 1px solid #d0d5dd;
       border-radius: 6px;
       font: inherit;
       background: #fff;
+    }
+
+    .text-input,
+    .select-input {
+      height: 36px;
+    }
+
+    .textarea-input {
+      min-height: 168px;
+      resize: vertical;
+      line-height: 1.5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .wide-field {
+      grid-column: 1 / -1;
     }
 
     .button {
@@ -922,6 +939,15 @@
             <label>新增</label>
             <button class="button" id="add-activity">新增</button>
           </div>
+          <div class="field wide-field local-only">
+            <label>美团接口请求标头</label>
+            <textarea class="textarea-input" id="request-headers-input" placeholder="从 Chrome F12 的 Network 里复制 pcActivityData 接口的完整 Request Headers，直接粘贴到这里。"></textarea>
+            <div class="note" id="request-headers-status">用于刷新美团活动数据；保存后会写入本机请求头文件，不会提交到公开仓库。</div>
+          </div>
+          <div class="field local-only">
+            <label>保存请求头</label>
+            <button class="button secondary" id="save-request-headers">保存请求头</button>
+          </div>
         </div>
         <div class="note" id="auto-refresh-status">自动刷新由桌面“美团看板服务.command”常驻服务执行；纳入自动刷新的活动会定时拉取接口并记录快照。</div>
       </div>
@@ -1233,6 +1259,72 @@
       });
       syncIntervalControls();
       setAutoRefreshStatus(`自动刷新已改为每 ${serviceConfig.intervalMinutes} 分钟；纳入自动刷新的活动会记录快照并推送到 GitHub。`);
+    }
+
+    function setRequestHeadersStatus(text) {
+      const status = document.getElementById("request-headers-status");
+      if (status) status.textContent = text;
+    }
+
+    function renderRequestHeadersStatus(headers) {
+      if (!headers) {
+        setRequestHeadersStatus("用于刷新美团活动数据；保存后会写入本机请求头文件，不会提交到公开仓库。");
+        return;
+      }
+      if (!headers.exists) {
+        setRequestHeadersStatus("当前还没有请求头文件。请粘贴 F12 里的完整请求标头后保存。");
+        return;
+      }
+      const pieces = [
+        `已保存：${headers.updatedAt || "未知时间"}`,
+        `Cookie：${headers.hasCookie ? "已包含" : "缺失"}`,
+        `mtgsig：${headers.hasMtgsig ? "已包含" : "缺失"}`
+      ];
+      if (headers.mtgsigTime) pieces.push(`mtgsig 时间：${headers.mtgsigTime}`);
+      setRequestHeadersStatus(pieces.join("；"));
+    }
+
+    async function loadRequestHeadersStatus() {
+      if (isPublicPage()) return;
+      try {
+        const response = await fetch(`${SERVICE_URL}/headers`);
+        const data = await response.json();
+        if (data.ok) renderRequestHeadersStatus(data.headers);
+      } catch {
+        setRequestHeadersStatus("无法读取请求头状态，请确认桌面“美团看板服务.command”正在运行。");
+      }
+    }
+
+    async function saveRequestHeaders() {
+      if (isPublicPage()) return;
+      const input = document.getElementById("request-headers-input");
+      const button = document.getElementById("save-request-headers");
+      const rawHeaders = input.value.trim();
+      if (!rawHeaders) {
+        setRequestHeadersStatus("请先粘贴完整请求标头。");
+        input.focus();
+        return;
+      }
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "保存中";
+      try {
+        const response = await fetch(`${SERVICE_URL}/headers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rawHeaders })
+        });
+        const data = await response.json();
+        if (!data.ok) throw new Error(data.message || "保存请求头失败");
+        input.value = "";
+        renderRequestHeadersStatus(data.headers);
+        setAutoRefreshStatus("请求头已保存。现在可以点击页面右上角“刷新”验证接口是否恢复。");
+      } catch (error) {
+        setRequestHeadersStatus(`保存失败：${error.message}`);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
     }
 
     function isActivityWatched(item) {
@@ -2221,6 +2313,7 @@
 
     document.getElementById("open-settings").addEventListener("click", () => {
       document.getElementById("settings-modal").classList.add("open");
+      loadRequestHeadersStatus();
     });
 
     document.getElementById("open-switch").addEventListener("click", () => {
@@ -2285,6 +2378,8 @@
         syncIntervalControls();
       }
     });
+
+    document.getElementById("save-request-headers").addEventListener("click", saveRequestHeaders);
 
     function isPublicPage() {
       return /^https?:$/.test(location.protocol) && !["127.0.0.1", "localhost"].includes(location.hostname);

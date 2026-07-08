@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+const envPath = resolve(root, ".env");
 const configPath = resolve(root, "data/watch-config.json");
 const overridesPath = resolve(root, "data/manual-overrides.json");
 const savedActivitiesPath = resolve(root, "data/saved-activities.json");
@@ -53,6 +54,59 @@ function readJson(path, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function readEnv() {
+  if (!existsSync(envPath)) return {};
+  const env = {};
+  readFileSync(envPath, "utf8").split(/\r?\n/).forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const index = trimmed.indexOf("=");
+    if (index < 0) return;
+    env[trimmed.slice(0, index).trim()] = trimmed.slice(index + 1).trim();
+  });
+  return env;
+}
+
+function headersFilePath() {
+  const env = readEnv();
+  return resolve(root, env.MEITUAN_HEADERS_FILE || "meituan-request-headers.txt");
+}
+
+function mtgsigTimeFromHeaders(text) {
+  const line = String(text || "").split(/\r?\n/).find(item => /^mtgsig:/i.test(item.trim()));
+  if (!line) return "";
+  try {
+    const parsed = JSON.parse(line.slice(line.indexOf(":") + 1).trim());
+    if (!parsed?.a2) return "";
+    return new Date(Number(parsed.a2)).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+  } catch {
+    return "";
+  }
+}
+
+function headersStatus() {
+  const path = headersFilePath();
+  if (!existsSync(path)) {
+    return {
+      exists: false,
+      path,
+      updatedAt: "",
+      mtgsigTime: "",
+      hasCookie: false,
+      hasMtgsig: false
+    };
+  }
+  const text = readFileSync(path, "utf8");
+  return {
+    exists: true,
+    path,
+    updatedAt: statSync(path).mtime.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }),
+    mtgsigTime: mtgsigTimeFromHeaders(text),
+    hasCookie: /\bCookie:/i.test(text),
+    hasMtgsig: /^mtgsig:/im.test(text)
+  };
 }
 
 function writeJson(path, value) {
@@ -398,6 +452,34 @@ function startRefreshServer() {
         return;
       }
       sendJson(res, 404, { ok: false, message: "只支持 GET/POST /config" });
+      return;
+    }
+
+    if (url.pathname === "/headers") {
+      if (req.method === "GET") {
+        sendJson(res, 200, { ok: true, headers: headersStatus() });
+        return;
+      }
+      if (req.method === "POST") {
+        const body = await readBody(req);
+        const rawHeaders = String(body.rawHeaders || "").trim();
+        if (!rawHeaders) {
+          sendJson(res, 400, { ok: false, message: "请先粘贴完整请求标头。" });
+          return;
+        }
+        if (!/\bCookie:/i.test(rawHeaders)) {
+          sendJson(res, 400, { ok: false, message: "请求标头里没有 Cookie，请复制完整请求标头。" });
+          return;
+        }
+        if (!/^mtgsig:/im.test(rawHeaders)) {
+          sendJson(res, 400, { ok: false, message: "请求标头里没有 mtgsig，请复制 pcActivityData 接口的完整请求标头。" });
+          return;
+        }
+        writeFileSync(headersFilePath(), `${rawHeaders}\n`);
+        sendJson(res, 200, { ok: true, headers: headersStatus() });
+        return;
+      }
+      sendJson(res, 404, { ok: false, message: "只支持 GET/POST /headers" });
       return;
     }
 
