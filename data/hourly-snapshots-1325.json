@@ -5255,11 +5255,11 @@
     "hour": 0,
     "slotMinute": 0,
     "dateHour": "2026-07-09 00:00",
-    "recordedAt": "2026/7/9 00:11:09",
-    "todayValidOrders": null,
-    "todayRedemptionOrders": null,
-    "todayActualPayment": null,
-    "todayRedemptionAmount": null,
+    "recordedAt": "2026/7/9 00:22:46",
+    "todayValidOrders": 2,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 418,
+    "todayRedemptionAmount": 0,
     "cumulativeRedemptionOrders": 2,
     "cumulativeRedemptionAmount": 418
   }
