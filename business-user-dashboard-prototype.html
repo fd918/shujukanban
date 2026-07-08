@@ -459,6 +459,7 @@
       <div class="tabs" id="settingTabs">
         <button class="active" data-tab="rules">异常规则</button>
         <button data-tab="snapshot">快照频率</button>
+        <button data-tab="account">中台账号</button>
         <button data-tab="feishu">飞书通知</button>
       </div>
       <div id="tabRules" class="settings-grid">
@@ -472,6 +473,10 @@
         <div class="setting"><strong>快照记录频率</strong><label>用于生成昨日同时刻、上周同时刻和近7日同期均值</label><select class="field" id="snapshotMinutes"><option value="10">每 10 分钟</option><option value="30">每 30 分钟</option><option value="60">每 60 分钟</option></select></div>
         <div class="setting"><strong>手动补记</strong><label>立即记录当前业务和用户快照</label><button class="btn primary" id="settingSnapshotBtn">立即记录快照</button></div>
       </div>
+      <div id="tabAccount" class="settings-grid hidden">
+        <div class="setting"><strong>中台账号</strong><label>保存到 macOS 钥匙串，成功登录测试后才会替换当前账号</label><input class="field" id="dashboardUsername" autocomplete="username" placeholder="请输入中台账号"><span class="muted" id="credentialUserStatus">未配置</span></div>
+        <div class="setting"><strong>中台密码</strong><label>不会写入配置文件或公开仓库</label><input class="field" id="dashboardPassword" type="password" autocomplete="current-password" placeholder="请输入中台密码"><span class="muted" id="credentialPassStatus">未配置</span></div>
+      </div>
       <div id="tabFeishu" class="settings-grid hidden">
         <div class="setting"><strong>Webhook URL</strong><label>保存到 macOS 钥匙串，不写入配置文件</label><input class="field" id="feishuWebhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."><span class="muted" id="webhookStatus">未配置</span></div>
         <div class="setting"><strong>签名密钥</strong><label>飞书机器人开启签名校验时填写</label><input class="field" id="feishuSecret" placeholder="签名密钥，可留空"><span class="muted" id="secretStatus">未配置</span></div>
@@ -479,7 +484,7 @@
         <div class="setting"><strong>测试消息</strong><label>保存配置后可测试 Webhook 是否可用</label><button class="btn primary" id="testFeishuBtn">发送测试消息</button><span class="muted" id="testResult">等待测试</span></div>
       </div>
     </div>
-    <div class="modal-foot"><button class="btn" id="cancelSettings">取消</button><button class="btn primary" id="saveSettings">保存配置</button></div>
+    <div class="modal-foot"><span class="muted" id="settingsResult">等待保存</span><button class="btn" id="cancelSettings">取消</button><button class="btn primary" id="saveSettings">保存配置</button></div>
   </section>
 
   <div class="toast" id="toast">已刷新</div>
@@ -1143,6 +1148,8 @@
       $("#notifyMode").value = cfg.notification?.mode || "immediate";
       $("#webhookStatus").textContent = cfg.notification?.hasWebhook ? "已配置" : "未配置";
       $("#secretStatus").textContent = cfg.notification?.hasSignSecret ? "已配置" : "未配置";
+      $("#credentialUserStatus").textContent = cfg.credentials?.hasUsername ? "已配置" : "未配置";
+      $("#credentialPassStatus").textContent = cfg.credentials?.hasPassword ? "已配置" : "未配置";
     }
 
     function collectSettings() {
@@ -1153,18 +1160,23 @@
         refreshSeconds: Number($("#refreshSeconds").value),
         snapshotMinutes: Number($("#snapshotMinutes").value),
         notification: { mode: $("#notifyMode").value, criticalImmediate: $("#notifyMode").value === "immediate", enabled: true },
+        credentials: { username: $("#dashboardUsername").value.trim(), password: $("#dashboardPassword").value },
         feishu: { webhookUrl: $("#feishuWebhook").value.trim(), signSecret: $("#feishuSecret").value.trim() }
       };
     }
 
     async function saveSettings() {
+      $("#settingsResult").textContent = "正在保存并测试...";
       const data = await requestJson(apiUrl("/api/config"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(collectSettings()) });
       state.config = data.config;
+      $("#dashboardUsername").value = "";
+      $("#dashboardPassword").value = "";
       $("#feishuWebhook").value = "";
       $("#feishuSecret").value = "";
       fillSettings();
       setupAutoRefresh();
       render();
+      $("#settingsResult").textContent = "配置已保存；如填写了中台账号，已测试通过";
       toast("配置已保存");
     }
 
@@ -1699,9 +1711,13 @@
       $$("#settingTabs button").forEach(item => item.classList.toggle("active", item === btn));
       $("#tabRules").classList.toggle("hidden", state.settingsTab !== "rules");
       $("#tabSnapshot").classList.toggle("hidden", state.settingsTab !== "snapshot");
+      $("#tabAccount").classList.toggle("hidden", state.settingsTab !== "account");
       $("#tabFeishu").classList.toggle("hidden", state.settingsTab !== "feishu");
     });
-    $("#saveSettings").addEventListener("click", () => saveSettings().then(closeSettings).catch(error => toast(error.message)));
+    $("#saveSettings").addEventListener("click", () => saveSettings().then(closeSettings).catch(error => {
+      $("#settingsResult").textContent = error.message;
+      toast(error.message);
+    }));
     $("#testFeishuBtn").addEventListener("click", testFeishu);
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
 

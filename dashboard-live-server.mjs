@@ -265,6 +265,22 @@ async function writeSecret(service, value) {
   await execFileAsync("/usr/bin/security", ["add-generic-password", "-U", "-a", "default", "-s", service, "-w", value]);
 }
 
+async function loginWithCredentials(user, pass) {
+  if (!user || !pass) throw new Error("请填写中台账号和密码。");
+  const response = await fetchWithTimeout(`${BASE_URL}/login`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+      "origin": "https://adminpub.yunzhanxinxi.com",
+      "referer": "https://adminpub.yunzhanxinxi.com/"
+    },
+    body: new URLSearchParams({ usrName: user, passWord: md5(`YZ_ADMIN_${pass}`) })
+  }, 10000);
+  const payload = await response.json().catch(() => ({}));
+  if (payload.code !== 200 || !payload.data?.access_token) throw new Error(payload.message || "中台登录失败，请检查账号密码。");
+  return payload.data.access_token;
+}
+
 async function readConfig() {
   try {
     const saved = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
@@ -309,19 +325,7 @@ async function login() {
   const user = process.env.YZ_DASHBOARD_USER || await readSecret(USER_SERVICE);
   const pass = process.env.YZ_DASHBOARD_PASS || await readSecret(PASS_SERVICE);
   if (!user || !pass) throw new Error("本地服务缺少中台账号密码，请在桌面入口写入钥匙串账号。");
-
-  const response = await fetchWithTimeout(`${BASE_URL}/login`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
-      "origin": "https://adminpub.yunzhanxinxi.com",
-      "referer": "https://adminpub.yunzhanxinxi.com/"
-    },
-    body: new URLSearchParams({ usrName: user, passWord: md5(`YZ_ADMIN_${pass}`) })
-  }, 10000);
-  const payload = await response.json();
-  if (payload.code !== 200 || !payload.data?.access_token) throw new Error(payload.message || "中台登录失败");
-  token = payload.data.access_token;
+  token = await loginWithCredentials(user, pass);
   tokenExpiresAt = Date.now() + 20 * 60 * 1000;
   return token;
 }
@@ -1336,6 +1340,10 @@ async function getPublicConfig() {
   const config = await readConfig();
   return {
     ...config,
+    credentials: {
+      hasUsername: Boolean(await readSecret(USER_SERVICE)),
+      hasPassword: Boolean(await readSecret(PASS_SERVICE))
+    },
     notification: {
       ...config.notification,
       hasWebhook: Boolean(await readSecret(FEISHU_WEBHOOK_SERVICE)),
@@ -1345,6 +1353,15 @@ async function getPublicConfig() {
 }
 
 async function saveConfig(body) {
+  if (body.credentials?.username || body.credentials?.password) {
+    const username = String(body.credentials?.username || "").trim();
+    const password = String(body.credentials?.password || "");
+    const nextToken = await loginWithCredentials(username, password);
+    await writeSecret(USER_SERVICE, username);
+    await writeSecret(PASS_SERVICE, password);
+    token = nextToken;
+    tokenExpiresAt = Date.now() + 20 * 60 * 1000;
+  }
   if (body.feishu?.webhookUrl) await writeSecret(FEISHU_WEBHOOK_SERVICE, body.feishu.webhookUrl);
   if (body.feishu?.signSecret) await writeSecret(FEISHU_SECRET_SERVICE, body.feishu.signSecret);
   const current = await readConfig();
