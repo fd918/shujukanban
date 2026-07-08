@@ -30,5 +30,21 @@
     "todayRedemptionAmount": 579757.09,
     "cumulativeRedemptionOrders": 21846,
     "cumulativeRedemptionAmount": 579757.09
+  },
+  {
+    "activityId": "1388",
+    "title": "美团周三外卖节激励活动-2026年第25期",
+    "metric": "orders",
+    "date": "2026-07-08",
+    "hour": 12,
+    "slotMinute": 0,
+    "dateHour": "2026-07-08 12:00",
+    "recordedAt": "2026/7/8 12:06:07",
+    "todayValidOrders": 47061,
+    "todayRedemptionOrders": 26364,
+    "todayActualPayment": 1238322.47,
+    "todayRedemptionAmount": 693525.64,
+    "cumulativeRedemptionOrders": 26364,
+    "cumulativeRedemptionAmount": 693525.64
   }
 ]
