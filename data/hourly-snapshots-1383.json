@@ -855,12 +855,12 @@
     "hour": 0,
     "slotMinute": 0,
     "dateHour": "2026-07-09 00:00",
-    "recordedAt": "2026/7/9 00:00:25",
-    "todayValidOrders": null,
-    "todayRedemptionOrders": null,
-    "todayActualPayment": null,
-    "todayRedemptionAmount": null,
-    "cumulativeRedemptionOrders": 2848,
-    "cumulativeRedemptionAmount": 422483.86
+    "recordedAt": "2026/7/9 00:12:00",
+    "todayValidOrders": 8,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 1088.23,
+    "todayRedemptionAmount": 0,
+    "cumulativeRedemptionOrders": 2861,
+    "cumulativeRedemptionAmount": 424397.57999999996
   }
 ]
