@@ -396,7 +396,7 @@ async function runManualRefreshNow(activityId, meta = {}) {
   const id = String(activityId || "").trim();
   const previousRefreshAt = lastManualRefreshAtByActivity.get(id) || 0;
   const waitMs = manualRefreshIntervalMs - (now - previousRefreshAt);
-  if (waitMs > 0) {
+  if (!meta.force && waitMs > 0) {
     throw new Error(`刷新太频繁，请 ${Math.ceil(waitMs / 1000)} 秒后再试。`);
   }
   lastManualRefreshAtByActivity.set(id, now);
