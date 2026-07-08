@@ -215,7 +215,7 @@ async function fetchJson(url, headers, activityId) {
   }
   const json = JSON.parse(text);
   if (json.code !== 0) {
-    throw new Error(`接口返回失败：${json.msg || "未知错误"}`);
+    throw new Error(`接口返回失败：code ${json.code} ${json.msg || "未知错误"}`);
   }
   return json;
 }

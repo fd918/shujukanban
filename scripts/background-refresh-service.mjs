@@ -1,17 +1,23 @@
-import { spawn } from "node:child_process";
+import { createHmac } from "node:crypto";
+import { execFile, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
+const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 const envPath = resolve(root, ".env");
 const configPath = resolve(root, "data/watch-config.json");
 const overridesPath = resolve(root, "data/manual-overrides.json");
 const savedActivitiesPath = resolve(root, "data/saved-activities.json");
+const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook";
+const FEISHU_SECRET_SERVICE = "com.tanwenjie.business-dashboard.feishu.secret";
 const port = Number(process.env.MEITUAN_REFRESH_PORT || 8765);
 const manualRefreshIntervalMs = 60 * 1000;
 const refreshTimeoutMs = Number(process.env.MEITUAN_REFRESH_TIMEOUT_MS || 120000);
+const meituanAuthAlertIntervalMs = 60 * 60 * 1000;
 let refreshInFlight = null;
 let autoRefreshRunning = false;
 let autoRefreshRequested = false;
@@ -21,6 +27,7 @@ const lastManualRefreshAtByActivity = new Map();
 const manualRefreshQueue = [];
 let refreshTimer = null;
 let activityListSyncTimer = null;
+let lastMeituanAuthAlertAt = 0;
 
 function nowText() {
   return new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
@@ -107,6 +114,71 @@ function headersStatus() {
     hasCookie: /\bCookie:/i.test(text),
     hasMtgsig: /^mtgsig:/im.test(text)
   };
+}
+
+async function readSecret(service) {
+  try {
+    const { stdout } = await execFileAsync("/usr/bin/security", ["find-generic-password", "-a", "default", "-s", service, "-w"]);
+    return stdout.trim();
+  } catch {
+    return "";
+  }
+}
+
+async function sendFeishuText(text) {
+  const webhook = await readSecret(FEISHU_WEBHOOK_SERVICE);
+  const secret = await readSecret(FEISHU_SECRET_SERVICE);
+  if (!webhook) {
+    console.error(`[${nowText()}] 美团接口失效提醒未发送：飞书 Webhook 未配置。`);
+    return;
+  }
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const payload = {
+    msg_type: "text",
+    content: { text }
+  };
+  if (secret) {
+    payload.timestamp = timestamp;
+    payload.sign = createHmac("sha256", `${timestamp}\n${secret}`).update("").digest("base64");
+  }
+  const response = await fetch(webhook, {
+    method: "POST",
+    headers: { "content-type": "application/json;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || (data.code && data.code !== 0)) {
+    throw new Error(data.msg || data.message || "飞书消息发送失败");
+  }
+}
+
+function isLikelyMeituanAuthError(error) {
+  const message = String(error?.message || error || "");
+  return /code\s*50103|Cookie|mtgsig|登录|鉴权|权限|未授权|系统异常|未知错误/i.test(message);
+}
+
+async function notifyMeituanAuthError(error, activityId = "") {
+  if (!isLikelyMeituanAuthError(error)) return;
+  const now = Date.now();
+  if (now - lastMeituanAuthAlertAt < meituanAuthAlertIntervalMs) return;
+  lastMeituanAuthAlertAt = now;
+  const status = headersStatus();
+  const lines = [
+    "美团活动看板接口失效提醒",
+    `时间：${nowText()}`,
+    `活动：${activityId || "活动列表同步/后台刷新"}`,
+    `现象：${String(error?.message || error).split("\n")[0]}`,
+    "判断：美团请求头、Cookie 或 mtgsig 可能已过期。",
+    "处理：打开本地看板 -> 设置 -> 美团接口请求标头，粘贴 F12 里 pcActivityData 的完整请求标头后保存。",
+    `当前请求头保存时间：${status.updatedAt || "未找到"}`,
+    `当前 mtgsig 时间：${status.mtgsigTime || "未识别"}`
+  ];
+  try {
+    await sendFeishuText(lines.join("\n"));
+    console.log(`[${nowText()}] 已发送美团接口失效飞书提醒。`);
+  } catch (notifyError) {
+    console.error(`[${nowText()}] 美团接口失效飞书提醒发送失败：${notifyError.message}`);
+  }
 }
 
 function writeJson(path, value) {
@@ -255,6 +327,7 @@ async function syncActivityList() {
     if (readConfig().autoPush) await pushPublicFiles();
   } catch (error) {
     console.error(`[${nowText()}] 活动列表同步失败：${error.message}`);
+    await notifyMeituanAuthError(error);
   } finally {
     activityListSyncRunning = false;
     scheduleNextActivityListSync();
@@ -493,6 +566,7 @@ function startRefreshServer() {
       const message = await runManualRefresh(activityId, body);
       sendJson(res, 200, { ok: true, message });
     } catch (error) {
+      await notifyMeituanAuthError(error, url.searchParams.get("activityId"));
       sendJson(res, 500, { ok: false, message: error.message });
     }
   });
@@ -546,6 +620,7 @@ async function runOnce() {
         await runRefreshExclusive(`后台自动刷新 ${id}`, () => refreshActivity(id));
       } catch (error) {
         console.error(`[${nowText()}] 已跳过活动 ${id}：${error.message}`);
+        await notifyMeituanAuthError(error, id);
       }
     }
     if (config.autoPush) await pushPublicFiles();
