@@ -1173,6 +1173,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
       return {
         ...fallback.payload,
         ok: true,
+        latestDataTime: fallback.savedAtText || fallback.payload.latestDataTime,
         config,
         refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
         source: {

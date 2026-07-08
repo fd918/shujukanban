@@ -874,7 +874,9 @@
     }
 
     function renderSource() {
-      $("#latestTime").textContent = state.source.latestDataTime ? `最新数据：${state.source.latestDataTime}` : "最新数据：等待刷新";
+      $("#latestTime").textContent = state.source.cached
+        ? `缓存数据：${state.source.cacheSavedAt || state.source.latestDataTime || "未知时间"}`
+        : (state.source.latestDataTime ? `最新数据：${state.source.latestDataTime}` : "最新数据：等待刷新");
       $("#snapshotInfo").textContent = `自动刷新：${state.config?.refreshSeconds || 60} 秒｜快照：每 ${state.config?.snapshotMinutes || 30} 分钟`;
       const missing = state.source.missing || [];
       $("#sourceBox").classList.toggle("warn", missing.length > 0);
@@ -1723,7 +1725,7 @@
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
     state.overviewCollapsed = localStorage.getItem("businessDashboardOverviewCollapsed") === "1";
-    loadData(false, true).then(setupAutoRefresh);
+    loadData(false, false).then(setupAutoRefresh);
   </script>
 </body>
 </html>
