@@ -1469,9 +1469,10 @@ async function encryptedPublicUserDetails(dateRange) {
     detail.history.rows.forEach(row => {
       const id = String(row.id || "");
       historyIds.add(id);
+      row.days = { ...(row.days || {}), [today]: 0 };
       const current = currentById.get(id);
       if (!current) return;
-      row.days = { ...(row.days || {}), [today]: number(current.todayOrders) };
+      row.days[today] = number(current.todayOrders);
       row.todayOrders = number(row.days[today]);
       row.phone = current.phone || row.phone;
       row.version = current.version || row.version;
