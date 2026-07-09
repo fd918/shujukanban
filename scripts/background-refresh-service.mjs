@@ -147,6 +147,20 @@ async function readSecret(service) {
   }
 }
 
+async function writeSecret(service, value) {
+  const text = String(value || "").trim();
+  if (!text) return;
+  await execFileAsync("/usr/bin/security", ["delete-generic-password", "-a", "default", "-s", service]).catch(() => {});
+  await execFileAsync("/usr/bin/security", ["add-generic-password", "-a", "default", "-s", service, "-w", text]);
+}
+
+async function feishuStatus() {
+  return {
+    hasWebhook: Boolean(await readSecret(FEISHU_WEBHOOK_SERVICE)),
+    hasSignSecret: Boolean(await readSecret(FEISHU_SECRET_SERVICE))
+  };
+}
+
 async function sendFeishuText(text) {
   return sendFeishuPayload({
     msg_type: "text",
@@ -165,8 +179,7 @@ async function sendFeishuPayload(payload) {
   const webhook = await readSecret(FEISHU_WEBHOOK_SERVICE);
   const secret = await readSecret(FEISHU_SECRET_SERVICE);
   if (!webhook) {
-    console.error(`[${nowText()}] 飞书消息未发送：飞书 Webhook 未配置。`);
-    return;
+    throw new Error("飞书 Webhook 未配置，请先在本地看板设置里填写。");
   }
   const timestamp = Math.floor(Date.now() / 1000).toString();
   if (secret) {
@@ -791,6 +804,36 @@ function startRefreshServer() {
       return;
     }
 
+    if (url.pathname === "/feishu") {
+      if (req.method === "GET") {
+        sendJson(res, 200, { ok: true, feishu: await feishuStatus() });
+        return;
+      }
+      if (req.method === "POST") {
+        const body = await readBody(req);
+        if (body.webhookUrl) await writeSecret(FEISHU_WEBHOOK_SERVICE, body.webhookUrl);
+        if (body.signSecret) await writeSecret(FEISHU_SECRET_SERVICE, body.signSecret);
+        sendJson(res, 200, { ok: true, feishu: await feishuStatus() });
+        return;
+      }
+      sendJson(res, 404, { ok: false, message: "只支持 GET/POST /feishu" });
+      return;
+    }
+
+    if (url.pathname === "/feishu/test") {
+      if (req.method === "POST") {
+        try {
+          await sendFeishuText(`美团活动看板测试消息：${nowText()}。如果你收到这条消息，说明 Webhook 可用。`);
+          sendJson(res, 200, { ok: true, message: "测试成功，飞书机器人已返回成功状态。" });
+        } catch (error) {
+          sendJson(res, 500, { ok: false, message: error.message });
+        }
+        return;
+      }
+      sendJson(res, 404, { ok: false, message: "只支持 POST /feishu/test" });
+      return;
+    }
+
     if (req.method !== "POST" || url.pathname !== "/refresh") {
       sendJson(res, 404, { ok: false, message: "只支持 POST /refresh" });
       return;
@@ -894,7 +937,7 @@ async function sendScheduledFeishuNotifications(sendTime = "") {
   const date = todayYmd();
   const key = notifySlotKey(date, slotTime);
   const log = readJson(feishuNotifyLogPath, {});
-  if (log[key]) {
+  if (log[key]?.complete) {
     console.log(`[${nowText()}] 飞书日报 ${key} 已发送过，跳过。`);
     scheduleNextFeishuNotify();
     return;
@@ -911,18 +954,50 @@ async function sendScheduledFeishuNotifications(sendTime = "") {
   }
 
   const sentIds = [];
+  const failedIds = [];
   for (const activity of targets) {
     try {
       await sendFeishuCard(buildActivityFeishuCard(activity));
       sentIds.push(String(activity.id));
       console.log(`[${nowText()}] 已发送活动 ${activity.id} 飞书日报。`);
     } catch (error) {
+      failedIds.push(String(activity.id));
       console.error(`[${nowText()}] 活动 ${activity.id} 飞书日报发送失败：${error.message}`);
     }
   }
-  log[key] = { sentAt: nowText(), activityIds: sentIds };
+  log[key] = { sentAt: nowText(), activityIds: sentIds, failedActivityIds: failedIds, complete: failedIds.length === 0 };
   writeJson(feishuNotifyLogPath, log);
+  if (failedIds.length) scheduleFeishuNotifyRetry(slotTime, failedIds, 1);
   scheduleNextFeishuNotify();
+}
+
+function scheduleFeishuNotifyRetry(slotTime, activityIds, attempt) {
+  const retryMinutes = [10, 30, 60][Math.min(attempt - 1, 2)];
+  console.log(`[${nowText()}] 飞书日报发送失败，${retryMinutes} 分钟后重试：${activityIds.join(", ")}`);
+  setTimeout(() => retryFeishuNotifications(slotTime, activityIds, attempt), retryMinutes * 60 * 1000);
+}
+
+async function retryFeishuNotifications(slotTime, activityIds, attempt) {
+  const activities = readJson(savedActivitiesPath, {});
+  const targets = activityIds.map(id => activities[id]).filter(Boolean);
+  const key = notifySlotKey(todayYmd(), slotTime);
+  const log = readJson(feishuNotifyLogPath, {});
+  const sentIds = new Set(log[key]?.activityIds || []);
+  const failedIds = [];
+  for (const activity of targets) {
+    if (sentIds.has(String(activity.id))) continue;
+    try {
+      await sendFeishuCard(buildActivityFeishuCard(activity));
+      sentIds.add(String(activity.id));
+      console.log(`[${nowText()}] 已重试发送活动 ${activity.id} 飞书日报。`);
+    } catch (error) {
+      failedIds.push(String(activity.id));
+      console.error(`[${nowText()}] 活动 ${activity.id} 飞书日报重试失败：${error.message}`);
+    }
+  }
+  log[key] = { sentAt: nowText(), activityIds: [...sentIds], failedActivityIds: failedIds, complete: failedIds.length === 0 };
+  writeJson(feishuNotifyLogPath, log);
+  if (failedIds.length && attempt < 3) scheduleFeishuNotifyRetry(slotTime, failedIds, attempt + 1);
 }
 
 function scheduleNextFeishuNotify() {
