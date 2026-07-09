@@ -1534,5 +1534,21 @@
     "todayRedemptionAmount": 98133.36,
     "cumulativeRedemptionOrders": 12985,
     "cumulativeRedemptionAmount": 319179.5
+  },
+  {
+    "activityId": "1378",
+    "title": "美团外卖企业媒体大新客激励活动-第10期",
+    "metric": "amount",
+    "date": "2026-07-09",
+    "hour": 21,
+    "slotMinute": 30,
+    "dateHour": "2026-07-09 21:30",
+    "recordedAt": "2026/7/9 21:30:23",
+    "todayValidOrders": 4671,
+    "todayRedemptionOrders": 4056,
+    "todayActualPayment": 116925.19,
+    "todayRedemptionAmount": 100396.36,
+    "cumulativeRedemptionOrders": 13057,
+    "cumulativeRedemptionAmount": 321442.5
   }
 ]
