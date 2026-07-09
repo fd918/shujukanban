@@ -3111,12 +3111,12 @@
     "hour": 0,
     "slotMinute": 30,
     "dateHour": "2026-07-10 00:30",
-    "recordedAt": "2026/7/10 00:36:24",
+    "recordedAt": "2026/7/10 00:48:01",
     "todayValidOrders": 2,
-    "todayRedemptionOrders": 0,
+    "todayRedemptionOrders": 1,
     "todayActualPayment": 69.84,
-    "todayRedemptionAmount": 0,
-    "cumulativeRedemptionOrders": 1857,
-    "cumulativeRedemptionAmount": 42401.39
+    "todayRedemptionAmount": 30,
+    "cumulativeRedemptionOrders": 1858,
+    "cumulativeRedemptionAmount": 42431.39
   }
 ]
