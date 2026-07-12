@@ -942,5 +942,21 @@
     "todayRedemptionAmount": 2401.3,
     "cumulativeRedemptionOrders": 318,
     "cumulativeRedemptionAmount": 58981.21000000001
+  },
+  {
+    "activityId": "1381",
+    "title": "【美团闪购】屈臣氏专场激励-企业媒体-710-712",
+    "metric": "amount",
+    "date": "2026-07-12",
+    "hour": 11,
+    "slotMinute": 0,
+    "dateHour": "2026-07-12 11:00",
+    "recordedAt": "2026/7/12 11:06:12",
+    "todayValidOrders": 31,
+    "todayRedemptionOrders": 19,
+    "todayActualPayment": 6420.19,
+    "todayRedemptionAmount": 4096.79,
+    "cumulativeRedemptionOrders": 327,
+    "cumulativeRedemptionAmount": 61016.200000000004
   }
 ]
