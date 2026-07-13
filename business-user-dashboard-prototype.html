@@ -288,6 +288,21 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .hidden { display: none !important; }
+    .refresh-switch { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+    .refresh-switch input { width:34px; height:18px; accent-color:var(--orange); cursor:pointer; }
+    .focus-shell { display:grid; grid-template-columns:210px minmax(0,1fr); min-height:520px; }
+    .focus-groups { border-right:1px solid var(--line); padding:12px; background:#fbfcfe; }
+    .focus-group { display:flex; justify-content:space-between; width:100%; padding:9px 10px; margin-bottom:4px; border:1px solid transparent; background:transparent; color:var(--text); text-align:left; cursor:pointer; border-radius:6px; }
+    .focus-group.active { color:var(--orange); background:#fff7ed; border-color:#fed7aa; }
+    .focus-main { min-width:0; }
+    .focus-summary { padding:10px 14px; border-bottom:1px solid var(--line); color:var(--muted); }
+    .focus-user { min-width:150px; }
+    .focus-user strong, .focus-user span { display:block; }
+    .focus-table th, .focus-table td { white-space:nowrap; }
+    .focus-table .focus-user { white-space:normal; }
+    .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
+    .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
 
     @media (max-width: 960px) {
       .filters, .kpis, .settings-grid, .detail-grid { grid-template-columns: 1fr; }
@@ -300,6 +315,10 @@
       .kpi { padding: 11px; }
       .kpi strong { font-size: 20px; }
       .chart-stage { height: 240px; }
+      .focus-shell { grid-template-columns:1fr; }
+      .focus-groups { border-right:0; border-bottom:1px solid var(--line); display:flex; gap:6px; overflow:auto; }
+      .focus-group { width:auto; flex:0 0 auto; margin:0; }
+      .focus-add-grid { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -356,13 +375,14 @@
     <section class="panel">
       <div class="panel-head">
         <div>
-          <h2>业务列表</h2>
-          <small>默认展示全部业务，可在列表内筛选异常类型和排序</small>
+          <h2 id="listTitle">业务列表</h2>
+          <small id="listSubtitle">默认展示全部业务，可在列表内筛选异常类型和排序</small>
         </div>
         <div class="toolbar">
           <div class="segmented" id="viewTabs">
             <button class="active" data-view="list">业务列表</button>
             <button data-view="daily">每日业务数据</button>
+            <button data-view="focus">重点用户</button>
           </div>
           <div class="daily-controls" id="dailyControls">
             <input class="field" id="dailyStart" type="date" title="每日数据开始日期">
@@ -402,6 +422,7 @@
               <th><button class="sort-btn" data-sort="impact">影响量</button></th>
               <th><button class="sort-btn" data-sort="level">异常等级</button></th>
               <th><button class="sort-btn" data-sort="users">相关用户</button></th>
+              <th>用户高频更新</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -411,6 +432,22 @@
           <thead id="dailyHead"></thead>
           <tbody id="dailyBody"></tbody>
         </table>
+        <section id="focusView" class="hidden">
+          <div class="toolbar" style="padding:12px 14px;border-bottom:1px solid var(--line);">
+            <div class="segmented" id="focusRangeTabs"><button data-focus-range="week">本周</button><button class="active" data-focus-range="month">本月</button><button data-focus-range="7">近7天</button><button data-focus-range="30">近30天</button></div>
+            <select class="field" id="focusPlatform"><option value="all">全部平台</option></select>
+            <select class="field" id="focusBusiness"><option value="all">全部业务</option></select>
+            <input class="field" id="focusSearch" placeholder="搜索用户名称或ID">
+            <button class="btn primary" id="addFocusBtn">添加关注用户</button>
+          </div>
+          <div class="focus-shell">
+            <aside class="focus-groups" id="focusGroups"></aside>
+            <div class="focus-main">
+              <div class="focus-summary" id="focusSummary">正在读取重点用户...</div>
+              <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody id="focusBody"></tbody></table></div>
+            </div>
+          </div>
+        </section>
       </div>
     </section>
   </main>
@@ -446,6 +483,12 @@
       <section class="source warn">
         <strong>口径差异：</strong>业务汇总接口、业务用户明细接口、推广用户数不是同一个口径。用户弹窗会显示“用户明细求和”和“求和差异”，用于判断是否和外层业务订单一致。
       </section>
+      <section class="source">
+        <strong>本次更新时间：</strong>业务订单和小时趋势每 10 分钟更新；业务行开启“用户高频更新”后，该业务前100用户每 10 分钟更新，其他业务按设置中心的固定时间更新全量用户。用户历史也只在固定时间更新。公网发布直接使用已保存缓存，不会再次请求中台。
+      </section>
+      <section class="source">
+        <strong>重点用户：</strong>按平台、业务和用户ID添加。重点用户集中展示每日订单；今日订单对比昨日同时刻，缺少昨日同时刻快照时显示“-”。本月合计对比上月同期，避免用未结束的本月对比完整上月。
+      </section>
     </div>
     <div class="modal-foot"><button class="btn" id="closeHelpFoot">关闭</button></div>
   </section>
@@ -471,6 +514,7 @@
       <div id="tabSnapshot" class="settings-grid hidden">
         <div class="setting"><strong>页面自动刷新频率</strong><label>控制页面多久自动请求一次中台最新数据</label><select class="field" id="refreshSeconds"><option value="30">每 30 秒</option><option value="60">每 60 秒</option><option value="120">每 2 分钟</option><option value="300">每 5 分钟</option></select></div>
         <div class="setting"><strong>快照记录频率</strong><label>用于生成昨日同时刻、上周同时刻和近7日同期均值</label><select class="field" id="snapshotMinutes"><option value="10">每 10 分钟</option><option value="30">每 30 分钟</option><option value="60">每 60 分钟</option></select></div>
+        <div class="setting"><strong>全量用户更新时间</strong><label>关闭业务高频开关后，用户明细和历史在这些时间更新；可增加，使用逗号分隔</label><input class="field" id="userRefreshTimes" placeholder="12:00,17:00,22:00"></div>
         <div class="setting"><strong>手动补记</strong><label>立即记录当前业务和用户快照</label><button class="btn primary" id="settingSnapshotBtn">立即记录快照</button></div>
       </div>
       <div id="tabAccount" class="settings-grid hidden">
@@ -487,12 +531,22 @@
     <div class="modal-foot"><span class="muted" id="settingsResult">等待保存</span><button class="btn" id="cancelSettings">取消</button><button class="btn primary" id="saveSettings">保存配置</button></div>
   </section>
 
+  <section class="modal" id="focusModal">
+    <div class="modal-head"><div><h2>添加关注用户</h2><small>先选择平台和业务，再输入用户ID</small></div><button class="icon-btn" id="closeFocusModal">×</button></div>
+    <div class="modal-body"><div class="focus-add-grid">
+      <div><label>平台</label><select class="field" id="focusAddPlatform"></select></div>
+      <div><label>业务</label><select class="field" id="focusAddBusiness"></select></div>
+      <div style="grid-column:1/-1"><label>用户ID</label><input class="field" id="focusAddUserId" placeholder="请输入用户ID"></div>
+    </div><section class="source" style="margin-top:14px;">添加时会校验用户是否属于所选业务；首次查询可能需要读取该业务用户缓存。</section></div>
+    <div class="modal-foot"><span class="muted" id="focusAddResult"></span><button class="btn" id="cancelFocusAdd">取消</button><button class="btn primary" id="confirmFocusAdd">确认添加</button></div>
+  </section>
+
   <div class="toast" id="toast">已刷新</div>
   <div class="loading-mask" id="loadingMask"><div class="loading-card">正在加载<span id="loadingText">正在请求中台数据，请稍等...</span></div></div>
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {} };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -815,13 +869,14 @@
     function renderLocalControls() {
       $("#settingsBtn").classList.toggle("hidden", !isLocalSettings);
       $("#dailyControls").classList.toggle("open", state.view === "daily");
-      $(".filters").classList.toggle("hidden", state.view === "daily");
-      $("#levelTabs").classList.toggle("hidden", state.view === "daily");
+      $(".filters").classList.toggle("hidden", state.view !== "list");
+      $("#levelTabs").classList.toggle("hidden", state.view !== "list");
+      $("#metricTabs").classList.toggle("hidden", state.view === "focus");
     }
 
     function renderOverviewToggle() {
-      $(".kpis").classList.toggle("overview-collapsed", state.overviewCollapsed);
-      $("#trendPanel").classList.toggle("overview-collapsed", state.overviewCollapsed);
+      $(".kpis").classList.toggle("overview-collapsed", state.overviewCollapsed || state.view === "focus");
+      $("#trendPanel").classList.toggle("overview-collapsed", state.overviewCollapsed || state.view === "focus");
       $("#overviewToggle").textContent = state.overviewCollapsed ? "展开概览" : "收起概览";
     }
 
@@ -896,8 +951,15 @@
     }
 
     function renderTable() {
+      $("#listTitle").textContent = state.view === "focus" ? "重点用户" : state.view === "daily" ? "每日业务数据" : "业务列表";
+      $("#listSubtitle").textContent = state.view === "focus" ? "跨平台集中查看已关注用户的每日订单变化" : state.view === "daily" ? "按日期查看各业务订单或佣金" : "默认展示全部业务，可在列表内筛选异常类型和排序";
       $("#businessTable").classList.toggle("hidden", state.view !== "list");
       $("#dailyTable").classList.toggle("hidden", state.view !== "daily");
+      $("#focusView").classList.toggle("hidden", state.view !== "focus");
+      if (state.view === "focus") {
+        renderFocusUsers();
+        return;
+      }
       if (state.view === "daily") {
         renderDailyTable();
         return;
@@ -912,7 +974,7 @@
         btn.textContent = active ? `${baseText}${state.sortDir === "asc" ? "↑" : "↓"}` : baseText;
       });
       if (state.loading && !rows.length) {
-        $("#businessBody").innerHTML = `<tr><td colspan="12" class="muted">数据加载中，请稍等...</td></tr>`;
+        $("#businessBody").innerHTML = `<tr><td colspan="13" class="muted">数据加载中，请稍等...</td></tr>`;
         return;
       }
       $("#businessBody").innerHTML = rows.length ? rows.map((row, index) => {
@@ -929,9 +991,10 @@
           <td>${fmtValue(row.cmp.impact)}</td>
           <td>${tag(row.cmp.level, row.cmp.label)}</td>
           <td>${fmt(row.users || row.userIds?.length || 0)}</td>
+          <td><label class="refresh-switch"><input type="checkbox" data-fast-business="${row.businessId}" ${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "每10分钟" : "定时更新"}</span></label></td>
           <td><button class="link" data-index="${index}">查看用户</button></td>
         </tr>`;
-      }).join("") : `<tr><td colspan="12" class="muted">当前筛选条件下没有业务。</td></tr>`;
+      }).join("") : `<tr><td colspan="13" class="muted">当前筛选条件下没有业务。</td></tr>`;
     }
 
     function renderDailyTable() {
@@ -955,6 +1018,100 @@
           return `<td>${state.metric === "commission" ? money(item.commission) : fmt(item.orders)}</td>`;
         }).join("")}
       </tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有每日业务数据。</td></tr>`;
+    }
+
+    function renderFocusUsers() {
+      const data = state.focusData || { dates: [], rows: [], range: { label: "本月" } };
+      const platforms = Array.from(new Set((data.rows || []).map(row => row.platform).filter(Boolean))).sort();
+      const businesses = (data.rows || []).filter(row => state.focusPlatform === "all" || row.platform === state.focusPlatform);
+      const businessNames = Array.from(new Set(businesses.map(row => row.businessName).filter(Boolean))).sort();
+      $("#focusPlatform").innerHTML = `<option value="all">全部平台</option>${platforms.map(item => `<option value="${item}">${item}</option>`).join("")}`;
+      $("#focusPlatform").value = platforms.includes(state.focusPlatform) ? state.focusPlatform : "all";
+      $("#focusBusiness").innerHTML = `<option value="all">全部业务</option>${businessNames.map(item => `<option value="${item}">${item}</option>`).join("")}`;
+      $("#focusBusiness").value = businessNames.includes(state.focusBusiness) ? state.focusBusiness : "all";
+      $("#focusGroups").innerHTML = `<button class="focus-group ${state.focusGroup === "all" ? "active" : ""}" data-focus-group="all"><span>全部关注</span><strong>${fmt(data.total || 0)}</strong></button>` + platforms.map(platform => {
+        const count = (data.rows || []).filter(row => row.platform === platform).length;
+        return `<button class="focus-group ${state.focusGroup === platform ? "active" : ""}" data-focus-group="${platform}"><span>${platform}</span><strong>${fmt(count)}</strong></button>`;
+      }).join("");
+      const keyword = state.focusSearch.toLowerCase();
+      let rows = (data.rows || []).filter(row => state.focusGroup === "all" || row.platform === state.focusGroup);
+      if (state.focusPlatform !== "all") rows = rows.filter(row => row.platform === state.focusPlatform);
+      if (state.focusBusiness !== "all") rows = rows.filter(row => row.businessName === state.focusBusiness);
+      if (keyword) rows = rows.filter(row => `${row.name}${row.userId}${row.platform}${row.businessName}`.toLowerCase().includes(keyword));
+      rows = rows.slice().sort((a, b) => Number(b.periodTotal || 0) - Number(a.periodTotal || 0));
+      const dates = data.dates || [];
+      $("#focusSummary").textContent = `${data.range?.label || "本月"}｜当前显示 ${rows.length} 位重点用户｜用户数据时间：${data.latestDataTime || "-"}`;
+      $("#focusHead").innerHTML = `<tr><th>序号</th><th>平台 / 业务</th><th>用户</th><th>今日订单</th><th>昨日同时刻</th><th>今日变化比例</th><th>今日影响订单</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th><th>操作</th></tr>`;
+      $("#focusBody").innerHTML = state.focusLoading && !rows.length
+        ? `<tr><td colspan="${dates.length + 13}" class="muted">重点用户加载中...</td></tr>`
+        : (rows.length ? rows.map((row, index) => `<tr>
+          <td>${index + 1}</td>
+          <td><strong>${row.platform}</strong><div class="muted">${row.businessName}</div></td>
+          <td class="focus-user"><strong>${row.name}</strong><span class="muted">ID：${row.userId}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
+          <td>${fmt(row.todayOrders)}</td><td>${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
+          ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
+          <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
+          <td>${state.publicMode ? "-" : `<button class="link" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}">移除</button>`}</td>
+        </tr>`).join("") : `<tr><td colspan="${dates.length + 13}" class="muted">还没有重点用户，点击“添加关注用户”开始关注。</td></tr>`);
+    }
+
+    async function loadFocusUsers() {
+      if (state.publicMode) {
+        renderFocusUsers();
+        return;
+      }
+      state.focusLoading = true;
+      renderFocusUsers();
+      try {
+        state.focusData = await requestJson(apiUrl(`/api/focus-users?preset=${state.focusRange}&_=${Date.now()}`));
+      } finally {
+        state.focusLoading = false;
+        renderFocusUsers();
+      }
+    }
+
+    function fillFocusAddOptions() {
+      const platforms = Array.from(new Set(state.businesses.map(row => row.platform).filter(Boolean))).sort();
+      $("#focusAddPlatform").innerHTML = `<option value="">请选择平台</option>${platforms.map(item => `<option value="${item}">${item}</option>`).join("")}`;
+      $("#focusAddBusiness").innerHTML = `<option value="">请先选择平台</option>`;
+      $("#focusAddUserId").value = "";
+      $("#focusAddResult").textContent = "";
+    }
+
+    function updateFocusAddBusinesses() {
+      const platform = $("#focusAddPlatform").value;
+      const rows = state.businesses.filter(row => row.platform === platform && (row.platformBusinessId || row.businessId));
+      $("#focusAddBusiness").innerHTML = `<option value="">请选择业务</option>${rows.map(row => `<option value="${row.platformBusinessId || row.businessId}">${row.name}</option>`).join("")}`;
+    }
+
+    function openFocusModal() {
+      if (state.publicMode) return toast("请在本地看板添加重点用户");
+      fillFocusAddOptions();
+      $("#modalMask").classList.add("open");
+      $("#focusModal").classList.add("open");
+    }
+
+    function closeFocusModal() {
+      $("#modalMask").classList.remove("open");
+      $("#focusModal").classList.remove("open");
+    }
+
+    async function addFocusUser() {
+      const businessId = $("#focusAddBusiness").value;
+      const userId = $("#focusAddUserId").value.trim();
+      $("#focusAddResult").textContent = "正在校验用户...";
+      const result = await requestJson(apiUrl("/api/focus-users"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId, userId }) });
+      state.focusData = result.data;
+      closeFocusModal();
+      renderFocusUsers();
+      toast("重点用户已添加");
+    }
+
+    async function removeFocusUser(businessId, userId) {
+      const result = await requestJson(apiUrl("/api/focus-users/remove"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId, userId }) });
+      state.focusData = result.data;
+      renderFocusUsers();
+      toast("已移除重点用户");
     }
 
     function render() {
@@ -1048,6 +1205,7 @@
       state.businessDaily = data.businessDaily || null;
       state.publicUserDetails = data.userDetails || {};
       state.publicBusinessTrends = data.businessTrends || {};
+      state.focusData = data.focusUsers || state.focusData;
       state.dateRange = data.dateRange || null;
       state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
       if (previousDataTime && previousDataTime !== state.source.latestDataTime) {
@@ -1163,6 +1321,7 @@
       for (const key of ["minorPct","minorOrders","majorPct","majorOrders","criticalPct","criticalOrders","upPct","upOrders"]) if ($("#" + key)) $("#" + key).value = rules[key] ?? "";
       $("#refreshSeconds").value = cfg.refreshSeconds || 60;
       $("#snapshotMinutes").value = cfg.snapshotMinutes || 30;
+      $("#userRefreshTimes").value = (cfg.userRefreshTimes || ["12:00", "17:00", "22:00"]).join(",");
       $("#notifyMode").value = cfg.notification?.mode || "immediate";
       $("#webhookStatus").textContent = cfg.notification?.hasWebhook ? "已配置" : "未配置";
       $("#secretStatus").textContent = cfg.notification?.hasSignSecret ? "已配置" : "未配置";
@@ -1177,6 +1336,8 @@
         rules,
         refreshSeconds: Number($("#refreshSeconds").value),
         snapshotMinutes: Number($("#snapshotMinutes").value),
+        userRefreshTimes: $("#userRefreshTimes").value.split(/[,，\s]+/).map(item => item.trim()).filter(Boolean),
+        fastUserBusinessIds: state.config?.fastUserBusinessIds || [],
         notification: { mode: $("#notifyMode").value, criticalImmediate: $("#notifyMode").value === "immediate", enabled: true },
         credentials: { username: $("#dashboardUsername").value.trim(), password: $("#dashboardPassword").value },
         feishu: { webhookUrl: $("#feishuWebhook").value.trim(), signSecret: $("#feishuSecret").value.trim() }

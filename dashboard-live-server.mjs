@@ -1509,9 +1509,142 @@ async function saveConfig(body) {
     rules: body.rules || current.rules,
     refreshSeconds: Number(body.refreshSeconds || current.refreshSeconds || defaultConfig.refreshSeconds),
     snapshotMinutes: body.snapshotMinutes || current.snapshotMinutes,
+    userRefreshTimes: body.userRefreshTimes || current.userRefreshTimes,
+    fastUserBusinessIds: body.fastUserBusinessIds || current.fastUserBusinessIds,
     notification: { ...current.notification, ...(body.notification || {}) },
     public: { ...current.public, ...(body.public || {}) }
   });
+}
+
+async function readFocusUsers() {
+  try {
+    const saved = JSON.parse(await readFile(FOCUS_USERS_PATH, "utf8"));
+    return { items: Array.isArray(saved.items) ? saved.items : [], updatedAt: saved.updatedAt || "", updatedAtText: saved.updatedAtText || "" };
+  } catch {
+    return { items: [], updatedAt: "", updatedAtText: "" };
+  }
+}
+
+async function writeFocusUsers(items) {
+  const payload = { items, updatedAt: new Date().toISOString(), updatedAtText: nowText() };
+  await mkdir(join(ROOT, "data"), { recursive: true });
+  await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
+  return payload;
+}
+
+function cachedUserForBusiness(businessId, userId) {
+  let found = null;
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    try {
+      const key = JSON.parse(cacheKey);
+      if (String(key.businessId) !== String(businessId)) continue;
+      const row = (payload.rows || []).find(item => String(item.id) === String(userId));
+      if (row) found = { ...found, ...row, days: row.days || found?.days || {} };
+    } catch {}
+  }
+  return found;
+}
+
+function focusRange(query = {}) {
+  const today = dayKey();
+  const preset = query.preset || "month";
+  if (preset === "week") {
+    const current = dateFromDay(today);
+    const offset = (current.getDay() + 6) % 7;
+    return { preset, startDate: shiftDay(today, -offset), endDate: today, label: "本周" };
+  }
+  if (preset === "7") return { preset, startDate: shiftDay(today, -6), endDate: today, label: "近7天" };
+  if (preset === "30") return { preset, startDate: shiftDay(today, -29), endDate: today, label: "近30天" };
+  return { preset: "month", startDate: dayKey(new Date(dateFromDay(today).getFullYear(), dateFromDay(today).getMonth(), 1)), endDate: today, label: "本月" };
+}
+
+async function buildFocusUsers(query = {}) {
+  const saved = await readFocusUsers();
+  const range = focusRange(query);
+  const dates = dayList(range.startDate, range.endDate);
+  const previousEnd = shiftDay(range.startDate, -1);
+  const previousStart = shiftDay(previousEnd, -(dates.length - 1));
+  const previousDates = dayList(previousStart, previousEnd);
+  const snapshots = await readSnapshots();
+  const yesterday = nearestSnapshot(snapshots, shiftDay(dayKey(), -1), minuteOfDay());
+  const rows = saved.items.map(item => {
+    const cached = cachedUserForBusiness(item.businessId, item.userId) || {};
+    const days = Object.fromEntries(dates.map(date => [date, number(cached.days?.[date])]));
+    if (dates.includes(dayKey())) days[dayKey()] = number(cached.todayOrders ?? days[dayKey()]);
+    const total = Object.values(days).reduce((sum, value) => sum + number(value), 0);
+    const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(cached.days?.[date]), 0);
+    const periodDiff = total - previousPeriodTotal;
+    const periodRatio = previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null;
+    const yesterdaySameTime = yesterday?.businessUsers?.[String(item.businessId)]?.[String(item.userId)]?.orders;
+    const todayOrders = number(days[dayKey()] ?? cached.todayOrders);
+    const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
+    const ratio = yesterdaySameTime ? diff / number(yesterdaySameTime) * 100 : null;
+    const topState = userRefreshState.top100[String(item.businessId)] || {};
+    return {
+      ...item,
+      name: cached.name || item.name,
+      phone: cached.phone || item.phone || "-",
+      version: cached.version || item.version || "-",
+      days,
+      periodTotal: total,
+      previousPeriodTotal,
+      periodRatio,
+      periodImpact: Math.abs(periodDiff),
+      todayOrders,
+      yesterdaySameTime: yesterdaySameTime === undefined ? null : number(yesterdaySameTime),
+      ratio,
+      impact: diff === null ? null : Math.abs(diff),
+      newTop100At: topState.entered?.[String(item.userId)] || "",
+      userDataTime: topState.updatedAtText || saved.updatedAtText || "-"
+    };
+  });
+  return { ok: true, range, dates, rows, total: rows.length, latestDataTime: saved.updatedAtText || nowText() };
+}
+
+async function addFocusUser(body) {
+  const businessId = String(body.businessId || "");
+  const userId = String(body.userId || "").trim();
+  if (!businessId || !userId) throw new Error("请选择业务并填写用户ID。");
+  const business = (lastGood.businesses || []).find(row => String(row.platformBusinessId || row.businessId) === businessId || String(row.businessId) === businessId);
+  if (!business) throw new Error("没有找到所选业务，请先刷新业务列表。");
+  let user = cachedUserForBusiness(businessId, userId);
+  if (!user) {
+    const statuses = [];
+    const result = await fetchBusinessUsers({
+      businessId,
+      startDate: dayKey(),
+      endDate: dayKey(),
+      pageSize: Math.min(5000, Math.max(500, number(business.users) + 50)),
+      sortField: dayKey(),
+      sortOrder: "desc",
+      refresh: true,
+      includePrevious: false
+    }, statuses);
+    user = (result.rows || []).find(item => String(item.id) === userId);
+  }
+  if (!user) throw new Error("该业务下没有找到这个用户ID，请核对平台、业务和用户ID。");
+  const saved = await readFocusUsers();
+  if (saved.items.some(item => String(item.businessId) === businessId && String(item.userId) === userId)) return writeFocusUsers(saved.items);
+  saved.items.push({
+    platform: business.platform,
+    businessName: business.name,
+    businessId,
+    catalogBusinessId: String(business.businessId || ""),
+    userId,
+    name: user.name,
+    phone: user.phone,
+    version: user.version,
+    addedAt: new Date().toISOString(),
+    addedAtText: nowText()
+  });
+  return writeFocusUsers(saved.items);
+}
+
+async function removeFocusUser(body) {
+  const businessId = String(body.businessId || "");
+  const userId = String(body.userId || "");
+  const saved = await readFocusUsers();
+  return writeFocusUsers(saved.items.filter(item => !(String(item.businessId) === businessId && String(item.userId) === userId)));
 }
 
 async function testFeishu() {
@@ -1637,8 +1770,6 @@ async function encryptedPublicBusinessTrends(businesses = []) {
 
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
-  await warmBusinessUserDetails(data.businesses || [], dateRange, { refresh: true });
-  warmBusinessUserHistories(data.businesses || []).catch(error => console.error(`[${nowText()}] 公网用户历史后台预热失败：${error.message}`));
   return {
     ok: true,
     latestDataTime: nowText(),
@@ -1646,7 +1777,9 @@ async function sanitizePublicDashboard(data) {
     config: {
       rules: data.config?.rules || defaultConfig.rules,
       refreshSeconds: data.config?.refreshSeconds || defaultConfig.refreshSeconds,
-      snapshotMinutes: data.config?.snapshotMinutes || defaultConfig.snapshotMinutes
+      snapshotMinutes: data.config?.snapshotMinutes || defaultConfig.snapshotMinutes,
+      userRefreshTimes: data.config?.userRefreshTimes || defaultConfig.userRefreshTimes,
+      fastUserBusinessIds: data.config?.fastUserBusinessIds || []
     },
     source: {
       publicSnapshot: true,
@@ -1660,7 +1793,14 @@ async function sanitizePublicDashboard(data) {
     users: data.users || [],
     businessDaily: data.businessDaily || null,
     businessTrends: await encryptedPublicBusinessTrends(data.businesses || []),
-    userDetails: await encryptedPublicUserDetails(dateRange)
+    userDetails: await encryptedPublicUserDetails(dateRange),
+    focusUsers: await buildFocusUsers({ preset: "month" }),
+    focusUsersByRange: {
+      week: await buildFocusUsers({ preset: "week" }),
+      month: await buildFocusUsers({ preset: "month" }),
+      7: await buildFocusUsers({ preset: "7" }),
+      30: await buildFocusUsers({ preset: "30" })
+    }
   };
 }
 
@@ -1745,7 +1885,9 @@ const server = createServer(async (req, res) => {
       }, statuses);
       const snapshots = await readSnapshots();
       const users = enrichBusinessUsersWithSnapshots(result.rows, snapshots, url.searchParams.get("business_id") || "", rangeFromQuery({ start_date: startDate, end_date: endDate }));
-      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: nowText(), users, total: result.total, userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0), page: result.page, pageSize: result.pageSize, source: { statuses } });
+      const topState = userRefreshState.top100[String(url.searchParams.get("business_id") || "")] || {};
+      users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
+      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: topState.updatedAtText || nowText(), users, total: result.total, userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0), page: result.page, pageSize: result.pageSize, source: { statuses } });
     }
     if (url.pathname === "/api/business-users-history") {
       const statuses = [];
@@ -1762,6 +1904,19 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/config" && req.method === "GET") return json(res, 200, await getPublicConfig());
     if (url.pathname === "/api/config" && req.method === "POST") return json(res, 200, { ok: true, config: await saveConfig(await readBody(req)) });
+    if (url.pathname === "/api/business-refresh" && req.method === "POST") {
+      const body = await readBody(req);
+      const current = await readConfig();
+      const id = String(body.businessId || "");
+      const ids = new Set((current.fastUserBusinessIds || []).map(String));
+      if (body.enabled) ids.add(id); else ids.delete(id);
+      const config = await writeConfig({ ...current, fastUserBusinessIds: [...ids] });
+      return json(res, 200, { ok: true, config });
+    }
+    if (url.pathname === "/api/focus-users" && req.method === "GET") return json(res, 200, await buildFocusUsers(Object.fromEntries(url.searchParams.entries())));
+    if (url.pathname === "/api/focus-users" && req.method === "POST") return json(res, 200, { ok: true, saved: await addFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "month" }) });
+    if (url.pathname === "/api/focus-users/remove" && req.method === "POST") return json(res, 200, { ok: true, saved: await removeFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "month" }) });
+    if (url.pathname === "/api/request-stats") return json(res, 200, { ok: true, stats: requestStats });
     if (url.pathname === "/api/feishu/test" && req.method === "POST") {
       try {
         return json(res, 200, await testFeishu());
