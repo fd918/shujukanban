@@ -218,6 +218,11 @@
     .user-cell { max-width: 150px; white-space: normal; line-height: 1.35; }
     .user-cell strong { display: block; }
     .user-cell .muted { display: block; margin-top: 3px; font-size: 12px; }
+    .user-toggle { border: 0; background: transparent; color: var(--text); padding: 0; font-weight: 700; text-align: left; }
+    .user-toggle:hover { color: var(--blue); }
+    .expanded-detail { background: #f8fafc; color: var(--muted); line-height: 1.7; }
+    .expanded-metrics { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+    .expanded-metrics strong { color: var(--text); }
     .sort-btn {
       border: 0;
       background: transparent;
@@ -491,6 +496,7 @@
       </section>
       <section class="source warn">
         <strong>口径差异：</strong>业务汇总接口、业务用户明细接口、推广用户数不是同一个口径。用户弹窗会显示“用户明细求和”和“求和差异”，用于判断是否和外层业务订单一致。
+        <strong>用户流失分析：</strong>用户列表默认展示“流失风险 + 近7天”。今日对比昨日同时刻，近7天对比前7天，本月截至今天对比上月相同日期进度；连续3天无订单、近7天下降、月度同期下降和连续两周下降会形成风险原因。点击用户名称可展开周/月明细。
       </section>
       <section class="source">
         <strong>本次更新时间：</strong>业务订单和小时趋势每 10 分钟更新；业务行开启“用户高频更新”后，该业务前100用户每 10 分钟更新，其他业务按设置中心的固定时间更新全量用户。用户历史也只在固定时间更新。公网发布直接使用已保存缓存，不会再次请求中台。
@@ -556,7 +562,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -678,9 +684,8 @@
       const today = new Date();
       let start = new Date(today);
       let end = new Date(today);
-      if (scope === "week") {
-        const day = today.getDay() || 7;
-        start.setDate(today.getDate() - day + 1);
+      if (scope === "seven") {
+        start.setDate(today.getDate() - 6);
       } else if (scope === "lastWeek") {
         const day = today.getDay() || 7;
         end.setDate(today.getDate() - day);
@@ -693,15 +698,15 @@
     }
 
     function detailScopeLabel() {
-      return { today: "今日", month: "本月" }[state.detailScope] || "今日";
+      return { today: "今日", seven: "近7天", month: "本月" }[state.detailScope] || "近7天";
     }
 
     function previousPeriodLabel(scope = state.detailScope) {
-      return { today: "昨日订单", month: "上月订单" }[scope] || "对比订单";
+      return { today: "昨日订单", seven: "前7天订单", month: "上月同期" }[scope] || "对比订单";
     }
 
     function compareBaseLabel(scope = state.detailScope) {
-      return { today: "昨日同时刻", month: "上月订单" }[scope] || "对比基准";
+      return { today: "昨日同时刻", seven: "前7天", month: "上月同期" }[scope] || "对比基准";
     }
 
     function detailCacheKey(row = state.detailRow, scope = state.detailScope) {
@@ -1401,10 +1406,11 @@
     async function openBusiness(row) {
       state.detailRow = row;
       state.detailMode = "abnormal";
-      state.detailScope = "today";
+      state.detailScope = "seven";
       state.detailSearch = "";
-      state.detailSort = "orders";
+      state.detailSort = "impact";
       state.detailSortDir = "desc";
+      state.detailExpandedUserId = "";
       state.detailUsers = [];
       state.detailHistory = null;
       state.detailHistoryStart = "";
@@ -1437,6 +1443,10 @@
     }
 
     async function loadBusinessUsers(row, refresh = false) {
+      if (state.detailScope === "seven" || state.detailScope === "month") {
+        await loadDetailMonthAnalysis(row, refresh);
+        return;
+      }
       const cacheKey = detailCacheKey(row);
       const cachedDetail = state.detailCache[cacheKey];
       if (!refresh && cachedDetail) {
@@ -1446,7 +1456,6 @@
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";
         renderDetail(true);
-        if (state.detailScope === "month" && !state.detailMonthAnalysis) loadDetailMonthAnalysis(row, false).catch(error => toast(error.message || "本月用户分析加载失败"));
         return;
       }
       if (state.publicMode) {
@@ -1456,7 +1465,6 @@
         state.detailLatestTime = detail.latestDataTime || state.source.latestDataTime || "";
         state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
         renderDetail(true);
-        if (state.detailScope === "month") loadDetailMonthAnalysis(row, false).catch(error => toast(error.message || "本月用户分析加载失败"));
         return;
       }
       state.detailRefreshing = true;
@@ -1485,7 +1493,6 @@
         state.detailLoadingLabel = "";
         state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
         renderDetail(data.cached);
-        if (state.detailScope === "month") loadDetailMonthAnalysis(row, refresh).catch(error => toast(error.message || "本月用户分析加载失败"));
       } catch (error) {
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";
@@ -1586,29 +1593,60 @@
       const weekStart = addDays(today, -day + 1);
       const lastWeekStart = addDays(weekStart, -7);
       const lastWeekEnd = addDays(weekStart, -1);
+      const lastWeekSamePeriodEnd = addDays(lastWeekStart, day - 1);
       const prevWeekStart = addDays(weekStart, -14);
       const prevWeekEnd = addDays(weekStart, -8);
+      const recent7Start = addDays(today, -6);
+      const previous7Start = addDays(today, -13);
+      const previous7End = addDays(today, -7);
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const prevMonthEnd = addDays(monthStart, -1);
+      const prevMonthLastDay = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+      const prevMonthSamePeriodEnd = new Date(prevMonthStart.getFullYear(), prevMonthStart.getMonth(), Math.min(today.getDate(), prevMonthLastDay));
       const rows = (history.rows || []).map(user => {
         const days = user.days || {};
         const weekOrders = sumDays(days, weekStart, today);
+        const lastWeekSamePeriodOrders = sumDays(days, lastWeekStart, lastWeekSamePeriodEnd);
         const lastWeekOrders = sumDays(days, lastWeekStart, lastWeekEnd);
         const prevWeekOrders = sumDays(days, prevWeekStart, prevWeekEnd);
+        const recent7Orders = sumDays(days, recent7Start, today);
+        const previous7Orders = sumDays(days, previous7Start, previous7End);
         const monthOrders = sumDays(days, monthStart, today);
-        const prevMonthOrders = sumDays(days, prevMonthStart, prevMonthEnd);
-        const weekCmp = classifyChange({ current: weekOrders, base: lastWeekOrders, labelPrefix: "本周比上周" });
+        const prevMonthOrders = sumDays(days, prevMonthStart, prevMonthSamePeriodEnd);
+        const recent7Cmp = classifyChange({ current: recent7Orders, base: previous7Orders, labelPrefix: "近7天比前7天" });
+        const weekCmp = classifyChange({ current: weekOrders, base: lastWeekSamePeriodOrders, labelPrefix: "本周比上周同期" });
         const lastWeekCmp = classifyChange({ current: lastWeekOrders, base: prevWeekOrders, labelPrefix: "上周比上上周" });
-        const monthCmp = classifyChange({ current: monthOrders, base: prevMonthOrders, labelPrefix: "本月比上月" });
-        const candidates = [monthCmp, weekCmp, lastWeekCmp].filter(item => item.level !== "normal" && item.level !== "missing");
+        const monthCmp = classifyChange({ current: monthOrders, base: prevMonthOrders, labelPrefix: "本月比上月同期" });
+        let consecutiveNoOrderDays = 0;
+        for (let offset = 0; offset < 14; offset += 1) {
+          if (Number(days[dayText(addDays(today, -offset))] || 0) > 0) break;
+          consecutiveNoOrderDays += 1;
+        }
+        const silenceCmp = consecutiveNoOrderDays >= 3 && previous7Orders > 0 ? {
+          today: 0,
+          base: previous7Orders,
+          diff: -previous7Orders,
+          impact: previous7Orders,
+          ratio: -100,
+          level: previous7Orders >= Number(state.config?.rules?.criticalOrders || 500) ? "critical" : "major",
+          label: "疑似停用",
+          reason: `连续 ${consecutiveNoOrderDays} 天无订单，前7天有 ${fmt(previous7Orders)} 单`
+        } : null;
+        const sustainedDecline = weekCmp.diff < 0 && weekCmp.level !== "normal" && lastWeekCmp.diff < 0 && lastWeekCmp.level !== "normal";
+        const candidates = [silenceCmp, recent7Cmp, monthCmp].filter(item => item && item.level !== "normal" && item.level !== "missing");
         const primary = candidates.sort((a, b) => rank(b.level) - rank(a.level) || Number(b.impact || 0) - Number(a.impact || 0))[0] || monthCmp;
-        const reasons = [weekCmp, lastWeekCmp, monthCmp]
+        const reasons = [silenceCmp, recent7Cmp, monthCmp]
+          .filter(Boolean)
           .filter(item => item.reason && item.level !== "normal")
           .map(item => item.reason);
+        if (sustainedDecline) reasons.push("本周和上周连续下降，存在持续流失风险");
         return {
           ...user,
+          recent7Orders,
+          previous7Orders,
+          recent7Cmp,
           weekOrders,
+          lastWeekSamePeriodOrders,
           lastWeekOrders,
           prevWeekOrders,
           monthOrders,
@@ -1616,25 +1654,42 @@
           weekCmp,
           lastWeekCmp,
           monthCmp,
+          silenceCmp,
+          sustainedDecline,
+          consecutiveNoOrderDays,
           cmp: { ...primary, today: monthOrders, reason: reasons.length ? reasons.join("；") : "本周、本月均未达到异常阈值" }
         };
       });
       return { rows, latestDataTime: history.latestDataTime || "" };
     }
 
+    function periodDisplayCmp(user) {
+      return state.detailScope === "seven" ? user.recent7Cmp : user.monthCmp;
+    }
+
+    function periodRiskCmp(user) {
+      if (state.detailScope === "seven") {
+        const candidates = [user.silenceCmp, user.recent7Cmp].filter(Boolean);
+        return candidates.sort((a, b) => rank(b.level) - rank(a.level) || Number(b.impact || 0) - Number(a.impact || 0))[0] || user.recent7Cmp;
+      }
+      return user.cmp || user.monthCmp;
+    }
+
     function renderDetail(cached = false) {
       const row = state.detailRow;
-      const allUsers = state.detailScope === "month" && state.detailMonthAnalysis?.rows ? state.detailMonthAnalysis.rows : (state.detailUsers || []);
-      const downUsers = state.detailScope === "month"
-        ? allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item?.diff < 0 && item?.level !== "normal"))
-        : allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
-      const upUsers = state.detailScope === "month"
-        ? allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item?.level === "up"))
-        : allUsers.filter(user => user.cmp.level === "up");
+      const periodScope = state.detailScope === "seven" || state.detailScope === "month";
+      const allUsers = periodScope && state.detailMonthAnalysis?.rows ? state.detailMonthAnalysis.rows : (state.detailUsers || []);
+      const downUsers = allUsers.filter(user => {
+        const cmp = periodScope ? periodRiskCmp(user) : user.cmp;
+        return cmp?.diff < 0 && cmp?.level !== "normal" && cmp?.level !== "missing";
+      });
+      const upUsers = allUsers.filter(user => (periodScope ? periodRiskCmp(user) : user.cmp)?.level === "up");
       const abnormal = downUsers;
-      const impactSum = downUsers.reduce((sum, user) => sum + Number(user.cmp.impact || 0), 0);
-      const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
-      const baselineSum = allUsers.reduce((sum, user) => sum + Number(user.cmp?.base || 0), 0);
+      const impactSum = downUsers.reduce((sum, user) => sum + Number((periodScope ? periodRiskCmp(user) : user.cmp)?.impact || 0), 0);
+      const userOrderSum = periodScope
+        ? allUsers.reduce((sum, user) => sum + Number(periodDisplayCmp(user)?.today || 0), 0)
+        : (state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0));
+      const baselineSum = allUsers.reduce((sum, user) => sum + Number((periodScope ? periodDisplayCmp(user) : user.cmp)?.base || 0), 0);
       const netDiff = userOrderSum - baselineSum;
       $("#detailBody").innerHTML = `
         <div class="detail-grid">
@@ -1645,13 +1700,14 @@
         </div>
         <div class="toolbar" style="margin-bottom:10px;">
           <div class="segmented">
-            <button class="${state.detailMode === "abnormal" ? "active" : ""}" data-detail-mode="abnormal">下降异常 ${fmt(downUsers.length)}</button>
-            <button class="${state.detailMode === "up" ? "active" : ""}" data-detail-mode="up">上升用户 ${fmt(upUsers.length)}</button>
+            <button class="${state.detailMode === "abnormal" ? "active" : ""}" data-detail-mode="abnormal">流失风险 ${fmt(downUsers.length)}</button>
+            <button class="${state.detailMode === "up" ? "active" : ""}" data-detail-mode="up">高增长 ${fmt(upUsers.length)}</button>
             <button class="${state.detailMode === "all" ? "active" : ""}" data-detail-mode="all">全部用户 ${fmt(allUsers.length)}</button>
             <button class="${state.detailMode === "history" ? "active" : ""}" data-detail-mode="history">历史订单</button>
           </div>
           <div class="segmented ${state.detailMode === "history" ? "hidden" : ""}">
             <button class="${state.detailScope === "today" ? "active" : ""}" data-detail-scope="today">今日</button>
+            <button class="${state.detailScope === "seven" ? "active" : ""}" data-detail-scope="seven">近7天</button>
             <button class="${state.detailScope === "month" ? "active" : ""}" data-detail-scope="month">本月</button>
           </div>
           <input class="field" style="max-width:220px;" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID">
@@ -1668,9 +1724,11 @@
     }
 
     function monthSortValue(user, key) {
-      if (key === "impact") return Math.max(Number(user.weekCmp?.impact || 0), Number(user.monthCmp?.impact || 0));
-      if (key === "ratio") return user.monthCmp?.ratio ?? -999999;
-      return user.monthOrders || 0;
+      const riskCmp = periodRiskCmp(user);
+      const displayCmp = periodDisplayCmp(user);
+      if (key === "impact") return riskCmp?.impact ?? -1;
+      if (key === "ratio") return displayCmp?.ratio ?? -999999;
+      return displayCmp?.today || 0;
     }
 
     function detailSortButton(key, label) {
@@ -1679,7 +1737,7 @@
     }
 
     function renderDetailResult() {
-      if (state.detailScope === "month" && state.detailMode !== "history") return renderMonthAnalysisResult();
+      if ((state.detailScope === "seven" || state.detailScope === "month") && state.detailMode !== "history") return renderMonthAnalysisResult();
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
       const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
@@ -1709,37 +1767,49 @@
 
     function renderMonthAnalysisResult() {
       const analysis = state.detailMonthAnalysis;
-      if (!analysis) return `<section class="source"><strong>正在加载：</strong>正在按用户每日订单计算本周、上周、本月和上月表现。</section>`;
+      if (!analysis) return `<section class="source"><strong>正在加载：</strong>正在按用户每日订单计算近7天和本月表现。</section>`;
       const allUsers = analysis.rows || [];
-      const downUsers = allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item.diff < 0 && item.level !== "normal"));
-      const upUsers = allUsers.filter(user => [user.weekCmp, user.lastWeekCmp, user.monthCmp].some(item => item.level === "up"));
+      const downUsers = allUsers.filter(user => {
+        const cmp = periodRiskCmp(user);
+        return cmp?.diff < 0 && cmp?.level !== "normal" && cmp?.level !== "missing";
+      });
+      const upUsers = allUsers.filter(user => periodRiskCmp(user)?.level === "up");
       const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "up" ? upUsers : allUsers;
       const keyword = state.detailSearch.toLowerCase();
       const users = (keyword ? sourceUsers.filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : sourceUsers)
         .slice()
         .sort((a, b) => (monthSortValue(a, state.detailSort) - monthSortValue(b, state.detailSort)) * (state.detailSortDir === "asc" ? 1 : -1));
+      const currentLabel = state.detailScope === "seven" ? "近7天订单" : "本月订单";
+      const baseLabel = state.detailScope === "seven" ? "前7天订单" : "上月同期";
       return `
-        <section class="source"><strong>本月综合评估：</strong>本表按用户每日订单重新汇总。本周对比上周，上周对比上上周，本月对比上月；10% 以内按正常处理。原因列会合并该用户命中的周/月异常原因。</section>
+        <section class="source"><strong>${detailScopeLabel()}用户评估：</strong>${state.detailScope === "seven" ? "最近7天对比前7天" : "本月截至今天对比上月相同日期进度"}；同时结合连续无单和近7天趋势识别流失风险。波动在10%以内按正常处理，点击用户名称可展开周/月明细。</section>
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "本周订单")}</th><th>上周订单</th><th>本周变化比例</th><th>本周影响订单</th><th>上上周订单</th><th>上周变化比例</th><th>上周影响订单</th><th>本月订单</th><th>上月订单</th><th>${detailSortButton("ratio", "本月变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>综合原因</th></tr></thead>
-            <tbody>${users.length ? users.map((user, index) => `<tr>
-              <td>${index + 1}</td>
-              <td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
-              <td>${fmt(user.weekOrders)}</td>
-              <td>${fmt(user.lastWeekOrders)}</td>
-              <td class="${user.weekCmp.diff < 0 ? "down" : user.weekCmp.diff > 0 ? "up" : ""}">${pctValue(user.weekCmp.ratio)}</td>
-              <td>${fmtValue(user.weekCmp.impact)}</td>
-              <td>${fmt(user.prevWeekOrders)}</td>
-              <td class="${user.lastWeekCmp.diff < 0 ? "down" : user.lastWeekCmp.diff > 0 ? "up" : ""}">${pctValue(user.lastWeekCmp.ratio)}</td>
-              <td>${fmtValue(user.lastWeekCmp.impact)}</td>
-              <td>${fmt(user.monthOrders)}</td>
-              <td>${fmt(user.prevMonthOrders)}</td>
-              <td class="${user.monthCmp.diff < 0 ? "down" : user.monthCmp.diff > 0 ? "up" : ""}">${pctValue(user.monthCmp.ratio)}</td>
-              <td>${fmtValue(Math.max(Number(user.weekCmp.impact || 0), Number(user.monthCmp.impact || 0)))}</td>
-              <td>${tag(user.cmp.level, user.cmp.label)}</td>
-              <td>${user.cmp.reason || "-"}</td>
-            </tr>`).join("") : `<tr><td colspan="15" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", currentLabel)}</th><th>${baseLabel}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>近期趋势</th><th>风险等级</th><th>判断原因</th></tr></thead>
+            <tbody>${users.length ? users.map((user, index) => {
+              const displayCmp = periodDisplayCmp(user) || {};
+              const riskCmp = periodRiskCmp(user) || displayCmp;
+              const expanded = state.detailExpandedUserId === String(user.id || "");
+              const trendText = user.consecutiveNoOrderDays >= 3 ? `连续${user.consecutiveNoOrderDays}天无单` : `近7天 ${pctValue(user.recent7Cmp?.ratio)}`;
+              const reason = state.detailScope === "seven"
+                ? [riskCmp.reason, user.sustainedDecline ? "本周和上周连续下降" : ""].filter(Boolean).join("；")
+                : (user.cmp?.reason || riskCmp.reason || "-");
+              return `<tr>
+                <td>${index + 1}</td>
+                <td class="user-cell"><button class="user-toggle" data-detail-user-toggle="${user.id || ""}">${expanded ? "▾" : "›"} ${user.name}</button><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
+                <td>${fmt(displayCmp.today)}</td>
+                <td>${fmtValue(displayCmp.base)}</td>
+                <td class="${displayCmp.diff < 0 ? "down" : displayCmp.diff > 0 ? "up" : ""}">${pctValue(displayCmp.ratio)}</td>
+                <td>${fmtValue(riskCmp.impact)}</td>
+                <td>${trendText}</td>
+                <td>${tag(riskCmp.level, riskCmp.label)}</td>
+                <td>${reason}</td>
+              </tr>${expanded ? `<tr><td></td><td colspan="8" class="expanded-detail"><div class="expanded-metrics">
+                <span>本周 <strong>${fmt(user.weekOrders)}</strong></span><span>上周同期 <strong>${fmt(user.lastWeekSamePeriodOrders)}</strong></span><span>变化 <strong>${pctValue(user.weekCmp?.ratio)}</strong></span>
+                <span>上周完整 <strong>${fmt(user.lastWeekOrders)}</strong></span><span>上上周 <strong>${fmt(user.prevWeekOrders)}</strong></span><span>变化 <strong>${pctValue(user.lastWeekCmp?.ratio)}</strong></span>
+                <span>本月 <strong>${fmt(user.monthOrders)}</strong></span><span>上月同期 <strong>${fmt(user.prevMonthOrders)}</strong></span><span>变化 <strong>${pctValue(user.monthCmp?.ratio)}</strong></span>
+              </div></td></tr>` : ""}`;
+            }).join("") : `<tr><td colspan="9" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
           </table>
         </div>`;
     }
@@ -1901,6 +1971,13 @@
     $("#cancelFocusAdd").addEventListener("click", closeFocusModal);
     $("#confirmFocusAdd").addEventListener("click", () => addFocusUser().catch(error => { $("#focusAddResult").textContent = error.message; toast(error.message); }));
     $("#detailBody").addEventListener("click", e => {
+      const userToggle = e.target.closest("[data-detail-user-toggle]");
+      if (userToggle) {
+        state.detailExpandedUserId = state.detailExpandedUserId === userToggle.dataset.detailUserToggle ? "" : userToggle.dataset.detailUserToggle;
+        const result = $("#detailResult");
+        if (result) result.innerHTML = renderDetailResult();
+        return;
+      }
       const detailSort = e.target.closest("[data-detail-sort]");
       if (detailSort) {
         state.detailSortDir = state.detailSort === detailSort.dataset.detailSort && state.detailSortDir === "desc" ? "asc" : "desc";
@@ -1912,6 +1989,7 @@
       const scope = e.target.closest("[data-detail-scope]");
       if (scope && state.detailRow) {
         state.detailScope = scope.dataset.detailScope;
+        state.detailExpandedUserId = "";
         state.detailHistory = null;
         state.detailMonthAnalysis = null;
         loadBusinessUsers(state.detailRow, false).catch(error => toast(error.message || "用户明细加载失败"));
