@@ -16,6 +16,9 @@ const SNAPSHOT_PATH = join(ROOT, "data/business-dashboard-snapshots.jsonl");
 const DASHBOARD_CACHE_PATH = join(ROOT, "data/business-dashboard-cache.json");
 const USER_PHONE_INDEX_PATH = join(ROOT, "data/user-phone-index.json");
 const USER_DETAIL_CACHE_PATH = join(ROOT, "data/business-user-detail-cache.json");
+const FOCUS_USERS_PATH = join(ROOT, "data/business-focus-users.json");
+const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.json");
+const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
 const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.json");
 const USER_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.username";
 const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
@@ -38,6 +41,9 @@ let lastOperationalAlert = { key: "", at: 0 };
 let startupWarmupRunning = false;
 let publicHistoryWarmupRunning = false;
 let detailCacheSaveTimer = null;
+let requestStatsSaveTimer = null;
+let requestStats = { day: dayKey(), total: 0, byPath: {}, byName: {}, updatedAt: "" };
+let userRefreshState = { scheduledRuns: {}, top100: {} };
 
 const defaultConfig = {
   rules: {
@@ -52,6 +58,8 @@ const defaultConfig = {
   },
   refreshSeconds: 60,
   snapshotMinutes: 30,
+  userRefreshTimes: ["12:00", "17:00", "22:00"],
+  fastUserBusinessIds: [],
   notification: {
     mode: "immediate",
     criticalImmediate: true,
@@ -305,9 +313,35 @@ async function writeConfig(nextConfig) {
     notification: { ...defaultConfig.notification, ...(nextConfig.notification || {}) },
     public: { ...defaultConfig.public, ...(nextConfig.public || {}) }
   };
+  config.userRefreshTimes = normalizeRefreshTimes(config.userRefreshTimes);
+  config.fastUserBusinessIds = Array.from(new Set((config.fastUserBusinessIds || []).map(String).filter(Boolean)));
   await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
   scheduleSnapshots();
   return config;
+}
+
+function normalizeRefreshTimes(value) {
+  const source = Array.isArray(value) ? value : String(value || "").split(/[,，\s]+/);
+  return Array.from(new Set(source.map(item => String(item).trim()).filter(item => /^([01]\d|2[0-3]):[0-5]\d$/.test(item)))).sort();
+}
+
+function scheduleJsonWrite(path, getValue, timerName) {
+  if (timerName === "requests" && requestStatsSaveTimer) return;
+  if (timerName === "requests") requestStatsSaveTimer = setTimeout(async () => {
+    requestStatsSaveTimer = null;
+    await mkdir(join(ROOT, "data"), { recursive: true });
+    await writeFile(path, JSON.stringify(getValue(), null, 2));
+  }, 1000);
+}
+
+function recordApiRequest(name, path) {
+  const today = dayKey();
+  if (requestStats.day !== today) requestStats = { day: today, total: 0, byPath: {}, byName: {}, updatedAt: "" };
+  requestStats.total += 1;
+  requestStats.byPath[path] = number(requestStats.byPath[path]) + 1;
+  requestStats.byName[name] = number(requestStats.byName[name]) + 1;
+  requestStats.updatedAt = nowText();
+  scheduleJsonWrite(API_REQUEST_STATS_PATH, () => requestStats, "requests");
 }
 
 async function fetchWithTimeout(url, options = {}, ms = 12000) {
@@ -332,6 +366,7 @@ async function login() {
 
 async function apiCall(name, method, path, data, timeoutMs = 12000) {
   const startedAt = Date.now();
+  recordApiRequest(name, path);
   try {
     const auth = await login();
     const url = new URL(`${BASE_URL}${path}`);
@@ -883,8 +918,8 @@ function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
   return merged.sort((a, b) => number(b.todayOrders) - number(a.todayOrders) || String(a.platform).localeCompare(String(b.platform), "zh-CN") || String(a.name).localeCompare(String(b.name), "zh-CN"));
 }
 
-async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 1, pageSize = 100, sortField = "", sortOrder = "", refresh = false }, statuses = []) {
-  const cacheKey = JSON.stringify({ businessId, startDate, endDate, page, pageSize, sortField, sortOrder });
+async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 1, pageSize = 100, sortField = "", sortOrder = "", refresh = false, includePrevious = true }, statuses = []) {
+  const cacheKey = JSON.stringify({ businessId, startDate, endDate, page, pageSize, sortField, sortOrder, includePrevious });
   if (!refresh && userDetailCache.has(cacheKey)) {
     const cached = userDetailCache.get(cacheKey);
     statuses.push({ name: "业务用户缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
@@ -914,7 +949,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
   }
   let previousById = {};
-  if (businessId) {
+  if (businessId && includePrevious) {
     const periodDays = dayList(startDate, endDate).length;
     const previousEnd = shiftDay(startDate, -1);
     const previousStart = shiftDay(previousEnd, -(periodDays - 1));
@@ -996,13 +1031,64 @@ async function warmBusinessUserDetails(businesses, dateRange, { refresh = false 
   console.log(`[${nowText()}] 已预热业务用户明细缓存：${warmed}/${rows.length}`);
 }
 
+async function loadUserRefreshState() {
+  try {
+    userRefreshState = JSON.parse(await readFile(USER_REFRESH_STATE_PATH, "utf8"));
+  } catch {
+    userRefreshState = { scheduledRuns: {}, top100: {} };
+  }
+  userRefreshState.scheduledRuns ||= {};
+  userRefreshState.top100 ||= {};
+}
+
+async function saveUserRefreshState() {
+  await mkdir(join(ROOT, "data"), { recursive: true });
+  await writeFile(USER_REFRESH_STATE_PATH, JSON.stringify(userRefreshState, null, 2));
+}
+
+async function warmTopBusinessUsers(businesses, dateRange, config) {
+  const enabled = new Set((config.fastUserBusinessIds || []).map(String));
+  const rows = (businesses || []).filter(row => enabled.has(String(row.businessId)) || enabled.has(String(row.platformBusinessId)));
+  if (!rows.length) return { businesses: 0, users: 0, newTop100: 0 };
+  let users = 0;
+  let newTop100 = 0;
+  await mapLimit(rows, 3, async row => {
+    const businessId = String(row.platformBusinessId || row.businessId || "");
+    const statuses = [];
+    const result = await fetchBusinessUsers({
+      businessId,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+      page: 1,
+      pageSize: 100,
+      sortField: dateRange.endDate,
+      sortOrder: "desc",
+      refresh: true,
+      includePrevious: false
+    }, statuses);
+    const previousIds = new Set(userRefreshState.top100[businessId]?.ids || []);
+    const entered = (result.rows || []).filter(user => !previousIds.has(String(user.id))).map(user => String(user.id));
+    userRefreshState.top100[businessId] = {
+      ids: (result.rows || []).map(user => String(user.id)),
+      entered: Object.fromEntries(entered.map(id => [id, nowText()])),
+      updatedAt: new Date().toISOString(),
+      updatedAtText: nowText()
+    };
+    users += result.rows?.length || 0;
+    newTop100 += previousIds.size ? entered.length : 0;
+  });
+  await saveUserRefreshState();
+  console.log(`[${nowText()}] 已刷新高频业务用户前100：${rows.length} 个业务，${users} 个用户，新进 ${newTop100} 人。`);
+  return { businesses: rows.length, users, newTop100 };
+}
+
 function publicHistoryRange() {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   return { startDate: dayKey(start), endDate: dayKey(today) };
 }
 
-async function warmBusinessUserHistories(businesses) {
+async function warmBusinessUserHistories(businesses, { refresh = false } = {}) {
   if (publicHistoryWarmupRunning) return;
   publicHistoryWarmupRunning = true;
   const rows = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
@@ -1019,7 +1105,7 @@ async function warmBusinessUserHistories(businesses) {
           endDate: range.endDate,
           pageSize: 5000,
           enrichPhones: false,
-          refresh: false
+          refresh
         }, statuses);
         warmed += 1;
       } catch (error) {
@@ -1036,14 +1122,15 @@ async function warmStartupData() {
   if (startupWarmupRunning) return;
   startupWarmupRunning = true;
   try {
-    console.log(`[${nowText()}] 开始启动预热：用户索引、今日业务、用户明细缓存`);
+    console.log(`[${nowText()}] 开始启动预热：用户索引、今日业务和本地用户缓存`);
     const loadedDetailCache = await loadUserDetailCacheFromDisk();
     if (loadedDetailCache) console.log(`[${nowText()}] 已加载本地用户明细缓存：${userDetailCache.size} 条`);
+    await loadUserRefreshState();
     await ensureUserPhoneIndex();
     const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
     const data = await liveDashboard({ recordSnapshot: false, query: { preset: "today", start_date: dateRange.startDate, end_date: dateRange.endDate, force: "1" } });
-    await warmBusinessUserDetails(data.businesses, dateRange);
-    warmBusinessUserHistories(data.businesses).catch(error => console.error(`[${nowText()}] 启动预热用户历史失败：${error.message}`));
+    const config = await readConfig();
+    await warmTopBusinessUsers(data.businesses, dateRange, config);
     console.log(`[${nowText()}] 启动预热完成`);
   } catch (error) {
     console.error(`[${nowText()}] 启动预热失败：${error.message}`);
@@ -1262,7 +1349,6 @@ async function maybeRecordSnapshot(businesses, users, force = false, businessDai
     return false;
   }
   const dateRange = rangeFromQuery();
-  await warmBusinessUserDetails(businesses, dateRange);
   const previousSnapshot = recentSnapshots.at(-1) || null;
   await mkdir(join(ROOT, "data"), { recursive: true });
   const snapshot = {
@@ -1287,6 +1373,32 @@ async function maybeRecordSnapshot(businesses, users, force = false, businessDai
       notifyOperationalIssue("公开看板推送失败", error.message, config).catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
     });
   }
+  return true;
+}
+
+function currentRefreshTime(config, date = new Date()) {
+  const minute = minuteOfDay(date);
+  const width = Math.max(10, number(config.snapshotMinutes || 10));
+  return normalizeRefreshTimes(config.userRefreshTimes).find(value => {
+    const [hour, minutes] = value.split(":").map(Number);
+    const target = hour * 60 + minutes;
+    return minute >= target && minute < target + width;
+  }) || "";
+}
+
+async function runScheduledUserRefresh(businesses, config) {
+  const time = currentRefreshTime(config);
+  if (!time) return false;
+  const key = `${dayKey()} ${time}`;
+  if (userRefreshState.scheduledRuns[key]) return false;
+  const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
+  console.log(`[${nowText()}] 开始固定时段全量用户更新：${time}`);
+  await warmBusinessUserDetails(businesses, dateRange, { refresh: true });
+  await warmBusinessUserHistories(businesses, { refresh: true });
+  userRefreshState.scheduledRuns = Object.fromEntries(Object.entries(userRefreshState.scheduledRuns).filter(([item]) => item.startsWith(dayKey())));
+  userRefreshState.scheduledRuns[key] = nowText();
+  await saveUserRefreshState();
+  console.log(`[${nowText()}] 固定时段全量用户更新完成：${time}`);
   return true;
 }
 
@@ -1340,9 +1452,13 @@ async function scheduleSnapshots() {
     const slot = snapshotSlot(new Date(), intervalMinutes);
     try {
       const data = await liveDashboard({ recordSnapshot: false });
+      const currentConfig = await readConfig();
       if (data.source?.missing?.length) {
-        await notifyOperationalIssue("快照异常：接口数据缺失", data.source.missing.join("；"), config);
+        await notifyOperationalIssue("快照异常：接口数据缺失", data.source.missing.join("；"), currentConfig);
       }
+      const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
+      await warmTopBusinessUsers(data.businesses, dateRange, currentConfig);
+      await runScheduledUserRefresh(data.businesses, currentConfig);
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { slot });
       console.log(`[${nowText()}] ${recorded ? `已记录业务用户快照：${slot.label}` : `跳过重复快照：${slot.label}`}`);
     } catch (error) {
