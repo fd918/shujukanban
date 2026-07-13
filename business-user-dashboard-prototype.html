@@ -8,7 +8,7 @@
     (() => {
       const params = new URLSearchParams(location.search);
       if (params.get("embed") !== "1" && window.top === window.self) {
-        location.replace(new URL("index.html#business", location.href).toString());
+        location.replace(new URL(params.get("view") === "focus" ? "index.html#focus" : "index.html#business", location.href).toString());
       }
     })();
   </script>
@@ -335,8 +335,8 @@
 <body>
   <header class="topbar">
     <div>
-      <h1>业务异常监控</h1>
-      <p class="subtitle">默认展示今日业务订单，支持筛选异常业务并下钻定位异常客户。</p>
+      <h1 id="pageTitle">业务异常监控</h1>
+      <p class="subtitle" id="pageSubtitle">默认展示今日业务订单，支持筛选异常业务并下钻定位异常客户。</p>
     </div>
     <div class="top-actions">
       <div><strong id="latestTime">最新数据：等待刷新</strong><span id="snapshotInfo">快照：等待记录</span></div>
@@ -392,7 +392,6 @@
           <div class="segmented" id="viewTabs">
             <button class="active" data-view="list">业务列表</button>
             <button data-view="daily">每日业务数据</button>
-            <button data-view="focus">重点用户</button>
           </div>
           <div class="daily-controls" id="dailyControls">
             <input class="field" id="dailyStart" type="date" title="每日数据开始日期">
@@ -557,7 +556,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -878,8 +877,12 @@
     }
 
     function renderLocalControls() {
+      const focusMode = state.view === "focus";
+      $("#pageTitle").textContent = focusMode ? "重点用户看板" : "业务异常监控";
+      $("#pageSubtitle").textContent = focusMode ? "跨平台、跨业务集中关注特殊用户的订单变化。" : "默认展示今日业务订单，支持筛选异常业务并下钻定位异常客户。";
       $("#settingsBtn").classList.toggle("hidden", !isLocalSettings);
       $("#dailyControls").classList.toggle("open", state.view === "daily");
+      $("#viewTabs").classList.toggle("hidden", focusMode);
       $(".filters").classList.toggle("hidden", state.view !== "list");
       $("#levelTabs").classList.toggle("hidden", state.view !== "list");
       $("#metricTabs").classList.toggle("hidden", state.view === "focus");
@@ -1189,7 +1192,8 @@
         fillSettings();
         render();
         syncOpenDetailAfterDataUpdate(previousDataTime, true);
-        loadBusinessTrend(manual);
+        if (state.view === "focus") await loadFocusUsers();
+        else loadBusinessTrend(manual);
         if (manual) toast("数据已刷新");
       } catch (error) {
         const publicLoaded = await loadPublicSnapshot();
