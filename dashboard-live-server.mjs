@@ -896,10 +896,47 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
       if (plainPhone) row.phone = plainPhone;
     });
   }
-  const payload = { ok: result.ok, total, dates, rows };
+  const payload = { ok: result.ok, savedAtText: nowText(), total, dates, rows };
   userDetailCache.set(cacheKey, payload);
   scheduleUserDetailCacheSave();
   return payload;
+}
+
+async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
+  const history = await fetchBusinessUserHistory({
+    businessId,
+    startDate,
+    endDate,
+    pageSize,
+    refresh,
+    enrichPhones: true
+  }, statuses);
+  const snapshots = await readSnapshots();
+  const todayRows = (history.rows || []).map(row => ({
+    ...row,
+    todayOrders: number(row.days?.[endDate]),
+    yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)])
+  }));
+  const users = enrichBusinessUsersWithSnapshots(todayRows, snapshots, businessId, rangeFromQuery({ start_date: endDate, end_date: endDate }));
+  const topState = userRefreshState.top100[String(businessId)] || {};
+  users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
+  const latestDataTime = history.savedAtText || userDetailCacheSavedAtText || "-";
+  return {
+    ok: history.ok,
+    cached: Boolean(history.cached),
+    latestDataTime,
+    total: history.total,
+    userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0),
+    users,
+    history: {
+      ok: history.ok,
+      cached: Boolean(history.cached),
+      latestDataTime,
+      dates: history.dates,
+      rows: history.rows,
+      total: history.total
+    }
+  };
 }
 
 function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
@@ -1004,6 +1041,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   });
   const payload = {
     ok: result.ok,
+    savedAtText: nowText(),
     total,
     page: number(result.data?.page || page),
     pageSize: perPage,
@@ -1096,7 +1134,7 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
 
 function publicHistoryRange() {
   const today = new Date();
-  const start = addDays(today, -59);
+  const start = addDays(today, -64);
   return { startDate: dayKey(start), endDate: dayKey(today) };
 }
 
@@ -1894,6 +1932,19 @@ const server = createServer(async (req, res) => {
   if (req.method === "OPTIONS") return json(res, 204, {});
   try {
     if (url.pathname === "/api/live-dashboard") return json(res, 200, await liveDashboard({ recordSnapshot: false, query: Object.fromEntries(url.searchParams.entries()) }));
+    if (url.pathname === "/api/business-users-sync") {
+      const statuses = [];
+      const endDate = parseDay(url.searchParams.get("end_date") || dayKey());
+      const startDate = parseDay(url.searchParams.get("start_date") || shiftDay(endDate, -64));
+      const result = await fetchSynchronizedBusinessUsers({
+        businessId: url.searchParams.get("business_id") || "",
+        startDate,
+        endDate,
+        pageSize: number(url.searchParams.get("page_size")) || 5000,
+        refresh: url.searchParams.get("refresh") === "1"
+      }, statuses);
+      return json(res, 200, { ...result, source: { statuses } });
+    }
     if (url.pathname === "/api/business-users") {
       const statuses = [];
       const startDate = parseDay(url.searchParams.get("start_date") || dayKey());
@@ -1912,7 +1963,7 @@ const server = createServer(async (req, res) => {
       const users = enrichBusinessUsersWithSnapshots(result.rows, snapshots, url.searchParams.get("business_id") || "", rangeFromQuery({ start_date: startDate, end_date: endDate }));
       const topState = userRefreshState.top100[String(url.searchParams.get("business_id") || "")] || {};
       users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
-      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: topState.updatedAtText || nowText(), users, total: result.total, userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0), page: result.page, pageSize: result.pageSize, source: { statuses } });
+      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: result.savedAtText || topState.updatedAtText || userDetailCacheSavedAtText || "-", users, total: result.total, userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0), page: result.page, pageSize: result.pageSize, source: { statuses } });
     }
     if (url.pathname === "/api/business-users-history") {
       const statuses = [];
@@ -1925,7 +1976,7 @@ const server = createServer(async (req, res) => {
         pageSize: number(url.searchParams.get("page_size")) || 5000,
         refresh: url.searchParams.get("refresh") === "1"
       }, statuses);
-      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: nowText(), dates: result.dates, rows: result.rows, total: result.total, source: { statuses } });
+      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: result.savedAtText || userDetailCacheSavedAtText || "-", dates: result.dates, rows: result.rows, total: result.total, source: { statuses } });
     }
     if (url.pathname === "/api/config" && req.method === "GET") return json(res, 200, await getPublicConfig());
     if (url.pathname === "/api/config" && req.method === "POST") return json(res, 200, { ok: true, config: await saveConfig(await readBody(req)) });
