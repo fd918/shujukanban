@@ -499,7 +499,7 @@
         <strong>用户流失分析：</strong>用户列表默认展示“流失风险 + 近7天”。今日对比昨日同时刻，近7天对比前7天，本月截至今天对比上月相同日期进度；连续3天无订单、近7天下降、月度同期下降和连续两周下降会形成风险原因。点击用户名称可展开周/月明细。
       </section>
       <section class="source">
-        <strong>本次更新时间：</strong>业务订单和小时趋势每 10 分钟更新；业务行开启“用户高频更新”后，该业务前100用户每 10 分钟更新，其他业务按设置中心的固定时间更新全量用户。用户历史也只在固定时间更新。公网发布直接使用已保存缓存，不会再次请求中台。
+        <strong>本次更新时间：</strong>业务订单和小时趋势每 10 分钟更新；业务行开启“用户高频更新”后，该业务前100用户每 10 分钟更新，其他业务按设置中心的固定时间更新全量用户。用户弹窗的今日、近7天和本月共用同一批全量用户数据和同一个数据时间；“刷新用户”只分页刷新当前业务，不刷新其他业务。公网发布直接使用已保存缓存，不会再次请求中台。
       </section>
       <section class="source">
         <strong>重点用户：</strong>按平台、业务和用户ID添加。重点用户集中展示每日订单；今日订单对比昨日同时刻，缺少昨日同时刻快照时显示“-”。本月合计对比上月同期，避免用未结束的本月对比完整上月。
@@ -562,7 +562,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -1196,7 +1196,7 @@
         state.refreshing = false;
         fillSettings();
         render();
-        syncOpenDetailAfterDataUpdate(previousDataTime, true);
+        syncOpenDetailAfterDataUpdate(previousDataTime, false);
         if (state.view === "focus") await loadFocusUsers();
         else loadBusinessTrend(manual);
         if (manual) toast("数据已刷新");
@@ -1416,6 +1416,8 @@
       state.detailHistoryStart = "";
       state.detailHistoryEnd = "";
       state.detailMonthAnalysis = null;
+      state.detailSyncedData = null;
+      state.detailSyncedBusinessId = "";
       state.detailStats = null;
       state.detailRefreshing = false;
       state.detailLoadingLabel = "";
@@ -1438,61 +1440,78 @@
         loadBusinessUserHistory(forceRefresh).catch(error => toast(error.message || "用户历史刷新失败"));
         return;
       }
-      if (state.detailScope === "month") state.detailMonthAnalysis = null;
+      state.detailSyncedData = null;
+      state.detailSyncedBusinessId = "";
       loadBusinessUsers(state.detailRow, forceRefresh).catch(error => toast(error.message || "用户明细刷新失败"));
     }
 
+    function applySynchronizedUserData(data, row, cached = false) {
+      const today = dayText(new Date());
+      const historyRows = data.history?.rows || [];
+      const historyById = new Map(historyRows.map(user => [String(user.id || ""), user]));
+      const synchronizedById = new Map();
+      (data.users || []).forEach(user => synchronizedById.set(String(user.id || ""), user));
+      historyRows.forEach(user => {
+        const id = String(user.id || "");
+        if (id && !synchronizedById.has(id)) synchronizedById.set(id, user);
+      });
+      const synchronizedUsers = [...synchronizedById.values()];
+      state.detailUsers = synchronizedUsers.map(user => {
+        const historyUser = historyById.get(String(user.id || ""));
+        const synced = historyUser ? {
+          ...historyUser,
+          ...user,
+          days: historyUser.days,
+          todayOrders: Number(historyUser.days?.[today] || 0)
+        } : user;
+        return { ...synced, cmp: compareDetailUser(synced) };
+      }).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || Number(b.cmp.impact || 0) - Number(a.cmp.impact || 0));
+      state.detailMonthAnalysis = buildMonthAnalysis(data.history || { rows: [] });
+      state.detailStats = { total: data.total || state.detailUsers.length, userOrderSum: state.detailUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0) };
+      state.detailLatestTime = data.latestDataTime || data.history?.latestDataTime || "-";
+      state.detailSyncedData = data;
+      state.detailSyncedBusinessId = String(row.platformBusinessId || row.businessId || "");
+      state.detailRefreshing = false;
+      state.detailLoadingLabel = "";
+      renderDetail(cached);
+    }
+
     async function loadBusinessUsers(row, refresh = false) {
-      if (state.detailScope === "seven" || state.detailScope === "month") {
-        await loadDetailMonthAnalysis(row, refresh);
-        return;
-      }
-      const cacheKey = detailCacheKey(row);
-      const cachedDetail = state.detailCache[cacheKey];
-      if (!refresh && cachedDetail) {
-        state.detailUsers = cachedDetail.users;
-        state.detailStats = cachedDetail.stats;
-        state.detailLatestTime = cachedDetail.latestTime;
-        state.detailRefreshing = false;
-        state.detailLoadingLabel = "";
-        renderDetail(true);
+      const businessId = String(row.platformBusinessId || row.businessId || "");
+      if (!refresh && state.detailSyncedData && state.detailSyncedBusinessId === businessId) {
+        applySynchronizedUserData(state.detailSyncedData, row, true);
         return;
       }
       if (state.publicMode) {
         const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || { rows: [] };
-        state.detailUsers = (detail.rows || []).map(user => ({ ...user, cmp: compareDetailUser(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
-        state.detailStats = { total: detail.total || state.detailUsers.length, userOrderSum: state.detailUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0) };
-        state.detailLatestTime = detail.latestDataTime || state.source.latestDataTime || "";
-        state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
-        renderDetail(true);
+        applySynchronizedUserData({
+          users: detail.rows || [],
+          history: detail.history || { rows: [], dates: [] },
+          total: detail.total || detail.rows?.length || 0,
+          latestDataTime: detail.history?.latestDataTime || detail.latestDataTime || state.source.latestDataTime || "-"
+        }, row, true);
         return;
       }
       state.detailRefreshing = true;
-      state.detailLoadingLabel = `${detailScopeLabel()}用户`;
+      state.detailLoadingLabel = "全部用户数据";
       if (state.detailUsers.length > 0) renderDetail(false);
-      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在从中台按当前业务拉取用户明细；首次加载会自动翻页并补齐明文手机号，之后默认使用缓存，点“刷新用户”才重新请求。</section>`;
+      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在读取当前业务的同步用户缓存；点击“刷新用户”时会分页更新该业务全部用户，今日、近7天和本月共用同一批数据。</section>`;
       const today = dayText(new Date());
-      const scopeRange = rangeForDetailScope();
+      const start = new Date();
+      start.setDate(start.getDate() - 64);
       const params = new URLSearchParams({
-        business_id: row.platformBusinessId || row.businessId || "",
-        start_date: scopeRange.startDate || state.dateRange?.startDate || today,
-        end_date: scopeRange.endDate || state.dateRange?.endDate || today,
-        page_size: Math.min(5000, Math.max(500, Number(row.users || row.userIds?.length || 0) + 50)),
-        sort_field: scopeRange.startDate === scopeRange.endDate ? scopeRange.endDate : "period_total",
-        sort_order: "desc",
+        business_id: businessId,
+        start_date: dayText(start),
+        end_date: today,
+        page_size: 5000,
         refresh: refresh ? "1" : "0",
         _: Date.now()
       });
       try {
-        const res = await fetch(apiUrl(`/api/business-users?${params.toString()}`));
+        const res = await fetch(apiUrl(`/api/business-users-sync?${params.toString()}`));
         const data = await res.json();
-        state.detailUsers = (data.users || []).map(user => ({ ...user, cmp: compareDetailUser(user) })).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
-        state.detailStats = { total: data.total, userOrderSum: data.userOrderSum };
-        state.detailLatestTime = data.latestDataTime || "";
-        state.detailRefreshing = false;
-        state.detailLoadingLabel = "";
-        state.detailCache[cacheKey] = { users: state.detailUsers, stats: state.detailStats, latestTime: state.detailLatestTime };
-        renderDetail(data.cached);
+        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || `用户同步失败：HTTP ${res.status}`);
+        applySynchronizedUserData(data, row, Boolean(data.cached));
       } catch (error) {
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";

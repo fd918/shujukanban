@@ -902,6 +902,33 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
   return payload;
 }
 
+function deduplicateBusinessUsers(rows = []) {
+  const users = new Map();
+  for (const row of rows) {
+    const id = String(row.id || "");
+    if (!id) continue;
+    const current = users.get(id);
+    if (!current) {
+      users.set(id, { ...row, days: { ...(row.days || {}) } });
+      continue;
+    }
+    const days = { ...(current.days || {}) };
+    for (const [date, value] of Object.entries(row.days || {})) {
+      days[date] = Math.max(number(days[date]), number(value));
+    }
+    users.set(id, {
+      ...current,
+      ...row,
+      phone: current.phone || row.phone,
+      version: current.version || row.version,
+      todayOrders: Math.max(number(current.todayOrders), number(row.todayOrders)),
+      yesterdayOrders: Math.max(number(current.yesterdayOrders), number(row.yesterdayOrders)),
+      days
+    });
+  }
+  return [...users.values()];
+}
+
 async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
   const history = await fetchBusinessUserHistory({
     businessId,
@@ -912,7 +939,8 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     enrichPhones: true
   }, statuses);
   const snapshots = await readSnapshots();
-  const todayRows = (history.rows || []).map(row => ({
+  const historyRows = deduplicateBusinessUsers(history.rows || []);
+  const todayRows = historyRows.map(row => ({
     ...row,
     todayOrders: number(row.days?.[endDate]),
     yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)])
@@ -933,7 +961,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
       cached: Boolean(history.cached),
       latestDataTime,
       dates: history.dates,
-      rows: history.rows,
+      rows: historyRows,
       total: history.total
     }
   };
@@ -1766,7 +1794,7 @@ async function encryptedPublicUserDetails(dateRange) {
       if (key.type === "history") {
         details[id] = details[id] || {};
         details[id].history = {
-          latestDataTime: nowText(),
+          latestDataTime: payload.savedAtText || "-",
           total: payload.total || payload.rows?.length || 0,
           dates: payload.dates || [],
           rows: payload.rows || []
@@ -1777,7 +1805,7 @@ async function encryptedPublicUserDetails(dateRange) {
       const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange);
       details[id] = {
         ...(details[id] || {}),
-        latestDataTime: nowText(),
+        latestDataTime: payload.savedAtText || "-",
         total: payload.total || rows.length,
         rows
       };
@@ -1787,6 +1815,8 @@ async function encryptedPublicUserDetails(dateRange) {
   }
   for (const detail of Object.values(details)) {
     if (!detail?.history?.rows?.length || !detail?.rows?.length) continue;
+    detail.rows = deduplicateBusinessUsers(detail.rows);
+    detail.history.rows = deduplicateBusinessUsers(detail.history.rows);
     const today = dateRange.endDate;
     if (!detail.history.dates.includes(today)) detail.history.dates.push(today);
     const currentById = new Map(detail.rows.map(row => [String(row.id || ""), row]));
