@@ -33,6 +33,7 @@ let lastSnapshotAt = 0;
 let lastSnapshotSlotKey = "";
 let lastGood = { businesses: [], users: [], summary: null, hourlyTrend: [] };
 const userDetailCache = new Map();
+let userDetailCacheSavedAtText = "";
 const userPhoneCache = new Map();
 const userProfileCache = new Map();
 let userPhoneIndexLoadedAt = 0;
@@ -344,6 +345,13 @@ function recordApiRequest(name, path) {
   scheduleJsonWrite(API_REQUEST_STATS_PATH, () => requestStats, "requests");
 }
 
+async function loadRequestStats() {
+  try {
+    const saved = JSON.parse(await readFile(API_REQUEST_STATS_PATH, "utf8"));
+    if (saved.day === dayKey()) requestStats = saved;
+  } catch {}
+}
+
 async function fetchWithTimeout(url, options = {}, ms = 12000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), ms);
@@ -525,6 +533,7 @@ async function loadUserDetailCacheFromDisk() {
     Object.entries(saved.items || {}).forEach(([key, value]) => {
       if (Array.isArray(value?.rows)) userDetailCache.set(key, value);
     });
+    userDetailCacheSavedAtText = saved.savedAtText || "";
     return userDetailCache.size > 0;
   } catch {
     return false;
@@ -534,9 +543,10 @@ async function loadUserDetailCacheFromDisk() {
 async function writeUserDetailCacheToDisk() {
   await mkdir(join(ROOT, "data"), { recursive: true });
   const entries = Array.from(userDetailCache.entries()).slice(-300);
+  userDetailCacheSavedAtText = nowText();
   await writeFile(USER_DETAIL_CACHE_PATH, JSON.stringify({
     savedAt: new Date().toISOString(),
-    savedAtText: nowText(),
+    savedAtText: userDetailCacheSavedAtText,
     items: Object.fromEntries(entries)
   }, null, 2));
 }
@@ -1068,9 +1078,11 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
     }, statuses);
     const previousIds = new Set(userRefreshState.top100[businessId]?.ids || []);
     const entered = (result.rows || []).filter(user => !previousIds.has(String(user.id))).map(user => String(user.id));
+    const enteredToday = { ...(userRefreshState.top100[businessId]?.entered || {}) };
+    entered.forEach(id => { enteredToday[id] = nowText(); });
     userRefreshState.top100[businessId] = {
       ids: (result.rows || []).map(user => String(user.id)),
-      entered: Object.fromEntries(entered.map(id => [id, nowText()])),
+      entered: enteredToday,
       updatedAt: new Date().toISOString(),
       updatedAtText: nowText()
     };
@@ -1084,7 +1096,7 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
 
 function publicHistoryRange() {
   const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const start = addDays(today, -59);
   return { startDate: dayKey(start), endDate: dayKey(today) };
 }
 
@@ -1126,6 +1138,7 @@ async function warmStartupData() {
     const loadedDetailCache = await loadUserDetailCacheFromDisk();
     if (loadedDetailCache) console.log(`[${nowText()}] 已加载本地用户明细缓存：${userDetailCache.size} 条`);
     await loadUserRefreshState();
+    await loadRequestStats();
     await ensureUserPhoneIndex();
     const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
     const data = await liveDashboard({ recordSnapshot: false, query: { preset: "today", start_date: dateRange.startDate, end_date: dateRange.endDate, force: "1" } });
@@ -1551,26 +1564,33 @@ function focusRange(query = {}) {
   if (preset === "week") {
     const current = dateFromDay(today);
     const offset = (current.getDay() + 6) % 7;
-    return { preset, startDate: shiftDay(today, -offset), endDate: today, label: "本周" };
+    const startDate = shiftDay(today, -offset);
+    return { preset, startDate, endDate: today, comparisonStartDate: shiftDay(startDate, -7), comparisonEndDate: shiftDay(today, -7), label: "本周" };
   }
-  if (preset === "7") return { preset, startDate: shiftDay(today, -6), endDate: today, label: "近7天" };
-  if (preset === "30") return { preset, startDate: shiftDay(today, -29), endDate: today, label: "近30天" };
-  return { preset: "month", startDate: dayKey(new Date(dateFromDay(today).getFullYear(), dateFromDay(today).getMonth(), 1)), endDate: today, label: "本月" };
+  if (preset === "7") return { preset, startDate: shiftDay(today, -6), endDate: today, comparisonStartDate: shiftDay(today, -13), comparisonEndDate: shiftDay(today, -7), label: "近7天" };
+  if (preset === "30") return { preset, startDate: shiftDay(today, -29), endDate: today, comparisonStartDate: shiftDay(today, -59), comparisonEndDate: shiftDay(today, -30), label: "近30天" };
+  const current = dateFromDay(today);
+  const startDate = dayKey(new Date(current.getFullYear(), current.getMonth(), 1));
+  const comparisonStartDate = dayKey(new Date(current.getFullYear(), current.getMonth() - 1, 1));
+  const comparisonMonthEnd = new Date(current.getFullYear(), current.getMonth(), 0).getDate();
+  const comparisonEndDate = dayKey(new Date(current.getFullYear(), current.getMonth() - 1, Math.min(current.getDate(), comparisonMonthEnd)));
+  return { preset: "month", startDate, endDate: today, comparisonStartDate, comparisonEndDate, label: "本月" };
 }
 
 async function buildFocusUsers(query = {}) {
   const saved = await readFocusUsers();
   const range = focusRange(query);
   const dates = dayList(range.startDate, range.endDate);
-  const previousEnd = shiftDay(range.startDate, -1);
-  const previousStart = shiftDay(previousEnd, -(dates.length - 1));
-  const previousDates = dayList(previousStart, previousEnd);
+  const previousDates = dayList(range.comparisonStartDate, range.comparisonEndDate);
   const snapshots = await readSnapshots();
   const yesterday = nearestSnapshot(snapshots, shiftDay(dayKey(), -1), minuteOfDay());
   const rows = saved.items.map(item => {
     const cached = cachedUserForBusiness(item.businessId, item.userId) || {};
     const days = Object.fromEntries(dates.map(date => [date, number(cached.days?.[date])]));
-    if (dates.includes(dayKey())) days[dayKey()] = number(cached.todayOrders ?? days[dayKey()]);
+    if (dates.includes(dayKey())) {
+      const hasDailyToday = cached.days && Object.prototype.hasOwnProperty.call(cached.days, dayKey());
+      days[dayKey()] = hasDailyToday ? number(cached.days[dayKey()]) : number(cached.todayOrders ?? days[dayKey()]);
+    }
     const total = Object.values(days).reduce((sum, value) => sum + number(value), 0);
     const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(cached.days?.[date]), 0);
     const periodDiff = total - previousPeriodTotal;
@@ -1595,17 +1615,22 @@ async function buildFocusUsers(query = {}) {
       ratio,
       impact: diff === null ? null : Math.abs(diff),
       newTop100At: topState.entered?.[String(item.userId)] || "",
-      userDataTime: topState.updatedAtText || saved.updatedAtText || "-"
+      userDataTime: topState.updatedAtText || userDetailCacheSavedAtText || "-"
     };
   });
-  return { ok: true, range, dates, rows, total: rows.length, latestDataTime: saved.updatedAtText || nowText() };
+  return { ok: true, range, dates, rows, total: rows.length, latestDataTime: userDetailCacheSavedAtText || "-" };
 }
 
 async function addFocusUser(body) {
   const businessId = String(body.businessId || "");
   const userId = String(body.userId || "").trim();
   if (!businessId || !userId) throw new Error("请选择业务并填写用户ID。");
-  const business = (lastGood.businesses || []).find(row => String(row.platformBusinessId || row.businessId) === businessId || String(row.businessId) === businessId);
+  let businessRows = lastGood.businesses || [];
+  if (!businessRows.length) {
+    const cache = await readDashboardCache();
+    businessRows = latestValidDashboardCache(cache)?.[1]?.payload?.businesses || [];
+  }
+  const business = businessRows.find(row => String(row.platformBusinessId || row.businessId) === businessId || String(row.businessId) === businessId);
   if (!business) throw new Error("没有找到所选业务，请先刷新业务列表。");
   let user = cachedUserForBusiness(businessId, userId);
   if (!user) {

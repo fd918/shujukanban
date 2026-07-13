@@ -295,11 +295,19 @@
     .focus-group { display:flex; justify-content:space-between; width:100%; padding:9px 10px; margin-bottom:4px; border:1px solid transparent; background:transparent; color:var(--text); text-align:left; cursor:pointer; border-radius:6px; }
     .focus-group.active { color:var(--orange); background:#fff7ed; border-color:#fed7aa; }
     .focus-main { min-width:0; }
+    #focusView > .toolbar { flex-wrap:nowrap; }
+    #focusView > .toolbar .field { width:auto; min-width:140px; flex:1 1 180px; }
+    #focusView > .toolbar #focusSearch { flex-basis:220px; }
+    #focusView > .toolbar .segmented, #focusView > .toolbar .btn { flex:0 0 auto; }
     .focus-summary { padding:10px 14px; border-bottom:1px solid var(--line); color:var(--muted); }
     .focus-user { min-width:150px; }
     .focus-user strong, .focus-user span { display:block; }
     .focus-table th, .focus-table td { white-space:nowrap; }
     .focus-table .focus-user { white-space:normal; }
+    .focus-table th:nth-child(1), .focus-table td:nth-child(1) { position:sticky; left:0; z-index:3; background:#fff; width:48px; }
+    .focus-table th:nth-child(2), .focus-table td:nth-child(2) { position:sticky; left:48px; z-index:3; background:#fff; min-width:150px; }
+    .focus-table th:nth-child(3), .focus-table td:nth-child(3) { position:sticky; left:198px; z-index:3; background:#fff; min-width:190px; box-shadow:5px 0 8px rgba(15,23,42,.04); }
+    .focus-table th:nth-child(-n+3) { background:#f8fafc; z-index:4; }
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
     .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
@@ -319,6 +327,8 @@
       .focus-groups { border-right:0; border-bottom:1px solid var(--line); display:flex; gap:6px; overflow:auto; }
       .focus-group { width:auto; flex:0 0 auto; margin:0; }
       .focus-add-grid { grid-template-columns:1fr; }
+      #focusView > .toolbar { flex-wrap:wrap; }
+      #focusView > .toolbar .field, #focusView > .toolbar #focusSearch { flex:1 1 100%; }
     }
   </style>
 </head>
@@ -512,9 +522,10 @@
         <div class="setting"><strong>上升异常</strong><label>上升比例和增加订单同时达到，才算上升</label><div class="inline"><input class="field" id="upPct" type="number"><input class="field" id="upOrders" type="number"></div></div>
       </div>
       <div id="tabSnapshot" class="settings-grid hidden">
-        <div class="setting"><strong>页面自动刷新频率</strong><label>控制页面多久自动请求一次中台最新数据</label><select class="field" id="refreshSeconds"><option value="30">每 30 秒</option><option value="60">每 60 秒</option><option value="120">每 2 分钟</option><option value="300">每 5 分钟</option></select></div>
+        <div class="setting"><strong>页面自动检查频率</strong><label>页面只读取本机最新缓存，不额外请求中台；中台业务数据仍按快照频率更新</label><select class="field" id="refreshSeconds"><option value="30">每 30 秒</option><option value="60">每 60 秒</option><option value="120">每 2 分钟</option><option value="300">每 5 分钟</option></select></div>
         <div class="setting"><strong>快照记录频率</strong><label>用于生成昨日同时刻、上周同时刻和近7日同期均值</label><select class="field" id="snapshotMinutes"><option value="10">每 10 分钟</option><option value="30">每 30 分钟</option><option value="60">每 60 分钟</option></select></div>
         <div class="setting"><strong>全量用户更新时间</strong><label>关闭业务高频开关后，用户明细和历史在这些时间更新；可增加，使用逗号分隔</label><input class="field" id="userRefreshTimes" placeholder="12:00,17:00,22:00"></div>
+        <div class="setting"><strong>今日接口请求统计</strong><label>按中台接口累计实际请求，服务重启后仍保留当天记录</label><span id="requestStatsText">打开设置时读取...</span></div>
         <div class="setting"><strong>手动补记</strong><label>立即记录当前业务和用户快照</label><button class="btn primary" id="settingSnapshotBtn">立即记录快照</button></div>
       </div>
       <div id="tabAccount" class="settings-grid hidden">
@@ -546,7 +557,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "orders", detailSortDir: "desc", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -919,12 +930,14 @@
         renderTrendChart();
         return;
       }
+      if (!refresh && state.trendData && Date.now() - state.trendLoadedAt < 10 * 60 * 1000) return;
       state.trendLoading = true;
       renderTrendChart();
       try {
         const params = new URLSearchParams({ platform_business_id: state.trendBusinessId, _: Date.now() });
         const data = await requestJson(apiUrl(`/api/business-hourly-trend?${params.toString()}`));
         state.trendData = data;
+        state.trendLoadedAt = Date.now();
       } catch (error) {
         state.trendData = null;
         toast(error.message || "趋势加载失败");
@@ -938,7 +951,7 @@
       $("#latestTime").textContent = state.source.cached
         ? `缓存数据：${state.source.cacheSavedAt || state.source.latestDataTime || "未知时间"}`
         : (state.source.latestDataTime ? `最新数据：${state.source.latestDataTime}` : "最新数据：等待刷新");
-      $("#snapshotInfo").textContent = `自动刷新：${state.config?.refreshSeconds || 60} 秒｜快照：每 ${state.config?.snapshotMinutes || 30} 分钟`;
+      $("#snapshotInfo").textContent = `页面检查：${state.config?.refreshSeconds || 60} 秒｜业务更新：每 ${state.config?.snapshotMinutes || 30} 分钟`;
       const missing = state.source.missing || [];
       $("#sourceBox").classList.toggle("warn", missing.length > 0);
       $("#sourceText").textContent = state.loading
@@ -1057,6 +1070,7 @@
 
     async function loadFocusUsers() {
       if (state.publicMode) {
+        state.focusData = state.publicFocusUsers[state.focusRange] || state.publicFocusUsers.month || state.focusData;
         renderFocusUsers();
         return;
       }
@@ -1175,7 +1189,7 @@
         fillSettings();
         render();
         syncOpenDetailAfterDataUpdate(previousDataTime, true);
-        loadBusinessTrend(true);
+        loadBusinessTrend(manual);
         if (manual) toast("数据已刷新");
       } catch (error) {
         const publicLoaded = await loadPublicSnapshot();
@@ -1206,6 +1220,7 @@
       state.publicUserDetails = data.userDetails || {};
       state.publicBusinessTrends = data.businessTrends || {};
       state.focusData = data.focusUsers || state.focusData;
+      state.publicFocusUsers = data.focusUsersByRange || { month: data.focusUsers };
       state.dateRange = data.dateRange || null;
       state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
       if (previousDataTime && previousDataTime !== state.source.latestDataTime) {
@@ -1748,12 +1763,17 @@
     function setupAutoRefresh() {
       if (state.refreshTimer) clearInterval(state.refreshTimer);
       const seconds = Math.max(10, Number(state.config?.refreshSeconds || 60));
-      state.refreshTimer = setInterval(() => loadData(false), seconds * 1000);
+      state.refreshTimer = setInterval(() => loadData(false, true), seconds * 1000);
     }
 
     function openSettings() {
       $("#modalMask").classList.add("open");
       $("#settingsModal").classList.add("open");
+      if (isLocalSettings) requestJson(apiUrl("/api/request-stats")).then(data => {
+        const stats = data.stats || {};
+        const detail = Number(stats.byPath?.["/api/v2/dashboard/business/user-order-statistics"] || 0);
+        $("#requestStatsText").textContent = `今日共 ${fmt(stats.total || 0)} 次，其中业务用户接口 ${fmt(detail)} 次；统计更新于 ${stats.updatedAt || "-"}`;
+      }).catch(error => { $("#requestStatsText").textContent = error.message; });
     }
     function closeSettings() {
       $("#modalMask").classList.remove("open");
@@ -1766,6 +1786,7 @@
     function closeHelp() {
       $("#modalMask").classList.remove("open");
       $("#helpModal").classList.remove("open");
+      $("#focusModal").classList.remove("open");
     }
     function closeDetail() {
       $("#modalMask").classList.remove("open");
@@ -1787,6 +1808,7 @@
       state.view = btn.dataset.view;
       $$("#viewTabs button").forEach(item => item.classList.toggle("active", item === btn));
       render();
+      if (state.view === "focus") loadFocusUsers().catch(error => toast(error.message || "重点用户加载失败"));
     });
     $("#levelTabs").addEventListener("click", e => {
       const btn = e.target.closest("button");
@@ -1840,9 +1862,40 @@
     $("#closeDetail").addEventListener("click", closeDetail);
     $("#closeDetailFoot").addEventListener("click", closeDetail);
     $("#businessBody").addEventListener("click", e => {
+      if (e.target.closest("[data-fast-business]")) return;
       const target = e.target.closest("[data-index]");
       if (target) openBusiness(filteredBusinesses()[Number(target.dataset.index)]).catch(error => toast(error.message || "用户明细加载失败"));
     });
+    $("#businessBody").addEventListener("change", async e => {
+      const toggle = e.target.closest("[data-fast-business]");
+      if (!toggle) return;
+      try {
+        const data = await requestJson(apiUrl("/api/business-refresh"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId: toggle.dataset.fastBusiness, enabled: toggle.checked }) });
+        state.config = data.config;
+        renderTable();
+        toast(toggle.checked ? "已开启前100每10分钟更新" : "已改为固定时段更新");
+      } catch (error) {
+        toggle.checked = !toggle.checked;
+        toast(error.message || "刷新策略保存失败");
+      }
+    });
+    $("#focusRangeTabs").addEventListener("click", e => {
+      const btn = e.target.closest("[data-focus-range]");
+      if (!btn) return;
+      state.focusRange = btn.dataset.focusRange;
+      $$("#focusRangeTabs button").forEach(item => item.classList.toggle("active", item === btn));
+      loadFocusUsers().catch(error => toast(error.message || "重点用户加载失败"));
+    });
+    $("#focusPlatform").addEventListener("change", e => { state.focusPlatform = e.target.value; state.focusBusiness = "all"; renderFocusUsers(); });
+    $("#focusBusiness").addEventListener("change", e => { state.focusBusiness = e.target.value; renderFocusUsers(); });
+    $("#focusSearch").addEventListener("input", e => { state.focusSearch = e.target.value.trim(); renderFocusUsers(); });
+    $("#focusGroups").addEventListener("click", e => { const btn = e.target.closest("[data-focus-group]"); if (btn) { state.focusGroup = btn.dataset.focusGroup; renderFocusUsers(); } });
+    $("#focusBody").addEventListener("click", e => { const btn = e.target.closest("[data-remove-focus]"); if (btn) removeFocusUser(btn.dataset.businessId, btn.dataset.userId).catch(error => toast(error.message || "移除失败")); });
+    $("#addFocusBtn").addEventListener("click", openFocusModal);
+    $("#focusAddPlatform").addEventListener("change", updateFocusAddBusinesses);
+    $("#closeFocusModal").addEventListener("click", closeFocusModal);
+    $("#cancelFocusAdd").addEventListener("click", closeFocusModal);
+    $("#confirmFocusAdd").addEventListener("click", () => addFocusUser().catch(error => { $("#focusAddResult").textContent = error.message; toast(error.message); }));
     $("#detailBody").addEventListener("click", e => {
       const detailSort = e.target.closest("[data-detail-sort]");
       if (detailSort) {
@@ -1918,7 +1971,7 @@
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
     state.overviewCollapsed = localStorage.getItem("businessDashboardOverviewCollapsed") === "1";
-    loadData(false, false).then(setupAutoRefresh);
+    loadData(false, true).then(setupAutoRefresh);
   </script>
 </body>
 </html>
