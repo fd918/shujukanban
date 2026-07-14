@@ -389,11 +389,12 @@
           <small>今日、昨日、上周同期 24 小时订单走势</small>
         </div>
         <div class="trend-toolbar">
+          <button class="btn" id="trendToggle">展开趋势</button>
           <select class="field" id="trendBusinessSelect" style="min-width:260px;"></select>
           <button class="btn" id="trendRefreshBtn">刷新趋势</button>
         </div>
       </div>
-      <div class="chart-wrap">
+      <div class="chart-wrap hidden" id="trendContent">
         <div class="chart-legend" id="trendLegend"></div>
         <div class="chart-stage" id="trendChart"></div>
       </div>
@@ -513,6 +514,12 @@
       <section class="source">
         <strong>本次更新时间：</strong>业务订单和小时趋势每 10 分钟更新；业务行开启“用户高频更新”后，该业务前100用户每 10 分钟更新，其他业务按设置中心的固定时间更新全量用户。用户弹窗的今日、近7天和本月共用同一批全量用户数据和同一个数据时间；“刷新用户”只分页刷新当前业务，不刷新其他业务。公网发布直接使用已保存缓存，不会再次请求中台。
       </section>
+      <section class="source warn">
+        <strong>请求频率与数量：</strong>页面每5分钟检查一次只读取缓存，请求中台为0次。每10分钟业务任务约160次请求；当前15个高频业务的前100用户约150次，因此每个10分钟周期合计约300次。全量用户在12:00、17:00、22:00更新，因中台每页约10人，单次全业务65天历史预计约3万至4万次请求。点击普通“查看用户”有缓存时为0次；点击“刷新用户”会刷新当前业务全部用户，例如3300名用户约330次请求。具体数量会随业务数、用户数和失败重试变化。
+      </section>
+      <section class="source">
+        <strong>用户数据时间：</strong>只显示当前业务用户缓存自身的保存时间，不再使用业务列表时间代替。公网和本地都选择结束日期最新、覆盖天数最长的同一份用户历史缓存；没有用户缓存时显示“-”。
+      </section>
       <section class="source">
         <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。公网添加的重点用户保存在当前浏览器，不会同步到其他电脑；本地添加的数据由服务统一保存。重点用户集中展示每日订单；今日订单对比昨日同时刻，缺少昨日同时刻快照时显示“-”。
       </section>
@@ -574,7 +581,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "seven", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "seven", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const $ = s => document.querySelector(s);
@@ -995,6 +1002,10 @@
       $(".kpis").classList.toggle("overview-collapsed", state.overviewCollapsed || state.view === "focus");
       $("#trendPanel").classList.toggle("overview-collapsed", state.overviewCollapsed || state.view === "focus");
       $("#overviewToggle").textContent = state.overviewCollapsed ? "展开概览" : "收起概览";
+      $("#trendContent").classList.toggle("hidden", state.trendCollapsed);
+      $("#trendBusinessSelect").classList.toggle("hidden", state.trendCollapsed);
+      $("#trendRefreshBtn").classList.toggle("hidden", state.trendCollapsed);
+      $("#trendToggle").textContent = state.trendCollapsed ? "展开趋势" : "收起趋势";
     }
 
     function renderTrendChart() {
@@ -1324,7 +1335,7 @@
         render();
         syncOpenDetailAfterDataUpdate(previousDataTime, false);
         if (state.view === "focus") await loadFocusUsers();
-        else loadBusinessTrend(manual);
+        else if (!state.trendCollapsed) loadBusinessTrend(manual);
         if (manual) toast("数据已刷新");
       } catch (error) {
         const publicLoaded = await loadPublicSnapshot();
@@ -1548,6 +1559,7 @@
       state.detailStats = null;
       state.detailRefreshing = false;
       state.detailLoadingLabel = "";
+      state.detailLatestTime = "";
       $("#detailTitle").textContent = row.name;
       $("#detailSub").textContent = `${row.platform}｜${row.cmp.label}`;
       $("#modalMask").classList.add("open");
@@ -1615,7 +1627,7 @@
           users: detail.rows || [],
           history: detail.history || { rows: [], dates: [] },
           total: detail.total || detail.rows?.length || 0,
-          latestDataTime: detail.history?.latestDataTime || detail.latestDataTime || state.source.latestDataTime || "-"
+          latestDataTime: detail.history?.latestDataTime || detail.latestDataTime || "-"
         }, row, true);
         return;
       }
@@ -1870,7 +1882,7 @@
           </div>
           <div class="search-with-clear"><input class="field" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID"><button class="search-clear ${state.detailSearch ? "" : "hidden"}" data-detail-search-clear="1" title="清空搜索">×</button></div>
           <button class="btn" data-detail-refresh="1">刷新用户</button>
-          <span class="muted">${state.detailRefreshing ? `正在刷新${state.detailLoadingLabel || "用户"}，当前先保留上次结果` : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || state.source.latestDataTime || "-"}</span>
+          <span class="muted">${state.detailRefreshing ? `正在刷新${state.detailLoadingLabel || "用户"}，当前先保留上次结果` : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜用户数据时间：${state.detailLatestTime || "-"}</span>
         </div>
         <div id="detailResult">${renderDetailResult()}</div>`;
     }
@@ -2117,6 +2129,12 @@
       localStorage.setItem("businessDashboardOverviewCollapsed", state.overviewCollapsed ? "1" : "0");
       renderOverviewToggle();
     });
+    $("#trendToggle").addEventListener("click", () => {
+      state.trendCollapsed = !state.trendCollapsed;
+      localStorage.setItem("businessDashboardTrendCollapsed", state.trendCollapsed ? "1" : "0");
+      renderOverviewToggle();
+      if (!state.trendCollapsed) loadBusinessTrend(false);
+    });
     $("#filterToggle").addEventListener("click", () => { state.filtersCollapsed = !state.filtersCollapsed; renderMobileFilters(); });
     $("#trendBusinessSelect").addEventListener("change", e => { state.trendBusinessId = e.target.value; state.trendData = null; loadBusinessTrend(true); });
     $("#trendRefreshBtn").addEventListener("click", () => loadBusinessTrend(true));
@@ -2295,6 +2313,7 @@
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
     state.overviewCollapsed = localStorage.getItem("businessDashboardOverviewCollapsed") === "1";
+    state.trendCollapsed = localStorage.getItem("businessDashboardTrendCollapsed") !== "0";
     loadData(false, true).then(setupAutoRefresh);
   </script>
 </body>

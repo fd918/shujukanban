@@ -948,7 +948,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   const users = enrichBusinessUsersWithSnapshots(todayRows, snapshots, businessId, rangeFromQuery({ start_date: endDate, end_date: endDate }));
   const topState = userRefreshState.top100[String(businessId)] || {};
   users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
-  const latestDataTime = history.savedAtText || userDetailCacheSavedAtText || "-";
+  const latestDataTime = history.savedAtText || "-";
   return {
     ok: history.ok,
     cached: Boolean(history.cached),
@@ -1470,14 +1470,12 @@ async function runScheduledUserRefresh(businesses, config) {
   if (!time) return false;
   const key = `${dayKey()} ${time}`;
   if (userRefreshState.scheduledRuns[key]) return false;
-  const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
   console.log(`[${nowText()}] 开始固定时段全量用户更新：${time}`);
-  await warmBusinessUserDetails(businesses, dateRange, { refresh: true });
   await warmBusinessUserHistories(businesses, { refresh: true });
   userRefreshState.scheduledRuns = Object.fromEntries(Object.entries(userRefreshState.scheduledRuns).filter(([item]) => item.startsWith(dayKey())));
   userRefreshState.scheduledRuns[key] = nowText();
   await saveUserRefreshState();
-  console.log(`[${nowText()}] 固定时段全量用户更新完成：${time}`);
+  console.log(`[${nowText()}] 固定时段全量用户历史更新完成：${time}`);
   return true;
 }
 
@@ -1786,12 +1784,22 @@ async function runCommand(command, args) {
 async function encryptedPublicUserDetails(dateRange) {
   const snapshots = await readSnapshots();
   const details = {};
+  const historyRanks = new Map();
+  const detailRanks = new Map();
+  const timeValue = value => {
+    const parsed = Date.parse(String(value || "").replace(/\//g, "-"));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
   for (const [cacheKey, payload] of userDetailCache.entries()) {
     try {
       const key = JSON.parse(cacheKey);
       const id = String(key.businessId || "");
       if (!id) continue;
       if (key.type === "history") {
+        const rank = [String(key.endDate || ""), (payload.dates || []).length, timeValue(payload.savedAtText)];
+        const previous = historyRanks.get(id);
+        if (previous && (rank[0] < previous[0] || (rank[0] === previous[0] && rank[1] < previous[1]) || (rank[0] === previous[0] && rank[1] === previous[1] && rank[2] <= previous[2]))) continue;
+        historyRanks.set(id, rank);
         details[id] = details[id] || {};
         details[id].history = {
           latestDataTime: payload.savedAtText || "-",
@@ -1802,6 +1810,10 @@ async function encryptedPublicUserDetails(dateRange) {
         continue;
       }
       if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
+      const rank = [timeValue(payload.savedAtText), (payload.rows || []).length];
+      const previous = detailRanks.get(id);
+      if (previous && (rank[0] < previous[0] || (rank[0] === previous[0] && rank[1] <= previous[1]))) continue;
+      detailRanks.set(id, rank);
       const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange);
       details[id] = {
         ...(details[id] || {}),
@@ -1814,33 +1826,12 @@ async function encryptedPublicUserDetails(dateRange) {
     }
   }
   for (const detail of Object.values(details)) {
-    if (!detail?.history?.rows?.length || !detail?.rows?.length) continue;
-    detail.rows = deduplicateBusinessUsers(detail.rows);
-    detail.history.rows = deduplicateBusinessUsers(detail.history.rows);
-    const today = dateRange.endDate;
-    if (!detail.history.dates.includes(today)) detail.history.dates.push(today);
-    const currentById = new Map(detail.rows.map(row => [String(row.id || ""), row]));
-    const historyIds = new Set();
-    detail.history.rows.forEach(row => {
-      const id = String(row.id || "");
-      historyIds.add(id);
-      row.days = { ...(row.days || {}), [today]: 0 };
-      const current = currentById.get(id);
-      if (!current) return;
-      row.days[today] = number(current.todayOrders);
-      row.todayOrders = number(row.days[today]);
-      row.phone = current.phone || row.phone;
-      row.version = current.version || row.version;
-    });
-    currentById.forEach((current, id) => {
-      if (historyIds.has(id)) return;
-      detail.history.rows.push({
-        ...current,
-        days: { [today]: number(current.todayOrders) }
-      });
-    });
-    detail.history.latestDataTime = detail.latestDataTime || detail.history.latestDataTime;
-    detail.history.total = detail.history.rows.length;
+    if (detail?.rows?.length) detail.rows = deduplicateBusinessUsers(detail.rows);
+    if (detail?.history?.rows?.length) {
+      detail.history.rows = deduplicateBusinessUsers(detail.history.rows);
+      detail.history.dates = [...new Set(detail.history.dates || [])].sort();
+      detail.history.total = detail.history.rows.length;
+    }
   }
   return details;
 }
@@ -2005,7 +1996,7 @@ const server = createServer(async (req, res) => {
         pageSize: number(url.searchParams.get("page_size")) || 5000,
         refresh: url.searchParams.get("refresh") === "1"
       }, statuses);
-      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: result.savedAtText || userDetailCacheSavedAtText || "-", dates: result.dates, rows: result.rows, total: result.total, source: { statuses } });
+      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: result.savedAtText || "-", dates: result.dates, rows: result.rows, total: result.total, source: { statuses } });
     }
     if (url.pathname === "/api/config" && req.method === "GET") return json(res, 200, await getPublicConfig());
     if (url.pathname === "/api/config" && req.method === "POST") return json(res, 200, { ok: true, config: await saveConfig(await readBody(req)) });
