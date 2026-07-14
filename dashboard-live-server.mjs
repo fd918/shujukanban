@@ -934,26 +934,47 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
 }
 
 function deduplicateBusinessUsers(rows = []) {
-  const users = new Map();
+  const accounts = new Map();
   for (const row of rows) {
     const id = String(row.id || "");
     if (!id) continue;
-    const current = users.get(id);
+    const accountKey = `${id}::${String(row.accountsId || id)}`;
+    const current = accounts.get(accountKey);
     if (!current) {
-      users.set(id, { ...row, days: { ...(row.days || {}) } });
+      accounts.set(accountKey, { ...row, days: { ...(row.days || {}) } });
       continue;
     }
     const days = { ...(current.days || {}) };
     for (const [date, value] of Object.entries(row.days || {})) {
       days[date] = Math.max(number(days[date]), number(value));
     }
-    users.set(id, {
+    accounts.set(accountKey, {
       ...current,
       ...row,
       phone: current.phone || row.phone,
       version: current.version || row.version,
       todayOrders: Math.max(number(current.todayOrders), number(row.todayOrders)),
       yesterdayOrders: Math.max(number(current.yesterdayOrders), number(row.yesterdayOrders)),
+      days
+    });
+  }
+
+  const users = new Map();
+  for (const row of accounts.values()) {
+    const id = String(row.id || "");
+    const current = users.get(id);
+    if (!current) {
+      users.set(id, { ...row, days: { ...(row.days || {}) } });
+      continue;
+    }
+    const days = { ...(current.days || {}) };
+    for (const [date, value] of Object.entries(row.days || {})) days[date] = number(days[date]) + number(value);
+    users.set(id, {
+      ...current,
+      phone: current.phone || row.phone,
+      version: current.version || row.version,
+      todayOrders: number(current.todayOrders) + number(row.todayOrders),
+      yesterdayOrders: number(current.yesterdayOrders) + number(row.yesterdayOrders),
       days
     });
   }
@@ -1004,7 +1025,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)]),
     realtimeToday: fastById.has(String(row.id || ""))
   }));
-  for (const fastRow of fast?.rows || []) {
+  for (const fastRow of fastIsNewer ? fast?.rows || [] : []) {
     if (historyRows.some(row => String(row.id || "") === String(fastRow.id || ""))) continue;
     todayRows.push({ ...fastRow, days: { [endDate]: number(fastRow.todayOrders) }, realtimeToday: true });
   }
@@ -1012,7 +1033,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   const topState = userRefreshState.top100[String(businessId)] || {};
   users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
   const historyLatestDataTime = history.savedAtText || "-";
-  const currentLatestDataTime = fast?.savedAtText || historyLatestDataTime;
+  const currentLatestDataTime = fastIsNewer ? fast.savedAtText : historyLatestDataTime;
   return {
     ok: history.ok,
     cached: Boolean(history.cached),

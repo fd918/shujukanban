@@ -2082,6 +2082,9 @@
       const unattributed = businessDecline ? businessDecline - locatedNetDecline : null;
       const detailDataTime = state.detailStats?.currentLatestDataTime;
       const rangeType = state.detailDisplayRange;
+      const availableDates = state.detailSyncedData?.history?.dates || [];
+      const minDailyDate = availableDates[0] || "";
+      const maxDailyDate = availableDates.at(-1) || "";
       $("#detailBody").innerHTML = `
         <div class="detail-grid">
           <div class="detail"><label>${detailScopeLabel()}订单</label><strong>${fmt(userOrderSum)}</strong></div>
@@ -2101,8 +2104,8 @@
             <button class="${rangeType === "month" ? "active" : ""}" data-detail-display-range="month">本月</button>
             <button class="${rangeType === "30" ? "active" : ""}" data-detail-display-range="30">近30天</button>
           </div>
-          <input class="field" id="detailHistoryStart" type="date" value="${state.detailHistoryStart || ""}" title="每日订单开始日期">
-          <input class="field" id="detailHistoryEnd" type="date" value="${state.detailHistoryEnd || ""}" title="每日订单结束日期">
+          <input class="field" id="detailHistoryStart" type="date" value="${state.detailHistoryStart || ""}" min="${minDailyDate}" max="${maxDailyDate}" title="每日订单开始日期">
+          <input class="field" id="detailHistoryEnd" type="date" value="${state.detailHistoryEnd || ""}" min="${minDailyDate}" max="${maxDailyDate}" title="每日订单结束日期">
           <button class="btn" data-detail-display-apply="1">应用日期</button>
           <div class="search-with-clear"><input class="field" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID"><button class="search-clear ${state.detailSearch ? "" : "hidden"}" data-detail-search-clear="1" title="清空搜索">×</button></div>
           <button class="btn" data-detail-refresh="1">刷新用户</button>
@@ -2152,7 +2155,7 @@
         ? dateTextList(state.detailHistoryStart, state.detailHistoryEnd)
         : [];
       return `
-        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；全部下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者，“全部下降”可查看所有下降用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。<br><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}；外层来自业务汇总接口，内层来自业务用户统计接口。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口 total=${fmt(state.detailStats?.total || allUsers.length)}，已加载 ${fmt(allUsers.length)} 行${diff === null ? "。" : `，当前订单口径差异 ${fmt(diff)}。`}</section>
+        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；全部下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者，“全部下降”可查看所有下降用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。<br><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人${diff === null ? "。" : `，当前订单口径差异 ${fmt(diff)}。`}</section>
         <div class="detail-table-wrap">
           <table class="compact wide-date-table">
             <thead><tr><th>序号</th><th>用户</th><th>关注</th><th>${detailSortButton("orders", "今日订单")}</th><th>昨日同时刻</th><th>上周同时刻</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
@@ -2519,6 +2522,11 @@
       if (e.target.closest("[data-detail-display-apply]")) {
         if (!state.detailHistoryStart || !state.detailHistoryEnd || state.detailHistoryStart > state.detailHistoryEnd) {
           toast("请选择正确的开始和结束日期");
+          return;
+        }
+        const availableDates = state.detailSyncedData?.history?.dates || [];
+        if (availableDates.length && (state.detailHistoryStart < availableDates[0] || state.detailHistoryEnd > availableDates.at(-1))) {
+          toast(`当前可选日期为 ${availableDates[0]} 至 ${availableDates.at(-1)}`);
           return;
         }
         state.detailDisplayRange = "custom";
