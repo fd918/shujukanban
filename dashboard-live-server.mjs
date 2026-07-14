@@ -1962,6 +1962,18 @@ async function removeFocusUser(body) {
   return writeFocusUsers(saved.items.filter(item => !(String(item.businessId) === businessId && String(item.userId) === userId)));
 }
 
+async function saveFocusUserNote(body) {
+  const businessId = String(body.businessId || "");
+  const userId = String(body.userId || "");
+  const note = String(body.note || "").trim().slice(0, 300);
+  if (!businessId || !userId) throw new Error("缺少业务ID或用户ID。");
+  const saved = await readFocusUsers();
+  const index = saved.items.findIndex(item => String(item.businessId) === businessId && String(item.userId) === userId);
+  if (index < 0) throw new Error("重点用户不存在，请刷新后重试。");
+  saved.items[index] = { ...saved.items[index], note, noteUpdatedAt: new Date().toISOString(), noteUpdatedAtText: nowText() };
+  return writeFocusUsers(saved.items);
+}
+
 async function testFeishu() {
   await sendFeishuText(`业务异常监控测试消息：${nowText()}。如果你收到这条消息，说明 Webhook 可用。`);
   return { ok: true, message: "测试成功，飞书机器人已返回成功状态。" };
@@ -2328,6 +2340,15 @@ const server = createServer(async (req, res) => {
       const data = await buildFocusUsers({ preset: "7" });
       const published = await publishLatestCachedDashboard().catch(error => {
         console.error(`[${nowText()}] 重点用户公网同步失败：${error.message}`);
+        return false;
+      });
+      return json(res, 200, { ok: true, saved, data, published });
+    }
+    if (url.pathname === "/api/focus-users/note" && req.method === "POST") {
+      const saved = await saveFocusUserNote(await readBody(req));
+      const data = await buildFocusUsers({ preset: "7" });
+      const published = await publishLatestCachedDashboard().catch(error => {
+        console.error(`[${nowText()}] 重点用户观察备注公网同步失败：${error.message}`);
         return false;
       });
       return json(res, 200, { ok: true, saved, data, published });

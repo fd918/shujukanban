@@ -141,7 +141,17 @@
     }
     .segmented button.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(15,23,42,.1); }
 
-    .table-wrap { overflow: auto; max-height: calc(100vh - 330px); min-height: 360px; scrollbar-gutter: stable both-edges; }
+    .table-wrap { overflow-x: scroll; overflow-y: auto; max-height: calc(100vh - 330px); min-height: 360px; scrollbar-gutter: stable both-edges; overscroll-behavior-x: contain; }
+    .table-wrap::-webkit-scrollbar, .detail-table-wrap::-webkit-scrollbar, .modal-body::-webkit-scrollbar { width: 12px; height: 14px; }
+    .table-wrap::-webkit-scrollbar-track, .detail-table-wrap::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track { background: #e8edf3; border-radius: 8px; }
+    .table-wrap::-webkit-scrollbar-thumb, .detail-table-wrap::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb { background: #8b98aa; border: 3px solid #e8edf3; border-radius: 8px; }
+    .table-wrap::-webkit-scrollbar-thumb:hover, .detail-table-wrap::-webkit-scrollbar-thumb:hover, .modal-body::-webkit-scrollbar-thumb:hover { background: #667085; }
+    .horizontal-scrollbar { height:18px; overflow-x:scroll; overflow-y:hidden; margin:6px 0 0; border:1px solid #cbd5e1; border-radius:7px; background:#e8edf3; position:sticky; bottom:0; z-index:8; }
+    .horizontal-scrollbar.hidden { display:none; }
+    .horizontal-scrollbar-inner { height:1px; }
+    .horizontal-scrollbar::-webkit-scrollbar { height:16px; }
+    .horizontal-scrollbar::-webkit-scrollbar-track { background:#e8edf3; border-radius:7px; }
+    .horizontal-scrollbar::-webkit-scrollbar-thumb { background:#667085; border:3px solid #e8edf3; border-radius:7px; }
     table { width: 100%; border-collapse: collapse; min-width: 1280px; }
     th, td {
       padding: 11px 10px;
@@ -215,7 +225,7 @@
     .modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
     .modal.detail-modal { width: min(1680px, 98vw); max-height: 94vh; }
     .modal-body { overflow: auto; padding: 16px 18px; }
-    .detail-table-wrap { overflow: auto; max-height: 52vh; border: 1px solid var(--line); border-radius: 8px; scrollbar-gutter: stable both-edges; }
+    .detail-table-wrap { overflow-x: scroll; overflow-y: auto; max-height: 52vh; border: 1px solid var(--line); border-radius: 8px; scrollbar-gutter: stable both-edges; overscroll-behavior-x: contain; }
     .detail-table-wrap table { min-width: 1120px; }
     .detail-table-wrap table.compact { min-width: 980px; }
     table.wide-date-table { width: max-content; min-width: 100%; }
@@ -345,6 +355,13 @@
     .focus-table .focus-business-col { position:sticky; left:48px; z-index:3; background:#fff; min-width:190px; }
     .focus-table .focus-user-col { position:sticky; left:48px; z-index:3; background:#fff; min-width:190px; box-shadow:5px 0 8px rgba(15,23,42,.04); }
     .focus-table .focus-user-col.with-business { left:238px; }
+    .focus-table .focus-order-col { width:86px; min-width:86px; padding-left:6px; padding-right:6px; text-align:right; }
+    .focus-table .focus-note-col { width:210px; min-width:210px; max-width:210px; white-space:normal; }
+    .focus-note-content { display:flex; align-items:flex-start; gap:6px; min-width:0; }
+    .focus-note-text { color:var(--text); line-height:1.45; white-space:normal; word-break:break-word; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+    .focus-note-empty { color:var(--muted); }
+    .focus-note-edit { width:24px; height:24px; flex:0 0 24px; border:0; border-radius:4px; background:#f2f4f7; color:var(--muted); padding:0; cursor:pointer; }
+    .focus-note-edit:hover { color:var(--blue); background:#eff6ff; }
     .focus-table thead .focus-business-col, .focus-table thead .focus-user-col, .focus-table th:first-child { background:#f8fafc; z-index:4; }
     .focus-table tfoot td { position:static !important; font-weight:700; background:#f8fafc; border-top:2px solid var(--line); }
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
@@ -546,7 +563,7 @@
         <strong>用户数据时间：</strong>只显示当前业务用户缓存自身的保存时间，不再使用业务列表时间代替。公网和本地都选择结束日期最新、覆盖天数最长的同一份用户历史缓存；没有用户缓存时显示“-”。
       </section>
       <section class="source">
-        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。公网直接添加的重点用户只保存在当前浏览器；本地新增或移除后会立即重新生成公网加密快照，不刷新全量用户，发布时只会校验默认业务的3条趋势。重点用户集中展示每日订单；今日订单对比昨日同时刻，缺少昨日同时刻快照时显示“-”。
+        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。公网直接添加的重点用户只保存在当前浏览器；本地新增、移除或修改观察备注后会立即重新生成公网加密快照，不刷新全量用户。观察备注只在重点用户看板展示；公网自行添加用户的备注只保存在当前浏览器。重点用户集中展示每日订单；今日订单对比昨日同时刻，缺少昨日同时刻快照时显示“-”。
         <strong>用户备注名：</strong>本地用户名称旁可点击“修改”，备注按用户ID统一应用到用户列表、历史订单和重点用户，并同步进入公网加密快照；留空保存会删除备注并恢复接口原名。
       </section>
     </div>
@@ -607,10 +624,11 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
+    const PUBLIC_FOCUS_NOTES_KEY = "businessDashboardPublicFocusNotes";
     const PUBLIC_USER_ALIASES_KEY = "businessDashboardPublicUserAliases";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -730,6 +748,14 @@
       try { return new Set(JSON.parse(localStorage.getItem(PUBLIC_FOCUS_HIDDEN_KEY) || "[]")); } catch { return new Set(); }
     }
 
+    function readPublicFocusNotes() {
+      try { return JSON.parse(localStorage.getItem(PUBLIC_FOCUS_NOTES_KEY) || "{}"); } catch { return {}; }
+    }
+
+    function writePublicFocusNotes(notes) {
+      localStorage.setItem(PUBLIC_FOCUS_NOTES_KEY, JSON.stringify(notes));
+    }
+
     async function copyUserId(userId) {
       const value = String(userId || "");
       if (!value) return;
@@ -777,8 +803,13 @@
         return { ...item, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), browserLocal: true };
       });
       const hidden = readPublicFocusHidden();
-      const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, row]));
-      localRows.forEach(row => rowsByKey.set(`${row.businessId}:${row.userId}`, row));
+      const notes = readPublicFocusNotes();
+      const applyNote = row => {
+        const key = `${row.businessId}:${row.userId}`;
+        return Object.prototype.hasOwnProperty.call(notes, key) ? { ...row, note: notes[key] } : row;
+      };
+      const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyNote(row)]));
+      localRows.forEach(row => rowsByKey.set(`${row.businessId}:${row.userId}`, applyNote(row)));
       return { ...base, ok: true, range, dates, rows: [...rowsByKey.values()], total: rowsByKey.size, latestDataTime: base.latestDataTime || state.source.latestDataTime || "-" };
     }
 
@@ -795,7 +826,7 @@
       const existingPublished = Object.values(state.publicFocusUsers).some(data => (data?.rows || []).some(row => `${row.businessId}:${row.userId}` === key));
       if (existingPublished) return true;
       const items = readPublicFocusItems();
-      const saved = { platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || ""), userId: String(userId), name: user.name, phone: user.phone, version: user.version, days: user.days || {}, todayOrders: user.todayOrders, yesterdaySameTime: user.sameTime?.yesterday?.orders ?? null, addedAt: new Date().toISOString() };
+      const saved = { platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || ""), userId: String(userId), name: user.name, phone: user.phone, version: user.version, note: "", days: user.days || {}, todayOrders: user.todayOrders, yesterdaySameTime: user.sameTime?.yesterday?.orders ?? null, addedAt: new Date().toISOString() };
       const index = items.findIndex(item => `${item.businessId}:${item.userId}` === key);
       if (index >= 0) items[index] = saved; else items.push(saved);
       writePublicFocusItems(items);
@@ -818,8 +849,8 @@
       }
       state.dailyStart = dayText(start);
       state.dailyEnd = dayText(end);
-      $("#dailyStart").value = state.dailyStart;
-      $("#dailyEnd").value = state.dailyEnd;
+      ["#dailyStart", "#businessDailyStart"].forEach(selector => { const input = $(selector); if (input) input.value = state.dailyStart; });
+      ["#dailyEnd", "#businessDailyEnd"].forEach(selector => { const input = $(selector); if (input) input.value = state.dailyEnd; });
       toast("已选择日期范围，点击查询后刷新");
     }
 
@@ -1253,6 +1284,50 @@
       $("#listSubtitle").textContent = "日期范围可使用近7天、上周、本月或自定义查询｜每日业务缓存随业务任务每 10 分钟更新。";
     }
 
+    function renderBusinessDailyModal() {
+      const selected = state.businessDailyModalRow;
+      if (!selected) return;
+      const daily = state.businessDaily || {};
+      const dates = daily.dates || [];
+      const selectedIds = new Set([selected.businessId, selected.platformBusinessId].filter(Boolean).map(String));
+      const row = (daily.rows || []).find(item => [item.businessId, item.platformBusinessId].filter(Boolean).some(id => selectedIds.has(String(id))));
+      const total = dates.reduce((sum, date) => sum + Number(row?.days?.[date]?.orders || 0), 0);
+      $("#detailBody").innerHTML = `
+        <div class="detail-grid">
+          <div class="detail"><label>查询区间</label><strong>${dates[0] || "-"} 至 ${dates.at(-1) || "-"}</strong></div>
+          <div class="detail"><label>区间订单合计</label><strong>${fmt(total)}</strong></div>
+          <div class="detail"><label>数据天数</label><strong>${fmt(dates.length)} 天</strong></div>
+          <div class="detail"><label>数据时间</label><strong>${state.source?.latestDataTime || "-"}</strong></div>
+        </div>
+        <div class="toolbar" style="margin-bottom:10px;">
+          <input class="field" id="businessDailyStart" type="date" value="${state.dailyStart}" title="开始日期">
+          <input class="field" id="businessDailyEnd" type="date" value="${state.dailyEnd}" title="结束日期">
+          <button class="btn" data-business-daily-range="7">近七天</button>
+          <button class="btn" data-business-daily-range="lastWeek">上周</button>
+          <button class="btn" data-business-daily-range="month">本月</button>
+          <button class="btn primary" data-business-daily-apply="1">查询</button>
+          <span class="muted">${state.refreshing ? "正在刷新，当前保留上次结果" : "每日订单缓存随业务任务每 10 分钟更新"}</span>
+        </div>
+        <div class="detail-table-wrap">
+          <table class="compact wide-date-table">
+            <thead><tr><th>序号</th><th>业务名称</th><th>区间合计</th>${dates.map(date => `<th>${date}</th>`).join("")}</tr></thead>
+            <tbody>${row ? `<tr><td>1</td><td class="user-cell"><strong>${escapeHtml(row.name || selected.name)}</strong><span class="muted">${escapeHtml(row.platform || selected.platform || "-")}</span></td><td><strong>${fmt(total)}</strong></td>${dates.map(date => `<td>${fmt(row.days?.[date]?.orders)}</td>`).join("")}</tr>` : `<tr><td colspan="${dates.length + 3}" class="muted">当前日期范围内没有该业务的历史订单数据。</td></tr>`}</tbody>
+          </table>
+        </div>
+        <div class="scroll-hint">可拖动表格底部加粗的横向滚动条查看全部日期。</div>`;
+    }
+
+    function openBusinessDailyModal(row) {
+      if (!row) return;
+      state.businessDailyModalRow = row;
+      state.detailRow = null;
+      $("#detailTitle").textContent = `${row.name}｜历史订单`;
+      $("#detailSub").textContent = `${row.platform || "-"}｜按日查看订单量`;
+      $("#modalMask").classList.add("open");
+      $("#detailModal").classList.add("open");
+      renderBusinessDailyModal();
+    }
+
     function renderFocusUsers() {
       const data = state.focusData || { dates: [], rows: [], range: { label: "本月" } };
       const businessMap = new Map();
@@ -1290,18 +1365,19 @@
       const showBusinessColumn = state.focusGroup === "all";
       const selectedBusinessName = state.focusGroup === "all" ? "全部关注" : (businessMap.get(state.focusGroup)?.name || "当前业务");
       $("#focusSummary").textContent = `${selectedBusinessName}｜${data.range?.label || "近7天"}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜${data.range?.label || "本期"}合计 ${fmt(periodSum)}｜今日每 10 分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}`;
-      $("#focusHead").innerHTML = `<tr><th>序号</th>${showBusinessColumn ? "<th class=\"focus-business-col\">业务</th>" : ""}<th class="focus-user-col ${showBusinessColumn ? "with-business" : ""}">用户</th><th>今日订单</th><th>昨日同时刻</th><th>今日变化比例</th><th>今日影响订单</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
+      $("#focusHead").innerHTML = `<tr><th>序号</th>${showBusinessColumn ? "<th class=\"focus-business-col\">业务</th>" : ""}<th class="focus-user-col ${showBusinessColumn ? "with-business" : ""}">用户</th><th class="focus-note-col">观察备注</th><th class="focus-order-col">今日订单</th><th class="focus-order-col">昨日同时刻</th><th>今日变化比例</th><th>今日影响订单</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
       $("#focusBody").innerHTML = state.focusLoading && !rows.length
-        ? `<tr><td colspan="${dates.length + (showBusinessColumn ? 12 : 11)}" class="muted">重点用户加载中...</td></tr>`
+        ? `<tr><td colspan="${dates.length + (showBusinessColumn ? 13 : 12)}" class="muted">重点用户加载中...</td></tr>`
         : (rows.length ? rows.map((row, index) => `<tr>
           <td>${index + 1}</td>
           ${showBusinessColumn ? `<td class="focus-business-col"><strong>${row.businessName}</strong></td>` : ""}
           <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
-          <td>${fmt(row.todayOrders)}</td><td>${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
+          <td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-business-id="${escapeHtml(row.businessId)}" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注" aria-label="编辑观察备注">✎</button><span class="focus-note-text ${row.note ? "" : "focus-note-empty"}" title="${escapeHtml(row.note || "添加观察备注")}">${escapeHtml(row.note || "添加备注")}</span></div></td>
+          <td class="focus-order-col">${fmt(row.todayOrders)}</td><td class="focus-order-col">${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
-        </tr>`).join("") : `<tr><td colspan="${dates.length + (showBusinessColumn ? 12 : 11)}" class="muted">还没有重点用户，点击“添加关注用户”开始关注。</td></tr>`);
-      $("#focusFoot").innerHTML = rows.length ? `<tr><td colspan="${showBusinessColumn ? 3 : 2}">当前列表合计</td><td>${fmt(todaySum)}</td><td>${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td>-</td><td>${fmt(rows.reduce((sum, row) => sum + Number(row.impact || 0), 0))}</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
+        </tr>`).join("") : `<tr><td colspan="${dates.length + (showBusinessColumn ? 13 : 12)}" class="muted">还没有重点用户，点击“添加关注用户”开始关注。</td></tr>`);
+      $("#focusFoot").innerHTML = rows.length ? `<tr><td colspan="${showBusinessColumn ? 4 : 3}">当前列表合计</td><td class="focus-order-col">${fmt(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td>-</td><td>${fmt(rows.reduce((sum, row) => sum + Number(row.impact || 0), 0))}</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
     }
 
     async function loadFocusUsers() {
@@ -1394,6 +1470,34 @@
       state.focusData = result.data;
       renderFocusUsers();
       toast("已移除重点用户");
+    }
+
+    async function editFocusNote(businessId, userId) {
+      const row = (state.focusData?.rows || []).find(item => String(item.businessId) === String(businessId) && String(item.userId) === String(userId));
+      const next = window.prompt("记录需要持续观察的用户情况；留空并确定可删除备注。", row?.note || "");
+      if (next === null) return;
+      const note = next.trim().slice(0, 300);
+      if (state.publicMode && !isLocalSettings) {
+        const notes = readPublicFocusNotes();
+        notes[`${businessId}:${userId}`] = note;
+        writePublicFocusNotes(notes);
+        state.focusData = mergedPublicFocusData(state.focusRange);
+        renderFocusUsers();
+        toast(note ? "观察备注已保存在当前浏览器" : "观察备注已删除");
+        return;
+      }
+      const result = await requestJson(apiUrl("/api/focus-users/note"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ businessId, userId, note })
+      });
+      if (state.focusRange === "7") {
+        state.focusData = result.data;
+        renderFocusUsers();
+      } else {
+        await loadFocusUsers();
+      }
+      toast(note ? "观察备注已保存并同步公网" : "观察备注已删除");
     }
 
     async function editUserAlias(userId) {
@@ -1758,6 +1862,10 @@
     }
 
     function syncOpenDetailAfterDataUpdate(previousDataTime, forceRefresh = false) {
+      if (state.businessDailyModalRow && $("#detailModal").classList.contains("open")) {
+        renderBusinessDailyModal();
+        return;
+      }
       if (!state.detailRow || !$("#detailModal").classList.contains("open")) return;
       if (previousDataTime && previousDataTime === state.source?.latestDataTime) return;
       const current = findCurrentBusiness(state.detailRow);
@@ -2329,6 +2437,7 @@
       $("#detailModal").classList.remove("open");
       $("#settingsModal").classList.remove("open");
       $("#helpModal").classList.remove("open");
+      state.businessDailyModalRow = null;
     }
 
     $("#metricTabs").addEventListener("click", e => {
@@ -2408,7 +2517,7 @@
       if (e.target.closest("[data-fast-business]")) return;
       const dailyTarget = e.target.closest("[data-business-daily-index]");
       if (dailyTarget) {
-        showBusinessDaily(filteredBusinesses()[Number(dailyTarget.dataset.businessDailyIndex)]);
+        openBusinessDailyModal(filteredBusinesses()[Number(dailyTarget.dataset.businessDailyIndex)]);
         return;
       }
       const target = e.target.closest("[data-index]");
@@ -2443,6 +2552,11 @@
     $("#focusSearchClear").addEventListener("click", () => { state.focusSearch = ""; $("#focusSearch").value = ""; renderFocusUsers(); $("#focusSearch").focus(); });
     $("#focusGroups").addEventListener("click", e => { const btn = e.target.closest("[data-focus-group]"); if (btn) { state.focusGroup = btn.dataset.focusGroup; renderFocusUsers(); } });
     $("#focusBody").addEventListener("click", e => {
+      const note = e.target.closest("[data-edit-focus-note]");
+      if (note) {
+        editFocusNote(note.dataset.businessId, note.dataset.userId).catch(error => toast(error.message || "观察备注保存失败"));
+        return;
+      }
       const copyId = e.target.closest("[data-copy-user-id]");
       if (copyId) {
         copyUserId(copyId.dataset.copyUserId);
@@ -2462,6 +2576,19 @@
     $("#cancelFocusAdd").addEventListener("click", closeFocusModal);
     $("#confirmFocusAdd").addEventListener("click", () => addFocusUser().catch(error => { $("#focusAddResult").textContent = error.message; toast(error.message); }));
     $("#detailBody").addEventListener("click", e => {
+      const dailyRange = e.target.closest("[data-business-daily-range]");
+      if (dailyRange) {
+        setDailyRange(dailyRange.dataset.businessDailyRange);
+        return;
+      }
+      if (e.target.closest("[data-business-daily-apply]")) {
+        if (!state.dailyStart || !state.dailyEnd || state.dailyStart > state.dailyEnd) {
+          toast("请选择正确的开始和结束日期");
+          return;
+        }
+        loadData(true).catch(error => toast(error.message || "历史订单查询失败"));
+        return;
+      }
       const copyId = e.target.closest("[data-copy-user-id]");
       if (copyId) {
         copyUserId(copyId.dataset.copyUserId);
@@ -2563,6 +2690,11 @@
       if (result) result.innerHTML = renderDetailResult();
     });
     $("#detailBody").addEventListener("change", e => {
+      if (e.target.id === "businessDailyStart") {
+        state.dailyStart = e.target.value;
+        setTimeout(() => openDatePicker($("#businessDailyEnd")), 120);
+      }
+      if (e.target.id === "businessDailyEnd") state.dailyEnd = e.target.value;
       if (e.target.id === "detailHistoryStart") state.detailHistoryStart = e.target.value;
       if (e.target.id === "detailHistoryEnd") state.detailHistoryEnd = e.target.value;
     });
@@ -2582,6 +2714,48 @@
     }));
     $("#testFeishuBtn").addEventListener("click", testFeishu);
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
+
+    function syncHorizontalScrollbars() {
+      $$(".table-wrap, .detail-table-wrap").forEach(wrap => {
+        let rail = wrap.nextElementSibling;
+        if (!rail?.classList.contains("horizontal-scrollbar")) {
+          rail = document.createElement("div");
+          rail.className = "horizontal-scrollbar";
+          rail.innerHTML = '<div class="horizontal-scrollbar-inner"></div>';
+          wrap.insertAdjacentElement("afterend", rail);
+        }
+        rail.firstElementChild.style.width = `${wrap.scrollWidth}px`;
+        rail.classList.toggle("hidden", wrap.scrollWidth <= wrap.clientWidth + 2);
+        if (!wrap.dataset.scrollbarBound) {
+          wrap.dataset.scrollbarBound = "1";
+          let syncing = false;
+          wrap.addEventListener("scroll", () => {
+            if (syncing) return;
+            syncing = true;
+            rail.scrollLeft = wrap.scrollLeft;
+            syncing = false;
+          });
+          rail.addEventListener("scroll", () => {
+            if (syncing) return;
+            syncing = true;
+            wrap.scrollLeft = rail.scrollLeft;
+            syncing = false;
+          });
+        }
+      });
+    }
+
+    let scrollbarSyncQueued = false;
+    function scheduleHorizontalScrollbarSync() {
+      if (scrollbarSyncQueued) return;
+      scrollbarSyncQueued = true;
+      requestAnimationFrame(() => {
+        scrollbarSyncQueued = false;
+        syncHorizontalScrollbars();
+      });
+    }
+    new MutationObserver(scheduleHorizontalScrollbarSync).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("resize", scheduleHorizontalScrollbarSync);
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
     state.overviewCollapsed = localStorage.getItem("businessDashboardOverviewCollapsed") === "1";
