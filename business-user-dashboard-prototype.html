@@ -1696,7 +1696,20 @@
         await loadBusinessUserHistory(false);
       } else {
         await loadBusinessUsers(row, false);
+        refreshOpenBusinessUsersIfStale();
       }
+    }
+
+    function dataTimeValue(value) {
+      return Date.parse(String(value || "").replace(/\//g, "-")) || 0;
+    }
+
+    function refreshOpenBusinessUsersIfStale() {
+      if (state.publicMode || !state.detailRow || state.detailRefreshing || state.detailMode === "history") return;
+      const businessTime = dataTimeValue(state.source?.latestDataTime);
+      const fullUserTime = dataTimeValue(state.detailStats?.historyLatestDataTime);
+      if (!businessTime || !fullUserTime || businessTime - fullUserTime < 9 * 60 * 1000) return;
+      loadBusinessUsers(state.detailRow, true).catch(error => toast(error.message || "当前业务全量用户刷新失败"));
     }
 
     function syncOpenDetailAfterDataUpdate(previousDataTime, forceRefresh = false) {
@@ -1713,7 +1726,9 @@
       }
       state.detailSyncedData = null;
       state.detailSyncedBusinessId = "";
-      loadBusinessUsers(state.detailRow, forceRefresh).catch(error => toast(error.message || "用户明细刷新失败"));
+      loadBusinessUsers(state.detailRow, forceRefresh)
+        .then(() => refreshOpenBusinessUsersIfStale())
+        .catch(error => toast(error.message || "用户明细刷新失败"));
     }
 
     function applySynchronizedUserData(data, row, cached = false) {

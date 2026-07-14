@@ -945,15 +945,15 @@ function deduplicateBusinessUsers(rows = []) {
     }
     const days = { ...(current.days || {}) };
     for (const [date, value] of Object.entries(row.days || {})) {
-      days[date] = Math.max(number(days[date]), number(value));
+      days[date] = number(days[date]) + number(value);
     }
     users.set(id, {
       ...current,
       ...row,
       phone: current.phone || row.phone,
       version: current.version || row.version,
-      todayOrders: Math.max(number(current.todayOrders), number(row.todayOrders)),
-      yesterdayOrders: Math.max(number(current.yesterdayOrders), number(row.yesterdayOrders)),
+      todayOrders: number(current.todayOrders) + number(row.todayOrders),
+      yesterdayOrders: number(current.yesterdayOrders) + number(row.yesterdayOrders),
       days
     });
   }
@@ -990,7 +990,9 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   const snapshots = await readSnapshots();
   const historyRows = deduplicateBusinessUsers(history.rows || []);
   const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
-  const fastById = new Map((fast?.rows || []).map(row => [String(row.id || ""), row]));
+  const timeValue = value => Date.parse(String(value || "").replace(/\//g, "-")) || 0;
+  const fastIsNewer = timeValue(fast?.savedAtText) > timeValue(history.savedAtText);
+  const fastById = new Map((fastIsNewer ? fast?.rows || [] : []).map(row => [String(row.id || ""), row]));
   const todayRows = historyRows.map(row => ({
     ...row,
     ...(fastById.get(String(row.id || "")) || {}),
