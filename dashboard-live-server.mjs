@@ -1400,25 +1400,51 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
 }
 
 function cachedBusinessUsersSnapshot(dateRange) {
-  const details = {};
+  const targetDate = dateRange.endDate;
+  const candidates = new Map();
   for (const [cacheKey, payload] of userDetailCache.entries()) {
     try {
       const key = JSON.parse(cacheKey);
-      if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
       const businessId = String(key.businessId);
-      const rows = payload.rows || [];
-      if (details[businessId] && Object.keys(details[businessId]).length >= rows.length) continue;
-      const byUser = {};
-      for (const row of rows) {
-        const userId = String(row.id);
-        byUser[userId] ||= { name: row.name, phone: row.phone, version: row.version, orders: 0, commission: 0 };
-        byUser[userId].orders += number(row.todayOrders);
-        byUser[userId].commission += number(row.todayCommission);
+      if (!businessId || !Array.isArray(payload.rows)) continue;
+      const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      const group = candidates.get(businessId) || { history: null, exact: null };
+      if (key.type === "history" && key.startDate <= targetDate && key.endDate >= targetDate) {
+        if (!group.history || savedAt > group.history.savedAt || (savedAt === group.history.savedAt && payload.rows.length > group.history.payload.rows.length)) {
+          group.history = { payload, savedAt };
+        }
+      } else if (key.startDate === targetDate && key.endDate === targetDate) {
+        if (!group.exact || savedAt > group.exact.savedAt || (savedAt === group.exact.savedAt && payload.rows.length > group.exact.payload.rows.length)) {
+          group.exact = { payload, savedAt };
+        }
       }
-      details[businessId] = byUser;
+      candidates.set(businessId, group);
     } catch {
       // Ignore old cache keys that are not JSON.
     }
+  }
+
+  const details = {};
+  for (const [businessId, group] of candidates.entries()) {
+    const historyRows = (group.history?.payload.rows || []).map(row => ({
+      ...row,
+      todayOrders: number(row.days?.[targetDate]),
+      todayCommission: 0
+    }));
+    const byUser = {};
+    for (const row of deduplicateBusinessUsers(historyRows)) {
+      const userId = String(row.id || "");
+      if (!userId) continue;
+      byUser[userId] = { name: row.name, phone: row.phone, version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
+    }
+    if (!group.history || group.exact?.savedAt > group.history.savedAt) {
+      for (const row of deduplicateBusinessUsers(group.exact?.payload.rows || [])) {
+        const userId = String(row.id || "");
+        if (!userId) continue;
+        byUser[userId] = { name: row.name, phone: row.phone, version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
+      }
+    }
+    if (Object.keys(byUser).length) details[businessId] = byUser;
   }
   return details;
 }
