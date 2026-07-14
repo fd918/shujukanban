@@ -1225,6 +1225,34 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
   return { businesses: rows.length, users, newTop100 };
 }
 
+async function refreshFocusUsersToday() {
+  const saved = await readFocusUsers();
+  const items = saved.items || [];
+  if (!items.length) return { users: 0 };
+  const today = dayKey();
+  let users = 0;
+  await mapLimit(items, 4, async item => {
+    const result = await apiCall("重点用户今日订单", "GET", "/api/v2/dashboard/business/user-order-statistics", {
+      order_type: item.businessId,
+      page: 1,
+      pre_page: 10,
+      start_date: today,
+      end_date: today,
+      keyword: item.userId
+    }, 20000);
+    if (!result.ok) return;
+    const matched = asList(result.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
+    if (!matched) return;
+    const row = normalizeUser(matched, today);
+    const cacheKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: today });
+    userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
+    users += 1;
+  });
+  if (users) scheduleUserDetailCacheSave();
+  console.log(`[${nowText()}] 已同步重点用户今日订单：${users}/${items.length}`);
+  return { users };
+}
+
 function publicHistoryRange() {
   const today = new Date();
   const start = addDays(today, -64);
@@ -1275,6 +1303,7 @@ async function warmStartupData() {
     const data = await liveDashboard({ recordSnapshot: false, query: { preset: "today", start_date: dateRange.startDate, end_date: dateRange.endDate, force: "1" } });
     const config = await readConfig();
     await warmTopBusinessUsers(data.businesses, dateRange, config);
+    await refreshFocusUsersToday();
     console.log(`[${nowText()}] 启动预热完成`);
   } catch (error) {
     console.error(`[${nowText()}] 启动预热失败：${error.message}`);
@@ -1603,6 +1632,7 @@ async function scheduleSnapshots() {
       }
       const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
       await warmTopBusinessUsers(data.businesses, dateRange, currentConfig);
+      await refreshFocusUsersToday();
       await runScheduledUserRefresh(data.businesses, currentConfig);
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { slot });
       console.log(`[${nowText()}] ${recorded ? `已记录业务用户快照：${slot.label}` : `跳过重复快照：${slot.label}`}`);
@@ -1712,6 +1742,13 @@ function cachedUserForBusiness(businessId, userId) {
   return found;
 }
 
+function cachedFocusCurrentUser(businessId, userId) {
+  const key = JSON.stringify({ type: "focus-current", businessId: String(businessId), userId: String(userId), date: dayKey() });
+  const payload = userDetailCache.get(key);
+  const row = payload?.rows?.[0];
+  return row ? { ...row, savedAtText: payload.savedAtText || "-" } : null;
+}
+
 function focusRange(query = {}) {
   const today = dayKey();
   const preset = query.preset || "7";
@@ -1740,25 +1777,26 @@ async function buildFocusUsers(query = {}) {
   const yesterday = nearestSnapshot(snapshots, shiftDay(dayKey(), -1), minuteOfDay());
   const rows = saved.items.map(item => {
     const cached = cachedUserForBusiness(item.businessId, item.userId) || {};
+    const current = cachedFocusCurrentUser(item.businessId, item.userId);
     const days = Object.fromEntries(dates.map(date => [date, number(cached.days?.[date])]));
     if (dates.includes(dayKey())) {
       const hasDailyToday = cached.days && Object.prototype.hasOwnProperty.call(cached.days, dayKey());
-      days[dayKey()] = hasDailyToday ? number(cached.days[dayKey()]) : number(cached.todayOrders ?? days[dayKey()]);
+      days[dayKey()] = current ? number(current.todayOrders) : (hasDailyToday ? number(cached.days[dayKey()]) : number(cached.todayOrders ?? days[dayKey()]));
     }
     const total = Object.values(days).reduce((sum, value) => sum + number(value), 0);
     const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(cached.days?.[date]), 0);
     const periodDiff = total - previousPeriodTotal;
     const periodRatio = previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null;
     const yesterdaySameTime = yesterday?.businessUsers?.[String(item.businessId)]?.[String(item.userId)]?.orders;
-    const todayOrders = number(days[dayKey()] ?? cached.todayOrders);
+    const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
     const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
     const ratio = yesterdaySameTime ? diff / number(yesterdaySameTime) * 100 : null;
     const topState = userRefreshState.top100[String(item.businessId)] || {};
     return {
       ...item,
-      name: cached.name || item.name,
-      phone: cached.phone || item.phone || "-",
-      version: cached.version || item.version || "-",
+      name: current?.name || cached.name || item.name,
+      phone: current?.phone || cached.phone || item.phone || "-",
+      version: current?.version || cached.version || item.version || "-",
       days,
       periodTotal: total,
       previousPeriodTotal,
@@ -1769,10 +1807,20 @@ async function buildFocusUsers(query = {}) {
       ratio,
       impact: diff === null ? null : Math.abs(diff),
       newTop100At: topState.entered?.[String(item.userId)] || "",
-      userDataTime: topState.updatedAtText || userDetailCacheSavedAtText || "-"
+      realtimeToday: Boolean(current),
+      userDataTime: current?.savedAtText || topState.updatedAtText || userDetailCacheSavedAtText || "-"
     };
   });
-  return { ok: true, range, dates, rows, total: rows.length, latestDataTime: userDetailCacheSavedAtText || "-" };
+  const currentTimes = rows.map(row => row.userDataTime).filter(Boolean).sort();
+  return {
+    ok: true,
+    range,
+    dates,
+    rows,
+    total: rows.length,
+    realtimeUserCount: rows.filter(row => row.realtimeToday).length,
+    latestDataTime: currentTimes.at(-1) || userDetailCacheSavedAtText || "-"
+  };
 }
 
 async function addFocusUser(body) {
@@ -1904,10 +1952,14 @@ async function encryptedPublicUserDetails(dateRange) {
       const previous = detailRanks.get(id);
       if (previous && (rank[0] < previous[0] || (rank[0] === previous[0] && rank[1] <= previous[1]))) continue;
       detailRanks.set(id, rank);
-      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange);
+      const realtimeToday = key.includePrevious === false && key.startDate === dayKey() && key.endDate === dayKey();
+      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange)
+        .map(row => ({ ...row, realtimeToday }));
       details[id] = {
         ...(details[id] || {}),
         latestDataTime: payload.savedAtText || "-",
+        currentLatestDataTime: payload.savedAtText || "-",
+        realtimeUserCount: realtimeToday ? rows.length : 0,
         total: payload.total || rows.length,
         rows
       };
@@ -1921,6 +1973,7 @@ async function encryptedPublicUserDetails(dateRange) {
       detail.history.rows = deduplicateBusinessUsers(detail.history.rows);
       detail.history.dates = [...new Set(detail.history.dates || [])].sort();
       detail.history.total = detail.history.rows.length;
+      detail.historyLatestDataTime = detail.history.latestDataTime || "-";
     }
   }
   return details;
@@ -2036,7 +2089,7 @@ async function writePublicUserDetailShards(details = {}) {
     }
     manifest[id] = {
       shard: `data/business-public-users/${safeId}.enc.json`,
-      latestDataTime: detail.history?.latestDataTime || detail.latestDataTime || "-",
+      latestDataTime: detail.latestDataTime || detail.history?.latestDataTime || "-",
       total: detail.history?.total || detail.total || 0
     };
   }

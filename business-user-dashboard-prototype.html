@@ -594,9 +594,10 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "seven", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
+    const PUBLIC_USER_ALIASES_KEY = "businessDashboardPublicUserAliases";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
@@ -606,9 +607,9 @@
     const pctValue = n => n === null || n === undefined ? "-" : pct(n);
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     const userIdOf = user => String(user?.id || user?.userId || "");
-    const userDisplayName = user => state.userAliases[userIdOf(user)] || user?.name || "-";
+    const userDisplayName = user => Object.prototype.hasOwnProperty.call(state.userAliases, userIdOf(user)) ? (state.userAliases[userIdOf(user)] || user?.name || "-") : (user?.name || "-");
     const userSearchText = user => `${userDisplayName(user)}${user?.name || ""}${userIdOf(user)}`.toLowerCase();
-    const aliasEditButton = user => isLocalSettings ? `<button class="alias-edit" data-edit-user-alias="${escapeHtml(userIdOf(user))}" title="修改或删除用户备注名">修改</button>` : "";
+    const aliasEditButton = user => `<button class="alias-edit" data-edit-user-alias="${escapeHtml(userIdOf(user))}" title="修改或删除用户备注名">修改</button>`;
     const pad = n => String(n).padStart(2, "0");
     const dayText = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
     const parseDateText = value => {
@@ -618,6 +619,28 @@
     const localApiBase = location.protocol === "file:" ? "http://127.0.0.1:8791" : "";
     const isLocalSettings = location.protocol === "file:" || ["127.0.0.1", "localhost"].includes(location.hostname);
     const apiUrl = path => `${localApiBase}${path}`;
+
+    function readPublicUserAliases() {
+      try { return JSON.parse(localStorage.getItem(PUBLIC_USER_ALIASES_KEY) || "{}"); } catch { return {}; }
+    }
+
+    function userRefreshTimesText() {
+      const times = state.config?.userRefreshTimes || ["12:00", "17:00", "22:00"];
+      return times.join("、") || "未配置";
+    }
+
+    function isFastUserBusiness(row = state.detailRow) {
+      const ids = new Set((state.config?.fastUserBusinessIds || []).map(String));
+      return ids.has(String(row?.businessId || "")) || ids.has(String(row?.platformBusinessId || ""));
+    }
+
+    function detailFrequencyText() {
+      if (state.detailMode === "history" || state.detailScope !== "today") return `固定时段 ${userRefreshTimesText()} 更新，可手动刷新当前业务`;
+      const realtime = Number(state.detailStats?.realtimeUserCount || 0);
+      return isFastUserBusiness()
+        ? `今日前 ${fmt(realtime || 100)} 名每 10 分钟更新，其余用户在 ${userRefreshTimesText()} 更新`
+        : `今日全部用户在 ${userRefreshTimesText()} 更新，可手动刷新当前业务`;
+    }
 
     function currentMetricLabel() {
       const label = state.dateRange?.label || "今日";
