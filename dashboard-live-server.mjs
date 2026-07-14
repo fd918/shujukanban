@@ -867,6 +867,31 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
     statuses.push({ name: "业务用户历史缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
     return { ...cached, cached: true };
   }
+  if (!refresh) {
+    const covering = [...userDetailCache.entries()]
+      .map(([key, payload]) => {
+        try {
+          return { key: JSON.parse(key), payload };
+        } catch {
+          return null;
+        }
+      })
+      .filter(item => item?.key?.type === "history"
+        && String(item.key.businessId) === String(businessId)
+        && item.key.startDate <= startDate
+        && item.key.endDate >= endDate)
+      .sort((a, b) => (a.payload.dates?.length || 0) - (b.payload.dates?.length || 0))[0];
+    if (covering) {
+      const dates = (covering.payload.dates || []).filter(date => date >= startDate && date <= endDate);
+      const rows = (covering.payload.rows || []).map(row => ({
+        ...row,
+        days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
+        todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
+      }));
+      statuses.push({ name: "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${rows.length} 个用户、${dates.length} 天`, durationMs: 0 });
+      return { ...covering.payload, dates, rows, total: rows.length, cached: true };
+    }
+  }
   const dates = dayList(startDate, endDate);
   const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate };
   const result = await apiCall("业务用户历史", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);

@@ -778,7 +778,11 @@
       state.detailHistoryStart = dayText(start);
       state.detailHistoryEnd = dayText(end);
       state.detailHistory = null;
-      if (reload) loadBusinessUserHistory(true).catch(error => toast(error.message || "用户历史加载失败"));
+      if (reload) {
+        state.detailRefreshing = true;
+        renderDetail(false);
+        loadBusinessUserHistory(false).catch(error => toast(error.message || "用户历史加载失败"));
+      }
     }
 
     function addDays(date, days) {
@@ -1718,9 +1722,11 @@
             }))
           };
           state.detailLatestTime = detail.history.latestDataTime || state.detailLatestTime;
+          state.detailRefreshing = false;
           renderDetail(true);
           return;
         }
+        state.detailRefreshing = false;
         renderDetail(true);
         toast("公网快照暂未包含该业务历史订单，请等待下一次快照发布。");
         return;
@@ -2314,7 +2320,9 @@
       const historyApply = e.target.closest("[data-detail-history-apply]");
       if (historyApply) {
         state.detailHistory = null;
-        loadBusinessUserHistory(true).catch(error => toast(error.message || "用户历史加载失败"));
+        state.detailRefreshing = true;
+        renderDetail(false);
+        loadBusinessUserHistory(false).catch(error => toast(error.message || "用户历史加载失败"));
         return;
       }
       const search = e.target.closest("#detailSearch");
