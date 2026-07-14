@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>业务异常监控</title>
+  <script src="vendor/fflate.min.js"></script>
   <script>
     (() => {
       const params = new URLSearchParams(location.search);
@@ -1389,8 +1390,9 @@
 
     function saveCachedPublicPayload(payload) {
       try {
+        const lightweightPayload = { ...payload, userDetails: {} };
         localStorage.setItem(PUBLIC_PAYLOAD_CACHE_KEY, JSON.stringify({
-          payload,
+          payload: lightweightPayload,
           expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
         }));
       } catch {}
@@ -1423,9 +1425,24 @@
 
     async function decodePublicPayload(plain, compression) {
       if (compression !== "gzip") return new TextDecoder().decode(plain);
-      if (!("DecompressionStream" in window)) throw new Error("当前浏览器不支持 gzip 解压");
-      const stream = new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"));
-      return await new Response(stream).text();
+      if ("DecompressionStream" in window) {
+        const stream = new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"));
+        return await new Response(stream).text();
+      }
+      if (window.fflate?.gunzipSync) return new TextDecoder().decode(window.fflate.gunzipSync(plain));
+      throw new Error("当前浏览器不支持公网数据解压");
+    }
+
+    async function loadPublicUserDetail(businessId) {
+      const current = state.publicUserDetails[businessId] || {};
+      if (!current.shard || current.history || current.rows) return current;
+      const res = await fetch(`${current.shard}?_=${Date.now()}`);
+      if (!res.ok) throw new Error(`公网用户数据加载失败：HTTP ${res.status}`);
+      const encrypted = await res.json();
+      const detail = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
+      if (!detail) throw new Error("公网用户数据解密失败，请重新打开页面并输入密码");
+      state.publicUserDetails[businessId] = detail;
+      return detail;
     }
 
     async function derivePublicKey(password, salt, iterations) {
@@ -1622,7 +1639,12 @@
         return;
       }
       if (state.publicMode) {
-        const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || { rows: [] };
+        const primaryId = String(row.platformBusinessId || row.businessId);
+        const fallbackId = String(row.businessId || "");
+        state.detailRefreshing = true;
+        state.detailLoadingLabel = "公网用户数据";
+        renderDetail(false);
+        const detail = await loadPublicUserDetail(state.publicUserDetails[primaryId] ? primaryId : fallbackId);
         applySynchronizedUserData({
           users: detail.rows || [],
           history: detail.history || { rows: [], dates: [] },
@@ -1663,7 +1685,9 @@
       if (!state.detailRow) return;
       if (state.publicMode) {
         const row = state.detailRow;
-        const detail = state.publicUserDetails[String(row.platformBusinessId || row.businessId)] || state.publicUserDetails[String(row.businessId)] || {};
+        const primaryId = String(row.platformBusinessId || row.businessId);
+        const fallbackId = String(row.businessId || "");
+        const detail = await loadPublicUserDetail(state.publicUserDetails[primaryId] ? primaryId : fallbackId);
         if (detail.history) {
           const startDate = state.detailHistoryStart || detail.history.dates?.at(-7) || detail.history.dates?.[0];
           const endDate = state.detailHistoryEnd || detail.history.dates?.at(-1);

@@ -20,6 +20,7 @@ const FOCUS_USERS_PATH = join(ROOT, "data/business-focus-users.json");
 const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.json");
 const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
 const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.json");
+const PUBLIC_USER_DETAIL_DIR = join(ROOT, "data/business-public-users");
 const USER_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.username";
 const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
 const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook";
@@ -1887,7 +1888,7 @@ async function sanitizePublicDashboard(data) {
   };
 }
 
-async function encryptPublicPayload(payload) {
+async function encryptPublicPayload(payload, { compression = "gzip", contentHash = "" } = {}) {
   const password = await readSecret(PUBLIC_PASSWORD_SERVICE);
   if (!password) throw new Error("缺少公网看板访问密码，请先写入钥匙串。");
   const salt = randomBytes(16);
@@ -1895,12 +1896,14 @@ async function encryptPublicPayload(payload) {
   const iterations = 600000;
   const key = pbkdf2Sync(password, salt, iterations, 32, "sha256");
   const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const plaintext = gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
+  const source = Buffer.from(JSON.stringify(payload), "utf8");
+  const plaintext = compression === "gzip" ? gzipSync(source) : source;
   const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   return {
     version: 1,
     algorithm: "AES-256-GCM",
-    compression: "gzip",
+    compression,
+    contentHash,
     kdf: "PBKDF2-SHA256",
     iterations,
     salt: salt.toString("base64"),
@@ -1912,17 +1915,46 @@ async function encryptPublicPayload(payload) {
   };
 }
 
+async function writePublicUserDetailShards(details = {}) {
+  await mkdir(PUBLIC_USER_DETAIL_DIR, { recursive: true });
+  const manifest = {};
+  for (const [id, detail] of Object.entries(details)) {
+    const safeId = String(id).replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeId) continue;
+    const contentHash = createHash("sha256").update(JSON.stringify(detail)).digest("hex");
+    const filePath = join(PUBLIC_USER_DETAIL_DIR, `${safeId}.enc.json`);
+    let shouldWrite = true;
+    if (existsSync(filePath)) {
+      try {
+        const current = JSON.parse(await readFile(filePath, "utf8"));
+        shouldWrite = current.contentHash !== contentHash;
+      } catch {}
+    }
+    if (shouldWrite) {
+      const encrypted = await encryptPublicPayload(detail, { compression: "gzip", contentHash });
+      await writeFile(filePath, JSON.stringify(encrypted));
+    }
+    manifest[id] = {
+      shard: `data/business-public-users/${safeId}.enc.json`,
+      latestDataTime: detail.history?.latestDataTime || detail.latestDataTime || "-",
+      total: detail.history?.total || detail.total || 0
+    };
+  }
+  return manifest;
+}
+
 async function publishPublicDashboard(data) {
   const payload = await sanitizePublicDashboard(data);
-  const encryptedPayload = await encryptPublicPayload(payload);
+  payload.userDetails = await writePublicUserDetailShards(payload.userDetails || {});
+  const encryptedPayload = await encryptPublicPayload(payload, { compression: "none" });
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(PUBLIC_DASHBOARD_PATH, JSON.stringify(encryptedPayload, null, 2));
   await pushPublicDashboard();
 }
 
 async function pushPublicDashboard() {
-  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
-  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "data/business-dashboard-public.enc.json"]);
+  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-public-users"]);
+  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-public-users"]);
   if (!status) {
     console.log(`[${nowText()}] 业务看板公开文件没有变化，跳过 GitHub 推送。`);
     return false;
