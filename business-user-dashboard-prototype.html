@@ -141,7 +141,7 @@
     }
     .segmented button.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(15,23,42,.1); }
 
-    .table-wrap { overflow: auto; max-height: calc(100vh - 330px); min-height: 360px; }
+    .table-wrap { overflow: auto; max-height: calc(100vh - 330px); min-height: 360px; scrollbar-gutter: stable both-edges; }
     table { width: 100%; border-collapse: collapse; min-width: 1280px; }
     th, td {
       padding: 11px 10px;
@@ -153,6 +153,8 @@
     th { color: var(--muted); font-size: 12px; background: #f8fafc; position: sticky; top: 0; z-index: 2; }
     tr:hover td { background: #fffaf0; }
     .link { border: 0; background: transparent; color: var(--blue); padding: 0; }
+    .business-history-link { border: 0; background: transparent; color: var(--text); padding: 0; font-weight: 700; text-align: left; cursor: pointer; }
+    .business-history-link:hover { color: var(--blue); text-decoration: underline; }
     tr[data-index] { cursor: pointer; }
     tr[data-index]:hover .link { text-decoration: underline; }
     .muted { color: var(--muted); font-size: 12px; }
@@ -213,9 +215,16 @@
     .modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
     .modal.detail-modal { width: min(1240px, 96vw); }
     .modal-body { overflow: auto; padding: 16px 18px; }
-    .detail-table-wrap { overflow: auto; max-height: 52vh; border: 1px solid var(--line); border-radius: 8px; }
+    .detail-table-wrap { overflow: auto; max-height: 52vh; border: 1px solid var(--line); border-radius: 8px; scrollbar-gutter: stable both-edges; }
     .detail-table-wrap table { min-width: 1120px; }
     .detail-table-wrap table.compact { min-width: 980px; }
+    table.wide-date-table { width: max-content; min-width: 100%; }
+    .wide-date-table th, .wide-date-table td { min-width: 92px; }
+    .wide-date-table th:first-child, .wide-date-table td:first-child { position: sticky; left: 0; z-index: 3; min-width: 52px; background: #fff; }
+    .wide-date-table th:nth-child(2), .wide-date-table td:nth-child(2) { position: sticky; left: 52px; z-index: 3; min-width: 170px; background: #fff; }
+    .wide-date-table th:nth-child(3), .wide-date-table td:nth-child(3) { position: sticky; left: 222px; z-index: 3; min-width: 70px; background: #fff; box-shadow: 5px 0 8px rgba(15,23,42,.05); }
+    .wide-date-table th:nth-child(-n+3) { background: #f8fafc; z-index: 4; }
+    .scroll-hint { margin: 7px 2px 0; color: var(--muted); font-size: 12px; }
     .user-cell { max-width: 150px; white-space: normal; line-height: 1.35; }
     .user-cell strong { display: block; }
     .user-cell .muted { display: block; margin-top: 3px; font-size: 12px; }
@@ -450,7 +459,7 @@
               <th><button class="sort-btn" data-sort="impact">影响量</button></th>
               <th><button class="sort-btn" data-sort="level">异常等级</button></th>
               <th><button class="sort-btn" data-sort="users">相关用户</button></th>
-              <th>用户高频更新</th>
+              <th>前100用户更新</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -513,10 +522,10 @@
         <strong>用户流失分析：</strong>用户列表默认展示“流失风险 + 近7天”。今日对比昨日同时刻，近7天对比前7天，本月截至今天对比上月相同日期进度；连续3天无订单、近7天下降、月度同期下降和连续两周下降会形成风险原因。点击用户名称可展开周/月明细。
       </section>
       <section class="source">
-        <strong>本次更新时间：</strong>业务订单和小时趋势每 10 分钟更新；业务行开启“用户高频更新”后，该业务前100用户每 10 分钟更新，其他业务按设置中心的固定时间更新全量用户。用户弹窗的今日、近7天和本月共用同一批全量用户数据和同一个数据时间；“刷新用户”只分页刷新当前业务，不刷新其他业务。公网发布直接使用已保存缓存，不会再次请求中台。
+        <strong>本次更新时间：</strong>业务订单和小时趋势每 10 分钟更新；业务行开启“前100用户更新”后，该业务按今日订单排序的前100用户每 10 分钟更新。全部用户、近7天、本月和历史订单来自固定时段的65天全量历史，默认在12:00、17:00、22:00更新。“刷新用户”只分页刷新当前业务，不刷新其他业务。公网发布直接使用已保存缓存，不会再次请求中台。
       </section>
       <section class="source warn">
-        <strong>请求频率与数量：</strong>页面每5分钟检查一次只读取缓存，请求中台为0次。每10分钟业务任务约160次请求；当前约16个高频业务的前100用户约160次，因此每个10分钟周期合计约320次。全量用户在12:00、17:00、22:00更新，因中台每页约10人，单次全业务65天历史预计约3万至4万次请求。点击普通“查看用户”有缓存时为0次；点击“刷新用户”会刷新当前业务全部用户，例如3300名用户约330次请求。具体数量会随业务数、用户数和失败重试变化。
+        <strong>请求频率与数量：</strong>页面每5分钟检查缓存，请求中台为0次。每10分钟约160次用于全部业务汇总、目录、小时趋势与快照，展示在指标卡、趋势图和业务列表；另约160次用于已勾选业务的前100用户，展示在用户列表的今日候选数据。“65天全量历史”是逐业务、逐用户读取每天订单，支撑近7天、本月、流失风险、高增长和历史订单；中台每页约10人，所以全部业务单次约3万至4万次。点击普通“查看用户”命中缓存为0次；手动刷新3300名用户的单个业务约330次。具体数量随业务数、用户数和失败重试变化。
       </section>
       <section class="source">
         <strong>用户数据时间：</strong>只显示当前业务用户缓存自身的保存时间，不再使用业务列表时间代替。公网和本地都选择结束日期最新、覆盖天数最长的同一份用户历史缓存；没有用户缓存时显示“-”。
@@ -1113,7 +1122,7 @@
         return `<tr data-index="${index}">
           <td>${index + 1}</td>
           <td>${row.platform}</td>
-          <td><strong>${row.name}</strong></td>
+          <td><button class="business-history-link" data-business-history-index="${index}" title="查看业务历史订单">${row.name}</button></td>
           <td>${state.metric === "commission" ? money(row.cmp.today) : fmt(row.cmp.today)}</td>
           <td>${same.yesterday ? fmt(state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : "-"}</td>
           <td>${same.lastWeek ? fmt(state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : "-"}</td>
@@ -1122,7 +1131,7 @@
           <td>${fmtValue(row.cmp.impact)}</td>
           <td>${tag(row.cmp.level, row.cmp.label)}</td>
           <td>${fmt(row.users || row.userIds?.length || 0)}</td>
-          <td><label class="refresh-switch"><input type="checkbox" data-fast-business="${row.businessId}" ${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "每10分钟" : "定时更新"}</span></label></td>
+          <td><label class="refresh-switch"><input type="checkbox" data-fast-business="${row.businessId}" ${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "前100每10分钟" : "固定时段"}</span></label></td>
           <td><button class="link" data-index="${index}">查看用户</button></td>
         </tr>`;
       }).join("") : `<tr><td colspan="13" class="muted">当前筛选条件下没有业务。</td></tr>`;
@@ -1135,6 +1144,7 @@
       let rows = daily.rows || [];
       if (state.platform !== "all") rows = rows.filter(row => row.platform === state.platform);
       if (searchKey) rows = rows.filter(row => `${row.platform}${row.name}${row.businessId}${row.platformBusinessId || ""}`.toLowerCase().includes(searchKey));
+      $("#dailyTable").classList.toggle("wide-date-table", dates.length > 7);
       $("#dailyHead").innerHTML = `<tr><th>序号</th><th>平台</th><th>业务名称</th>${dates.map(date => `<th>${date}</th>`).join("")}</tr>`;
       if (state.loading && !rows.length) {
         $("#dailyBody").innerHTML = `<tr><td colspan="${dates.length + 3}" class="muted">每日业务数据加载中，请稍等...</td></tr>`;
@@ -1557,9 +1567,9 @@
       await loadData(false);
     }
 
-    async function openBusiness(row) {
+    async function openBusiness(row, initialMode = "abnormal") {
       state.detailRow = row;
-      state.detailMode = "abnormal";
+      state.detailMode = initialMode;
       state.detailScope = "seven";
       state.detailSearch = "";
       state.detailSort = "impact";
@@ -1581,7 +1591,12 @@
       $("#detailSub").textContent = `${row.platform}｜${row.cmp.label}`;
       $("#modalMask").classList.add("open");
       $("#detailModal").classList.add("open");
-      await loadBusinessUsers(row, false);
+      if (initialMode === "history") {
+        setDetailHistoryRange("7", false);
+        await loadBusinessUserHistory(false);
+      } else {
+        await loadBusinessUsers(row, false);
+      }
     }
 
     function syncOpenDetailAfterDataUpdate(previousDataTime, forceRefresh = false) {
@@ -2026,10 +2041,11 @@
         <button class="btn primary" data-detail-history-apply="1">查询历史</button>
       </div>
       ${selectedUser ? renderUserHistoryAnalysis(selectedUser, dates) : `<section class="source"><strong>用户分析：</strong>点击用户名称后，会在这里分析该用户的订单总量、日均订单、有单天数、最高单日和近期走势。</section>`}
-      <div class="detail-table-wrap"><table class="compact">
+      <div class="detail-table-wrap"><table class="compact wide-date-table">
         <thead><tr><th>序号</th><th>用户</th><th>关注</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
         <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><button class="user-history-link" data-select-history-user="${user.id || ""}">${user.name}</button><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td><button class="add-focus-icon" data-add-detail-focus="${user.id || ""}" title="加入重点用户">+</button></td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 4}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
-      </table></div>`;
+      </table></div>
+      ${dates.length > 7 ? `<div class="scroll-hint">当前共 ${dates.length} 天，表格底部可左右拖动查看全部日期。</div>` : ""}`;
     }
 
     function renderUserHistoryAnalysis(user, dates) {
@@ -2186,6 +2202,11 @@
     $("#closeDetailFoot").addEventListener("click", closeDetail);
     $("#businessBody").addEventListener("click", e => {
       if (e.target.closest("[data-fast-business]")) return;
+      const historyTarget = e.target.closest("[data-business-history-index]");
+      if (historyTarget) {
+        openBusiness(filteredBusinesses()[Number(historyTarget.dataset.businessHistoryIndex)], "history").catch(error => toast(error.message || "历史订单加载失败"));
+        return;
+      }
       const target = e.target.closest("[data-index]");
       if (target) openBusiness(filteredBusinesses()[Number(target.dataset.index)]).catch(error => toast(error.message || "用户明细加载失败"));
     });
@@ -2196,7 +2217,7 @@
         const data = await requestJson(apiUrl("/api/business-refresh"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId: toggle.dataset.fastBusiness, enabled: toggle.checked }) });
         state.config = data.config;
         renderTable();
-        toast(toggle.checked ? "已开启前100每10分钟更新" : "已改为固定时段更新");
+        toast(toggle.checked ? "已开启前100用户每10分钟更新" : "已改为固定时段更新");
       } catch (error) {
         toggle.checked = !toggle.checked;
         toast(error.message || "刷新策略保存失败");
