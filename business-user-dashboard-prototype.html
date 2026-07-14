@@ -220,6 +220,13 @@
     .user-cell .muted { display: block; margin-top: 3px; font-size: 12px; }
     .user-toggle { border: 0; background: transparent; color: var(--text); padding: 0; font-weight: 700; text-align: left; }
     .user-toggle:hover { color: var(--blue); }
+    .user-history-link { border:0; background:transparent; color:var(--text); padding:0; font-weight:700; text-align:left; cursor:pointer; }
+    .user-history-link:hover { color:var(--blue); text-decoration:underline; }
+    .user-name-line { display:flex; align-items:center; gap:5px; }
+    .add-focus-icon { width:26px; height:26px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--orange); font-size:18px; line-height:22px; cursor:pointer; }
+    .add-focus-icon:hover { border-color:var(--orange); background:#fff7ed; }
+    .history-analysis { display:grid; grid-template-columns:repeat(4,minmax(120px,1fr)); gap:8px; margin:10px 0; }
+    .history-analysis .detail { padding:10px; }
     .expanded-detail { background: #f8fafc; color: var(--muted); line-height: 1.7; }
     .expanded-metrics { display: flex; flex-wrap: wrap; gap: 8px 18px; }
     .expanded-metrics strong { color: var(--text); }
@@ -318,7 +325,7 @@
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
 
     @media (max-width: 960px) {
-      .filters, .kpis, .settings-grid, .detail-grid { grid-template-columns: 1fr; }
+      .filters, .kpis, .settings-grid, .detail-grid, .history-analysis { grid-template-columns: 1fr; }
       .topbar { align-items: start; flex-direction: column; }
       .content { padding: 14px; }
       .mobile-filter-toggle { display: block; width: 100%; }
@@ -448,7 +455,7 @@
         </table>
         <section id="focusView" class="hidden">
           <div class="toolbar" style="padding:12px 14px;border-bottom:1px solid var(--line);">
-            <div class="segmented" id="focusRangeTabs"><button data-focus-range="week">本周</button><button class="active" data-focus-range="month">本月</button><button data-focus-range="7">近7天</button><button data-focus-range="30">近30天</button></div>
+            <div class="segmented" id="focusRangeTabs"><button class="active" data-focus-range="7">近7天</button><button data-focus-range="month">本月</button><button data-focus-range="30">近30天</button></div>
             <select class="field" id="focusPlatform"><option value="all">全部平台</option></select>
             <select class="field" id="focusBusiness"><option value="all">全部业务</option></select>
             <input class="field" id="focusSearch" placeholder="搜索用户名称或ID">
@@ -562,7 +569,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "month", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", config: null, summary: null, businesses: [], users: [], businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, detailMode: "abnormal", detailScope: "seven", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -1078,7 +1085,7 @@
 
     async function loadFocusUsers() {
       if (state.publicMode) {
-        state.focusData = state.publicFocusUsers[state.focusRange] || state.publicFocusUsers.month || state.focusData;
+        state.focusData = state.publicFocusUsers[state.focusRange] || state.publicFocusUsers["7"] || state.focusData;
         renderFocusUsers();
         return;
       }
@@ -1127,6 +1134,18 @@
       closeFocusModal();
       renderFocusUsers();
       toast("重点用户已添加");
+    }
+
+    async function addDetailFocusUser(userId) {
+      if (state.publicMode) return toast("请在本地看板添加重点用户");
+      const businessId = String(state.detailRow?.platformBusinessId || state.detailRow?.businessId || "");
+      if (!businessId || !userId) return;
+      await requestJson(apiUrl("/api/focus-users"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ businessId, userId })
+      });
+      toast("已加入重点用户看板");
     }
 
     async function removeFocusUser(businessId, userId) {
@@ -1411,6 +1430,7 @@
       state.detailSort = "impact";
       state.detailSortDir = "desc";
       state.detailExpandedUserId = "";
+      state.detailHistoryUserId = "";
       state.detailUsers = [];
       state.detailHistory = null;
       state.detailHistoryStart = "";
@@ -1774,12 +1794,12 @@
         ${state.detailMode === "history" ? renderUserHistoryTable() : `
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>${compareBaseLabel()}</th><th>上周同时刻</th><th>${previousPeriodLabel()}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>原因</th></tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>关注</th><th>${detailSortButton("orders", `${detailScopeLabel()}订单`)}</th><th>${compareBaseLabel()}</th><th>上周同时刻</th><th>${previousPeriodLabel()}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th><th>原因</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
-              return `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${fmt(user.yesterdayOrders)}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td><td>${user.cmp.reason || "-"}</td></tr>`;
-            }).join("") : `<tr><td colspan="10" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+              return `<tr><td>${index + 1}</td><td class="user-cell"><button class="user-history-link" data-user-history="${user.id || ""}" title="查看该用户历史订单">${user.name}</button><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${state.publicMode ? "-" : `<button class="add-focus-icon" data-add-detail-focus="${user.id || ""}" title="加入重点用户">+</button>`}</td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td>${fmt(user.yesterdayOrders)}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td><td>${user.cmp.reason || "-"}</td></tr>`;
+            }).join("") : `<tr><td colspan="11" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>`}`;
     }
@@ -1804,7 +1824,7 @@
         <section class="source"><strong>${detailScopeLabel()}用户评估：</strong>${state.detailScope === "seven" ? "最近7天对比前7天" : "本月截至今天对比上月相同日期进度"}；同时结合连续无单和近7天趋势识别流失风险。波动在10%以内按正常处理，点击用户名称可展开周/月明细。</section>
         <div class="detail-table-wrap">
           <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", currentLabel)}</th><th>${baseLabel}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>近期趋势</th><th>风险等级</th><th>判断原因</th></tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>关注</th><th>${detailSortButton("orders", currentLabel)}</th><th>${baseLabel}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>近期趋势</th><th>风险等级</th><th>判断原因</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const displayCmp = periodDisplayCmp(user) || {};
               const riskCmp = periodRiskCmp(user) || displayCmp;
@@ -1815,7 +1835,8 @@
                 : (user.cmp?.reason || riskCmp.reason || "-");
               return `<tr>
                 <td>${index + 1}</td>
-                <td class="user-cell"><button class="user-toggle" data-detail-user-toggle="${user.id || ""}">${expanded ? "▾" : "›"} ${user.name}</button><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
+                <td class="user-cell"><div class="user-name-line"><button class="user-toggle" data-detail-user-toggle="${user.id || ""}" title="展开周期数据">${expanded ? "▾" : "›"}</button><button class="user-history-link" data-user-history="${user.id || ""}" title="查看该用户历史订单">${user.name}</button></div><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
+                <td>${state.publicMode ? "-" : `<button class="add-focus-icon" data-add-detail-focus="${user.id || ""}" title="加入重点用户">+</button>`}</td>
                 <td>${fmt(displayCmp.today)}</td>
                 <td>${fmtValue(displayCmp.base)}</td>
                 <td class="${displayCmp.diff < 0 ? "down" : displayCmp.diff > 0 ? "up" : ""}">${pctValue(displayCmp.ratio)}</td>
@@ -1823,12 +1844,12 @@
                 <td>${trendText}</td>
                 <td>${tag(riskCmp.level, riskCmp.label)}</td>
                 <td>${reason}</td>
-              </tr>${expanded ? `<tr><td></td><td colspan="8" class="expanded-detail"><div class="expanded-metrics">
+              </tr>${expanded ? `<tr><td></td><td colspan="9" class="expanded-detail"><div class="expanded-metrics">
                 <span>本周 <strong>${fmt(user.weekOrders)}</strong></span><span>上周同期 <strong>${fmt(user.lastWeekSamePeriodOrders)}</strong></span><span>变化 <strong>${pctValue(user.weekCmp?.ratio)}</strong></span>
                 <span>上周完整 <strong>${fmt(user.lastWeekOrders)}</strong></span><span>上上周 <strong>${fmt(user.prevWeekOrders)}</strong></span><span>变化 <strong>${pctValue(user.lastWeekCmp?.ratio)}</strong></span>
                 <span>本月 <strong>${fmt(user.monthOrders)}</strong></span><span>上月同期 <strong>${fmt(user.prevMonthOrders)}</strong></span><span>变化 <strong>${pctValue(user.monthCmp?.ratio)}</strong></span>
               </div></td></tr>` : ""}`;
-            }).join("") : `<tr><td colspan="9" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
+            }).join("") : `<tr><td colspan="10" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
           </table>
         </div>`;
     }
@@ -1839,6 +1860,7 @@
       const dates = history.dates || [];
       const keyword = state.detailSearch.toLowerCase();
       const rows = keyword ? (history.rows || []).filter(user => `${user.name}${user.id}`.toLowerCase().includes(keyword)) : (history.rows || []);
+      const selectedUser = rows.find(user => String(user.id || "") === state.detailHistoryUserId) || (rows.length === 1 ? rows[0] : null);
       return `<div class="toolbar" style="margin-bottom:10px;">
         <input class="field" id="detailHistoryStart" type="date" value="${state.detailHistoryStart || ""}" title="历史开始日期">
         <input class="field" id="detailHistoryEnd" type="date" value="${state.detailHistoryEnd || ""}" title="历史结束日期">
@@ -1847,10 +1869,44 @@
         <button class="btn" data-detail-history-range="month">本月</button>
         <button class="btn primary" data-detail-history-apply="1">查询历史</button>
       </div>
+      ${selectedUser ? renderUserHistoryAnalysis(selectedUser, dates) : `<section class="source"><strong>用户分析：</strong>点击用户名称后，会在这里分析该用户的订单总量、日均订单、有单天数、最高单日和近期走势。</section>`}
       <div class="detail-table-wrap"><table class="compact">
-        <thead><tr><th>序号</th><th>用户</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
-        <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><strong>${user.name}</strong><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
+        <thead><tr><th>序号</th><th>用户</th><th>关注</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
+        <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><button class="user-history-link" data-select-history-user="${user.id || ""}">${user.name}</button><span class="muted">ID：${user.id || "-"}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${state.publicMode ? "-" : `<button class="add-focus-icon" data-add-detail-focus="${user.id || ""}" title="加入重点用户">+</button>`}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 4}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
       </table></div>`;
+    }
+
+    function renderUserHistoryAnalysis(user, dates) {
+      const values = dates.map(date => Number(user.days?.[date] || 0));
+      const total = values.reduce((sum, value) => sum + value, 0);
+      const activeDays = values.filter(value => value > 0).length;
+      const average = dates.length ? Math.round(total / dates.length * 10) / 10 : 0;
+      const maxValue = values.length ? Math.max(...values) : 0;
+      const maxDate = maxValue > 0 ? dates[values.indexOf(maxValue)] : "-";
+      const recent = values.slice(-3);
+      const previous = values.slice(-6, -3);
+      const recentTotal = recent.reduce((sum, value) => sum + value, 0);
+      const previousTotal = previous.reduce((sum, value) => sum + value, 0);
+      const recentRatio = previousTotal ? (recentTotal - previousTotal) / previousTotal * 100 : null;
+      let zeroDays = 0;
+      for (let index = values.length - 1; index >= 0 && values[index] === 0; index -= 1) zeroDays += 1;
+      const trend = recentRatio === null ? "缺少前3日基准" : Math.abs(recentRatio) <= 10 ? "近3日基本稳定" : recentRatio > 0 ? `近3日上升 ${pctValue(recentRatio)}` : `近3日下降 ${pctValue(recentRatio)}`;
+      const conclusion = zeroDays >= 3 ? `已连续 ${zeroDays} 天无订单，建议优先联系` : recentRatio !== null && recentRatio < -10 ? `${trend}，需要关注是否持续流失` : recentRatio !== null && recentRatio > 10 ? `${trend}，属于增长用户` : trend;
+      return `<section class="source"><strong>${user.name}（ID：${user.id || "-"}）分析：</strong>${conclusion}。分析范围为 ${dates[0] || "-"} 至 ${dates.at(-1) || "-"}。</section>
+        <div class="history-analysis">
+          <div class="detail"><label>范围合计</label><strong>${fmt(total)}</strong></div>
+          <div class="detail"><label>日均订单</label><strong>${fmt(average)}</strong></div>
+          <div class="detail"><label>有单天数</label><strong>${activeDays}/${dates.length}</strong></div>
+          <div class="detail"><label>最高单日</label><strong>${fmt(maxValue)}</strong><small>${maxDate}</small></div>
+        </div>`;
+    }
+
+    function openDetailUserHistory(userId) {
+      state.detailMode = "history";
+      state.detailSearch = String(userId || "");
+      state.detailHistoryUserId = String(userId || "");
+      renderDetail(true);
+      loadBusinessUserHistory(false).catch(error => toast(error.message || "用户历史加载失败"));
     }
 
     function setupAutoRefresh() {
@@ -1990,6 +2046,23 @@
     $("#cancelFocusAdd").addEventListener("click", closeFocusModal);
     $("#confirmFocusAdd").addEventListener("click", () => addFocusUser().catch(error => { $("#focusAddResult").textContent = error.message; toast(error.message); }));
     $("#detailBody").addEventListener("click", e => {
+      const addFocus = e.target.closest("[data-add-detail-focus]");
+      if (addFocus) {
+        addDetailFocusUser(addFocus.dataset.addDetailFocus).catch(error => toast(error.message || "添加重点用户失败"));
+        return;
+      }
+      const historyUser = e.target.closest("[data-user-history]");
+      if (historyUser) {
+        openDetailUserHistory(historyUser.dataset.userHistory);
+        return;
+      }
+      const selectedHistoryUser = e.target.closest("[data-select-history-user]");
+      if (selectedHistoryUser) {
+        state.detailHistoryUserId = selectedHistoryUser.dataset.selectHistoryUser;
+        state.detailSearch = selectedHistoryUser.dataset.selectHistoryUser;
+        renderDetail(true);
+        return;
+      }
       const userToggle = e.target.closest("[data-detail-user-toggle]");
       if (userToggle) {
         state.detailExpandedUserId = state.detailExpandedUserId === userToggle.dataset.detailUserToggle ? "" : userToggle.dataset.detailUserToggle;
@@ -2046,6 +2119,7 @@
     $("#detailBody").addEventListener("input", e => {
       if (e.target.id !== "detailSearch") return;
       state.detailSearch = e.target.value.trim();
+      state.detailHistoryUserId = "";
       const result = $("#detailResult");
       if (result) result.innerHTML = renderDetailResult();
     });

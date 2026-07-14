@@ -1626,7 +1626,7 @@ function cachedUserForBusiness(businessId, userId) {
 
 function focusRange(query = {}) {
   const today = dayKey();
-  const preset = query.preset || "month";
+  const preset = query.preset || "7";
   if (preset === "week") {
     const current = dateFromDay(today);
     const offset = (current.getDay() + 6) % 7;
@@ -1887,11 +1887,10 @@ async function sanitizePublicDashboard(data) {
     businessDaily: data.businessDaily || null,
     businessTrends: await encryptedPublicBusinessTrends(data.businesses || []),
     userDetails: await encryptedPublicUserDetails(dateRange),
-    focusUsers: await buildFocusUsers({ preset: "month" }),
+    focusUsers: await buildFocusUsers({ preset: "7" }),
     focusUsersByRange: {
-      week: await buildFocusUsers({ preset: "week" }),
-      month: await buildFocusUsers({ preset: "month" }),
       7: await buildFocusUsers({ preset: "7" }),
+      month: await buildFocusUsers({ preset: "month" }),
       30: await buildFocusUsers({ preset: "30" })
     }
   };
@@ -2020,8 +2019,8 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { ok: true, config });
     }
     if (url.pathname === "/api/focus-users" && req.method === "GET") return json(res, 200, await buildFocusUsers(Object.fromEntries(url.searchParams.entries())));
-    if (url.pathname === "/api/focus-users" && req.method === "POST") return json(res, 200, { ok: true, saved: await addFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "month" }) });
-    if (url.pathname === "/api/focus-users/remove" && req.method === "POST") return json(res, 200, { ok: true, saved: await removeFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "month" }) });
+    if (url.pathname === "/api/focus-users" && req.method === "POST") return json(res, 200, { ok: true, saved: await addFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "7" }) });
+    if (url.pathname === "/api/focus-users/remove" && req.method === "POST") return json(res, 200, { ok: true, saved: await removeFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "7" }) });
     if (url.pathname === "/api/request-stats") return json(res, 200, { ok: true, stats: requestStats });
     if (url.pathname === "/api/feishu/test" && req.method === "POST") {
       try {
