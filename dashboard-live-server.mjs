@@ -989,6 +989,28 @@ function latestFastBusinessUsers(businessId, date = dayKey()) {
       const key = JSON.parse(cacheKey);
       if (String(key.businessId) !== String(businessId)) continue;
       if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
+      if (key.filterField !== "order_valid") continue;
+      if (number(key.pageSize) > 100) continue;
+      const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      if (!latest || savedAt > latestAt) {
+        latest = payload;
+        latestAt = savedAt;
+      }
+    } catch {}
+  }
+  return latest;
+}
+
+function latestFullBusinessUsers(businessId, date = dayKey()) {
+  let latest = null;
+  let latestAt = 0;
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    try {
+      const key = JSON.parse(cacheKey);
+      if (String(key.businessId) !== String(businessId)) continue;
+      if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
+      if (key.filterField !== "order_valid") continue;
+      if (number(key.pageSize) < 5000) continue;
       const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
       if (!latest || savedAt > latestAt) {
         latest = payload;
@@ -1005,43 +1027,62 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     startDate,
     endDate,
     pageSize,
-    refresh,
+    refresh: false,
     enrichPhones: true
   }, statuses);
   const snapshots = await readSnapshots();
   const historyRows = deduplicateBusinessUsers(history.rows || []);
+  const refreshedFull = refresh && endDate === dayKey() ? await fetchBusinessUsers({
+    businessId,
+    startDate: endDate,
+    endDate,
+    page: 1,
+    pageSize,
+    sortField: endDate,
+    sortOrder: "desc",
+    refresh: true,
+    includePrevious: false
+  }, statuses) : null;
+  const full = refreshedFull || (endDate === dayKey() ? latestFullBusinessUsers(businessId, endDate) : null);
   const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
   const timeValue = value => Date.parse(String(value || "").replace(/\//g, "-")) || 0;
-  const fastIsNewer = timeValue(fast?.savedAtText) > timeValue(history.savedAtText);
-  const fastById = new Map((fastIsNewer ? fast?.rows || [] : []).map(row => [String(row.id || ""), row]));
+  const fullRows = deduplicateBusinessUsers(full?.rows || []);
+  const fullById = new Map(fullRows.map(row => [String(row.id || ""), row]));
+  const fastIsNewer = timeValue(fast?.savedAtText) > timeValue(full?.savedAtText);
+  const fastRows = deduplicateBusinessUsers(fastIsNewer ? fast?.rows || [] : []);
+  const fastById = new Map(fastRows.map(row => [String(row.id || ""), row]));
+  const currentById = new Map(fullById);
+  fastById.forEach((row, id) => currentById.set(id, row));
   const todayRows = historyRows.map(row => ({
     ...row,
-    ...(fastById.get(String(row.id || "")) || {}),
+    ...(currentById.get(String(row.id || "")) || {}),
     days: {
       ...(row.days || {}),
-      ...(fastById.has(String(row.id || "")) ? { [endDate]: number(fastById.get(String(row.id || ""))?.todayOrders) } : {})
+      ...(full ? { [endDate]: number(currentById.get(String(row.id || ""))?.todayOrders) } : {})
     },
-    todayOrders: fastById.has(String(row.id || "")) ? number(fastById.get(String(row.id || ""))?.todayOrders) : number(row.days?.[endDate]),
+    todayOrders: full ? number(currentById.get(String(row.id || ""))?.todayOrders) : number(fastById.get(String(row.id || ""))?.todayOrders ?? row.days?.[endDate]),
     yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)]),
-    realtimeToday: fastById.has(String(row.id || ""))
+    realtimeToday: currentById.has(String(row.id || ""))
   }));
-  for (const fastRow of fastIsNewer ? fast?.rows || [] : []) {
-    if (historyRows.some(row => String(row.id || "") === String(fastRow.id || ""))) continue;
-    todayRows.push({ ...fastRow, days: { [endDate]: number(fastRow.todayOrders) }, realtimeToday: true });
+  for (const currentRow of currentById.values()) {
+    if (historyRows.some(row => String(row.id || "") === String(currentRow.id || ""))) continue;
+    todayRows.push({ ...currentRow, days: { [endDate]: number(currentRow.todayOrders) }, realtimeToday: true });
   }
   const users = enrichBusinessUsersWithSnapshots(todayRows, snapshots, businessId, rangeFromQuery({ start_date: endDate, end_date: endDate }));
   const topState = userRefreshState.top100[String(businessId)] || {};
   users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
   const historyLatestDataTime = history.savedAtText || "-";
-  const currentLatestDataTime = fastIsNewer ? fast.savedAtText : historyLatestDataTime;
+  const fullCurrentLatestDataTime = full?.savedAtText || "";
+  const currentLatestDataTime = fastIsNewer ? fast.savedAtText : (fullCurrentLatestDataTime || historyLatestDataTime);
   return {
     ok: history.ok,
     cached: Boolean(history.cached),
     latestDataTime: currentLatestDataTime,
     currentLatestDataTime,
+    fullCurrentLatestDataTime: fullCurrentLatestDataTime || "-",
     historyLatestDataTime,
     realtimeUserCount: fastById.size,
-    total: history.total,
+    total: full?.total || history.total,
     userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0),
     users,
     history: {

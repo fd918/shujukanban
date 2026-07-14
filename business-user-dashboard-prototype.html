@@ -1752,7 +1752,7 @@
     function refreshOpenBusinessUsersIfStale() {
       if (state.publicMode || !state.detailRow || state.detailRefreshing || state.detailMode === "history") return;
       const businessTime = dataTimeValue(state.source?.latestDataTime);
-      const fullUserTime = dataTimeValue(state.detailStats?.historyLatestDataTime);
+      const fullUserTime = dataTimeValue(state.detailStats?.fullCurrentLatestDataTime);
       if (!businessTime || (fullUserTime && businessTime - fullUserTime < 9 * 60 * 1000)) return;
       loadBusinessUsers(state.detailRow, true).catch(error => toast(error.message || "当前业务全量用户刷新失败"));
     }
@@ -1805,6 +1805,7 @@
         userOrderSum: state.detailUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0),
         realtimeUserCount: Number(data.realtimeUserCount || state.detailUsers.filter(user => user.realtimeToday).length),
         currentLatestDataTime: data.currentLatestDataTime || data.latestDataTime || "-",
+        fullCurrentLatestDataTime: data.fullCurrentLatestDataTime || "-",
         historyLatestDataTime: data.historyLatestDataTime || data.history?.latestDataTime || "-"
       };
       state.detailLatestTime = state.detailScope === "today" ? state.detailStats.currentLatestDataTime : state.detailStats.historyLatestDataTime;
@@ -1834,6 +1835,7 @@
           total: detail.total || detail.rows?.length || 0,
           latestDataTime: detail.latestDataTime || detail.history?.latestDataTime || "-",
           currentLatestDataTime: detail.currentLatestDataTime || detail.latestDataTime || "-",
+          fullCurrentLatestDataTime: detail.fullCurrentLatestDataTime || "-",
           historyLatestDataTime: detail.historyLatestDataTime || detail.history?.latestDataTime || "-",
           realtimeUserCount: detail.realtimeUserCount || 0
         }, row, true);
