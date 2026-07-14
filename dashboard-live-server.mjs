@@ -934,34 +934,10 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
 }
 
 function deduplicateBusinessUsers(rows = []) {
-  const accounts = new Map();
+  const users = new Map();
   for (const row of rows) {
     const id = String(row.id || "");
     if (!id) continue;
-    const accountKey = `${id}::${String(row.accountsId || id)}`;
-    const current = accounts.get(accountKey);
-    if (!current) {
-      accounts.set(accountKey, { ...row, days: { ...(row.days || {}) } });
-      continue;
-    }
-    const days = { ...(current.days || {}) };
-    for (const [date, value] of Object.entries(row.days || {})) {
-      days[date] = Math.max(number(days[date]), number(value));
-    }
-    accounts.set(accountKey, {
-      ...current,
-      ...row,
-      phone: current.phone || row.phone,
-      version: current.version || row.version,
-      todayOrders: Math.max(number(current.todayOrders), number(row.todayOrders)),
-      yesterdayOrders: Math.max(number(current.yesterdayOrders), number(row.yesterdayOrders)),
-      days
-    });
-  }
-
-  const users = new Map();
-  for (const row of accounts.values()) {
-    const id = String(row.id || "");
     const current = users.get(id);
     if (!current) {
       users.set(id, { ...row, days: { ...(row.days || {}) } });
@@ -971,6 +947,7 @@ function deduplicateBusinessUsers(rows = []) {
     for (const [date, value] of Object.entries(row.days || {})) days[date] = number(days[date]) + number(value);
     users.set(id, {
       ...current,
+      ...row,
       phone: current.phone || row.phone,
       version: current.version || row.version,
       todayOrders: number(current.todayOrders) + number(row.todayOrders),
@@ -1491,6 +1468,24 @@ function cachedBusinessUsersSnapshot(dateRange) {
 
   const details = {};
   for (const [businessId, group] of candidates.entries()) {
+    const full = latestFullBusinessUsers(businessId, targetDate);
+    if (full) {
+      const fullSavedAt = Date.parse(String(full.savedAtText || "").replace(/\//g, "-")) || 0;
+      const fast = latestFastBusinessUsers(businessId, targetDate);
+      const fastSavedAt = Date.parse(String(fast?.savedAtText || "").replace(/\//g, "-")) || 0;
+      const currentById = new Map(deduplicateBusinessUsers(full.rows || []).map(row => [String(row.id || ""), row]));
+      if (fastSavedAt > fullSavedAt) {
+        for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), row);
+      }
+      details[businessId] = Object.fromEntries([...currentById.entries()].map(([userId, row]) => [userId, {
+        name: row.name,
+        phone: row.phone,
+        version: row.version,
+        orders: number(row.todayOrders),
+        commission: number(row.todayCommission)
+      }]));
+      continue;
+    }
     const historyRows = (group.history?.payload.rows || []).map(row => ({
       ...row,
       todayOrders: number(row.days?.[targetDate]),
@@ -2060,7 +2055,7 @@ async function encryptedPublicUserDetails(dateRange) {
       // Ignore old cache keys that are not JSON.
     }
   }
-  for (const detail of Object.values(details)) {
+  for (const [businessId, detail] of Object.entries(details)) {
     if (detail?.rows?.length) detail.rows = deduplicateBusinessUsers(detail.rows);
     if (detail?.history?.rows?.length) {
       detail.history.rows = deduplicateBusinessUsers(detail.history.rows);
@@ -2068,6 +2063,37 @@ async function encryptedPublicUserDetails(dateRange) {
       detail.history.total = detail.history.rows.length;
       detail.historyLatestDataTime = detail.history.latestDataTime || "-";
     }
+    if (dateRange.endDate !== dayKey()) continue;
+    const full = latestFullBusinessUsers(businessId, dateRange.endDate);
+    if (!full) continue;
+    const fast = latestFastBusinessUsers(businessId, dateRange.endDate);
+    const fullTime = timeValue(full.savedAtText);
+    const fastIsNewer = timeValue(fast?.savedAtText) > fullTime;
+    const currentById = new Map(deduplicateBusinessUsers(full.rows || []).map(row => [String(row.id || ""), row]));
+    if (fastIsNewer) {
+      for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), row);
+    }
+    const historyRows = detail.history?.rows || [];
+    const mergedRows = historyRows.map(row => {
+      const current = currentById.get(String(row.id || ""));
+      return {
+        ...row,
+        ...(current || {}),
+        days: { ...(row.days || {}), [dateRange.endDate]: number(current?.todayOrders) },
+        todayOrders: number(current?.todayOrders),
+        realtimeToday: Boolean(current)
+      };
+    });
+    const historyIds = new Set(historyRows.map(row => String(row.id || "")));
+    for (const row of currentById.values()) {
+      if (!historyIds.has(String(row.id || ""))) mergedRows.push({ ...row, days: { [dateRange.endDate]: number(row.todayOrders) }, realtimeToday: true });
+    }
+    detail.rows = enrichBusinessUsersWithSnapshots(mergedRows, snapshots, businessId, dateRange);
+    detail.total = full.total || detail.rows.length;
+    detail.latestDataTime = fastIsNewer ? fast.savedAtText : full.savedAtText;
+    detail.currentLatestDataTime = detail.latestDataTime;
+    detail.fullCurrentLatestDataTime = full.savedAtText || "-";
+    detail.realtimeUserCount = fastIsNewer ? deduplicateBusinessUsers(fast.rows || []).length : 0;
   }
   return details;
 }
