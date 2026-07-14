@@ -960,6 +960,24 @@ function deduplicateBusinessUsers(rows = []) {
   return [...users.values()];
 }
 
+function latestFastBusinessUsers(businessId, date = dayKey()) {
+  let latest = null;
+  let latestAt = 0;
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    try {
+      const key = JSON.parse(cacheKey);
+      if (String(key.businessId) !== String(businessId)) continue;
+      if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
+      const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      if (!latest || savedAt > latestAt) {
+        latest = payload;
+        latestAt = savedAt;
+      }
+    } catch {}
+  }
+  return latest;
+}
+
 async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
   const history = await fetchBusinessUserHistory({
     businessId,
@@ -971,26 +989,42 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   }, statuses);
   const snapshots = await readSnapshots();
   const historyRows = deduplicateBusinessUsers(history.rows || []);
+  const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
+  const fastById = new Map((fast?.rows || []).map(row => [String(row.id || ""), row]));
   const todayRows = historyRows.map(row => ({
     ...row,
-    todayOrders: number(row.days?.[endDate]),
+    ...(fastById.get(String(row.id || "")) || {}),
+    days: {
+      ...(row.days || {}),
+      ...(fastById.has(String(row.id || "")) ? { [endDate]: number(fastById.get(String(row.id || ""))?.todayOrders) } : {})
+    },
+    todayOrders: fastById.has(String(row.id || "")) ? number(fastById.get(String(row.id || ""))?.todayOrders) : number(row.days?.[endDate]),
     yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)])
+    ,realtimeToday: fastById.has(String(row.id || ""))
   }));
+  for (const fastRow of fast?.rows || []) {
+    if (historyRows.some(row => String(row.id || "") === String(fastRow.id || ""))) continue;
+    todayRows.push({ ...fastRow, days: { [endDate]: number(fastRow.todayOrders) }, realtimeToday: true });
+  }
   const users = enrichBusinessUsersWithSnapshots(todayRows, snapshots, businessId, rangeFromQuery({ start_date: endDate, end_date: endDate }));
   const topState = userRefreshState.top100[String(businessId)] || {};
   users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
-  const latestDataTime = history.savedAtText || "-";
+  const historyLatestDataTime = history.savedAtText || "-";
+  const currentLatestDataTime = fast?.savedAtText || historyLatestDataTime;
   return {
     ok: history.ok,
     cached: Boolean(history.cached),
-    latestDataTime,
+    latestDataTime: currentLatestDataTime,
+    currentLatestDataTime,
+    historyLatestDataTime,
+    realtimeUserCount: fastById.size,
     total: history.total,
     userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0),
     users,
     history: {
       ok: history.ok,
       cached: Boolean(history.cached),
-      latestDataTime,
+      latestDataTime: historyLatestDataTime,
       dates: history.dates,
       rows: historyRows,
       total: history.total
