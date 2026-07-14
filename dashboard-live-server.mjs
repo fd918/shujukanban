@@ -862,7 +862,7 @@ async function fetchBusinessHourlyTrend({ platformBusinessId = "", currentDate =
 }
 
 async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
-  const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize });
+  const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
   if (!refresh && userDetailCache.has(cacheKey)) {
     const cached = userDetailCache.get(cacheKey);
     statuses.push({ name: "业务用户历史缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
@@ -898,7 +898,7 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
     }
   }
   const dates = dayList(startDate, endDate);
-  const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate };
+  const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate, filter_field: "order_valid" };
   const result = await apiCall("业务用户历史", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);
   statuses.push(result);
   const firstRows = asList(result.data);
@@ -945,15 +945,15 @@ function deduplicateBusinessUsers(rows = []) {
     }
     const days = { ...(current.days || {}) };
     for (const [date, value] of Object.entries(row.days || {})) {
-      days[date] = number(days[date]) + number(value);
+      days[date] = Math.max(number(days[date]), number(value));
     }
     users.set(id, {
       ...current,
       ...row,
       phone: current.phone || row.phone,
       version: current.version || row.version,
-      todayOrders: number(current.todayOrders) + number(row.todayOrders),
-      yesterdayOrders: number(current.yesterdayOrders) + number(row.yesterdayOrders),
+      todayOrders: Math.max(number(current.todayOrders), number(row.todayOrders)),
+      yesterdayOrders: Math.max(number(current.yesterdayOrders), number(row.yesterdayOrders)),
       days
     });
   }
@@ -1061,13 +1061,13 @@ function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
 }
 
 async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 1, pageSize = 100, sortField = "", sortOrder = "", refresh = false, includePrevious = true }, statuses = []) {
-  const cacheKey = JSON.stringify({ businessId, startDate, endDate, page, pageSize, sortField, sortOrder, includePrevious });
+  const cacheKey = JSON.stringify({ businessId, startDate, endDate, page, pageSize, sortField, sortOrder, includePrevious, filterField: "order_valid" });
   if (!refresh && userDetailCache.has(cacheKey)) {
     const cached = userDetailCache.get(cacheKey);
     statuses.push({ name: "业务用户缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
     return { ...cached, cached: true };
   }
-  const params = { order_type: businessId, page, pre_page: pageSize, start_date: startDate, end_date: endDate };
+  const params = { order_type: businessId, page, pre_page: pageSize, start_date: startDate, end_date: endDate, filter_field: "order_valid" };
   if (sortField && sortOrder) {
     params.sort_field = sortField;
     params.sort_order = sortOrder;
@@ -1101,7 +1101,8 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
       page: 1,
       pre_page: pageSize,
       start_date: previousStart,
-      end_date: previousEnd
+      end_date: previousEnd,
+      filter_field: "order_valid"
     }, 30000);
     statuses.push(previous);
     let previousRows = asList(previous.data);
@@ -1116,7 +1117,8 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
         page: currentPage,
         pre_page: pageSize,
         start_date: previousStart,
-        end_date: previousEnd
+        end_date: previousEnd,
+        filter_field: "order_valid"
       }, 30000));
       previousRows = previousRows.concat(...previousRest.filter(item => item.ok).map(item => asList(item.data)));
     }
@@ -1240,6 +1242,7 @@ async function refreshFocusUsersToday() {
       pre_page: 10,
       start_date: today,
       end_date: today,
+      filter_field: "order_valid",
       keyword: item.userId
     }, 20000);
     if (!result.ok) return;
