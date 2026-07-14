@@ -146,12 +146,10 @@
     .table-wrap::-webkit-scrollbar-track, .detail-table-wrap::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track { background: #e8edf3; border-radius: 8px; }
     .table-wrap::-webkit-scrollbar-thumb, .detail-table-wrap::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb { background: #8b98aa; border: 3px solid #e8edf3; border-radius: 8px; }
     .table-wrap::-webkit-scrollbar-thumb:hover, .detail-table-wrap::-webkit-scrollbar-thumb:hover, .modal-body::-webkit-scrollbar-thumb:hover { background: #667085; }
-    .horizontal-scrollbar { height:18px; overflow-x:scroll; overflow-y:hidden; margin:6px 0 0; border:1px solid #cbd5e1; border-radius:7px; background:#e8edf3; position:sticky; bottom:0; z-index:8; }
+    .horizontal-scrollbar { height:18px; overflow:hidden; margin:6px 0 0; border:1px solid #cbd5e1; border-radius:7px; background:#e8edf3; position:sticky; bottom:0; z-index:8; cursor:pointer; }
     .horizontal-scrollbar.hidden { display:none; }
-    .horizontal-scrollbar-inner { height:1px; }
-    .horizontal-scrollbar::-webkit-scrollbar { height:16px; }
-    .horizontal-scrollbar::-webkit-scrollbar-track { background:#e8edf3; border-radius:7px; }
-    .horizontal-scrollbar::-webkit-scrollbar-thumb { background:#667085; border:3px solid #e8edf3; border-radius:7px; }
+    .horizontal-scrollbar-thumb { position:absolute; top:3px; bottom:3px; left:0; min-width:58px; border-radius:6px; background:#667085; cursor:grab; touch-action:none; }
+    .horizontal-scrollbar-thumb:active { cursor:grabbing; background:#475467; }
     table { width: 100%; border-collapse: collapse; min-width: 1280px; }
     th, td {
       padding: 11px 10px;
@@ -2715,31 +2713,53 @@
     $("#testFeishuBtn").addEventListener("click", testFeishu);
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
 
+    function updateHorizontalScrollbarThumb(wrap, rail) {
+      const thumb = rail.querySelector(".horizontal-scrollbar-thumb");
+      const maxScroll = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+      const thumbWidth = Math.min(rail.clientWidth, Math.max(58, rail.clientWidth * wrap.clientWidth / Math.max(wrap.scrollWidth, 1)));
+      const maxLeft = Math.max(0, rail.clientWidth - thumbWidth);
+      thumb.style.width = `${thumbWidth}px`;
+      thumb.style.transform = `translateX(${maxScroll ? wrap.scrollLeft / maxScroll * maxLeft : 0}px)`;
+      rail.classList.toggle("hidden", maxScroll <= 2);
+    }
+
     function syncHorizontalScrollbars() {
       $$(".table-wrap, .detail-table-wrap").forEach(wrap => {
         let rail = wrap.nextElementSibling;
         if (!rail?.classList.contains("horizontal-scrollbar")) {
           rail = document.createElement("div");
           rail.className = "horizontal-scrollbar";
-          rail.innerHTML = '<div class="horizontal-scrollbar-inner"></div>';
+          rail.innerHTML = '<div class="horizontal-scrollbar-thumb" title="左右拖动查看完整表格"></div>';
           wrap.insertAdjacentElement("afterend", rail);
         }
-        rail.firstElementChild.style.width = `${wrap.scrollWidth}px`;
-        rail.classList.toggle("hidden", wrap.scrollWidth <= wrap.clientWidth + 2);
+        updateHorizontalScrollbarThumb(wrap, rail);
         if (!wrap.dataset.scrollbarBound) {
           wrap.dataset.scrollbarBound = "1";
-          let syncing = false;
-          wrap.addEventListener("scroll", () => {
-            if (syncing) return;
-            syncing = true;
-            rail.scrollLeft = wrap.scrollLeft;
-            syncing = false;
+          wrap.addEventListener("scroll", () => updateHorizontalScrollbarThumb(wrap, rail));
+          const thumb = rail.querySelector(".horizontal-scrollbar-thumb");
+          thumb.addEventListener("pointerdown", event => {
+            event.stopPropagation();
+            thumb.setPointerCapture(event.pointerId);
+            const startX = event.clientX;
+            const startScroll = wrap.scrollLeft;
+            const maxScroll = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+            const maxLeft = Math.max(1, rail.clientWidth - thumb.getBoundingClientRect().width);
+            const move = moveEvent => { wrap.scrollLeft = startScroll + (moveEvent.clientX - startX) * maxScroll / maxLeft; };
+            const up = () => {
+              thumb.removeEventListener("pointermove", move);
+              thumb.removeEventListener("pointerup", up);
+              thumb.removeEventListener("pointercancel", up);
+            };
+            thumb.addEventListener("pointermove", move);
+            thumb.addEventListener("pointerup", up);
+            thumb.addEventListener("pointercancel", up);
           });
-          rail.addEventListener("scroll", () => {
-            if (syncing) return;
-            syncing = true;
-            wrap.scrollLeft = rail.scrollLeft;
-            syncing = false;
+          rail.addEventListener("pointerdown", event => {
+            if (event.target !== rail) return;
+            const rect = rail.getBoundingClientRect();
+            const thumbWidth = thumb.getBoundingClientRect().width;
+            const maxLeft = Math.max(1, rail.clientWidth - thumbWidth);
+            wrap.scrollLeft = Math.max(0, Math.min(maxLeft, event.clientX - rect.left - thumbWidth / 2)) / maxLeft * Math.max(0, wrap.scrollWidth - wrap.clientWidth);
           });
         }
       });
