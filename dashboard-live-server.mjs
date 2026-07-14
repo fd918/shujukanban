@@ -880,7 +880,11 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
         && String(item.key.businessId) === String(businessId)
         && item.key.startDate <= startDate
         && item.key.endDate >= endDate)
-      .sort((a, b) => (a.payload.dates?.length || 0) - (b.payload.dates?.length || 0))[0];
+      .sort((a, b) => {
+        const timeA = Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0;
+        const timeB = Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0;
+        return timeB - timeA || (a.payload.dates?.length || 0) - (b.payload.dates?.length || 0);
+      })[0];
     if (covering) {
       const dates = (covering.payload.dates || []).filter(date => date >= startDate && date <= endDate);
       const rows = (covering.payload.rows || []).map(row => ({
