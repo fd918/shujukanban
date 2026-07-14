@@ -999,8 +999,8 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
       ...(fastById.has(String(row.id || "")) ? { [endDate]: number(fastById.get(String(row.id || ""))?.todayOrders) } : {})
     },
     todayOrders: fastById.has(String(row.id || "")) ? number(fastById.get(String(row.id || ""))?.todayOrders) : number(row.days?.[endDate]),
-    yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)])
-    ,realtimeToday: fastById.has(String(row.id || ""))
+    yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)]),
+    realtimeToday: fastById.has(String(row.id || ""))
   }));
   for (const fastRow of fast?.rows || []) {
     if (historyRows.some(row => String(row.id || "") === String(fastRow.id || ""))) continue;
