@@ -17,6 +17,7 @@ const DASHBOARD_CACHE_PATH = join(ROOT, "data/business-dashboard-cache.json");
 const USER_PHONE_INDEX_PATH = join(ROOT, "data/user-phone-index.json");
 const USER_DETAIL_CACHE_PATH = join(ROOT, "data/business-user-detail-cache.json");
 const FOCUS_USERS_PATH = join(ROOT, "data/business-focus-users.json");
+const USER_ALIASES_PATH = join(ROOT, "data/business-user-aliases.json");
 const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.json");
 const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
 const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.json");
@@ -1359,6 +1360,7 @@ function cachedBusinessUsersSnapshot(dateRange) {
 
 async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   const config = await readConfig();
+  const userAliases = await readUserAliases();
   const dateRange = rangeFromQuery(query);
   const cacheKey = dashboardCacheKey(dateRange);
   if (query.cache === "1" && query.force !== "1") {
@@ -1371,6 +1373,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
         ok: true,
         latestDataTime: fallback.savedAtText || fallback.payload.latestDataTime,
         config,
+        userAliases: userAliases.aliases,
         refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
         source: {
           ...(fallback.payload.source || {}),
@@ -1426,6 +1429,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     latestDataTime: nowText(),
     refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
     config,
+    userAliases: userAliases.aliases,
     dateRange,
     source: {
       baseUrl: BASE_URL,
@@ -1636,6 +1640,28 @@ async function writeFocusUsers(items) {
   const payload = { items, updatedAt: new Date().toISOString(), updatedAtText: nowText() };
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
+  return payload;
+}
+
+async function readUserAliases() {
+  try {
+    const saved = JSON.parse(await readFile(USER_ALIASES_PATH, "utf8"));
+    return { aliases: saved.aliases && typeof saved.aliases === "object" ? saved.aliases : {}, updatedAt: saved.updatedAt || "", updatedAtText: saved.updatedAtText || "" };
+  } catch {
+    return { aliases: {}, updatedAt: "", updatedAtText: "" };
+  }
+}
+
+async function saveUserAlias(body) {
+  const userId = String(body.userId || "").trim();
+  const name = String(body.name || "").trim().slice(0, 40);
+  if (!userId) throw new Error("缺少用户ID。");
+  const saved = await readUserAliases();
+  if (name) saved.aliases[userId] = name;
+  else delete saved.aliases[userId];
+  const payload = { aliases: saved.aliases, updatedAt: new Date().toISOString(), updatedAtText: nowText() };
+  await mkdir(join(ROOT, "data"), { recursive: true });
+  await writeFile(USER_ALIASES_PATH, JSON.stringify(payload, null, 2));
   return payload;
 }
 
@@ -1884,10 +1910,12 @@ async function encryptedPublicBusinessTrends(businesses = []) {
 
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
+  const userAliases = await readUserAliases();
   return {
     ok: true,
     latestDataTime: nowText(),
     dateRange,
+    userAliases: userAliases.aliases,
     config: {
       rules: data.config?.rules || defaultConfig.rules,
       refreshSeconds: data.config?.refreshSeconds || defaultConfig.refreshSeconds,
@@ -1915,6 +1943,15 @@ async function sanitizePublicDashboard(data) {
       30: await buildFocusUsers({ preset: "30" })
     }
   };
+}
+
+async function publishLatestCachedDashboard() {
+  const cache = await readDashboardCache();
+  const cached = latestValidDashboardCache(cache)?.[1]?.payload;
+  if (!cached) return false;
+  const config = await readConfig();
+  await publishPublicDashboard({ ...cached, config, snapshot: null });
+  return true;
 }
 
 async function encryptPublicPayload(payload, { compression = "gzip", contentHash = "" } = {}) {
@@ -2071,8 +2108,33 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { ok: true, config });
     }
     if (url.pathname === "/api/focus-users" && req.method === "GET") return json(res, 200, await buildFocusUsers(Object.fromEntries(url.searchParams.entries())));
-    if (url.pathname === "/api/focus-users" && req.method === "POST") return json(res, 200, { ok: true, saved: await addFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "7" }) });
-    if (url.pathname === "/api/focus-users/remove" && req.method === "POST") return json(res, 200, { ok: true, saved: await removeFocusUser(await readBody(req)), data: await buildFocusUsers({ preset: "7" }) });
+    if (url.pathname === "/api/focus-users" && req.method === "POST") {
+      const saved = await addFocusUser(await readBody(req));
+      const data = await buildFocusUsers({ preset: "7" });
+      const published = await publishLatestCachedDashboard().catch(error => {
+        console.error(`[${nowText()}] 重点用户公网同步失败：${error.message}`);
+        return false;
+      });
+      return json(res, 200, { ok: true, saved, data, published });
+    }
+    if (url.pathname === "/api/focus-users/remove" && req.method === "POST") {
+      const saved = await removeFocusUser(await readBody(req));
+      const data = await buildFocusUsers({ preset: "7" });
+      const published = await publishLatestCachedDashboard().catch(error => {
+        console.error(`[${nowText()}] 重点用户公网同步失败：${error.message}`);
+        return false;
+      });
+      return json(res, 200, { ok: true, saved, data, published });
+    }
+    if (url.pathname === "/api/user-aliases" && req.method === "GET") return json(res, 200, { ok: true, ...(await readUserAliases()) });
+    if (url.pathname === "/api/user-aliases" && req.method === "POST") {
+      const saved = await saveUserAlias(await readBody(req));
+      const published = await publishLatestCachedDashboard().catch(error => {
+        console.error(`[${nowText()}] 用户备注公网同步失败：${error.message}`);
+        return false;
+      });
+      return json(res, 200, { ok: true, ...saved, published });
+    }
     if (url.pathname === "/api/request-stats") return json(res, 200, { ok: true, stats: requestStats });
     if (url.pathname === "/api/feishu/test" && req.method === "POST") {
       try {
