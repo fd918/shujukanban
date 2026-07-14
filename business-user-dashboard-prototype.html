@@ -320,6 +320,8 @@
     .refresh-switch { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
     .refresh-switch input { width:34px; height:18px; accent-color:var(--orange); cursor:pointer; }
     .focus-shell { display:grid; grid-template-columns:210px minmax(0,1fr); min-height:520px; }
+    .focus-shell.focus-groups-collapsed { grid-template-columns:1fr; }
+    .focus-shell.focus-groups-collapsed .focus-groups { display:none; }
     .focus-groups { border-right:1px solid var(--line); padding:12px; background:#fbfcfe; }
     .focus-group { display:flex; justify-content:space-between; width:100%; padding:9px 10px; margin-bottom:4px; border:1px solid transparent; background:transparent; color:var(--text); text-align:left; cursor:pointer; border-radius:6px; }
     .focus-group.active { color:var(--orange); background:#fff7ed; border-color:#fed7aa; }
@@ -337,6 +339,7 @@
     .focus-table th:nth-child(2), .focus-table td:nth-child(2) { position:sticky; left:48px; z-index:3; background:#fff; min-width:150px; }
     .focus-table th:nth-child(3), .focus-table td:nth-child(3) { position:sticky; left:198px; z-index:3; background:#fff; min-width:190px; box-shadow:5px 0 8px rgba(15,23,42,.04); }
     .focus-table th:nth-child(-n+3) { background:#f8fafc; z-index:4; }
+    .focus-table tfoot td { position:static !important; font-weight:700; background:#f8fafc; border-top:2px solid var(--line); }
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
     .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
@@ -474,16 +477,15 @@
         <section id="focusView" class="hidden">
           <div class="toolbar" style="padding:12px 14px;border-bottom:1px solid var(--line);">
             <div class="segmented" id="focusRangeTabs"><button class="active" data-focus-range="7">近7天</button><button data-focus-range="month">本月</button><button data-focus-range="30">近30天</button></div>
-            <select class="field" id="focusPlatform"><option value="all">全部平台</option></select>
-            <select class="field" id="focusBusiness"><option value="all">全部业务</option></select>
+            <button class="btn" id="focusGroupToggle">收起业务筛选</button>
             <div class="search-with-clear"><input class="field" id="focusSearch" placeholder="搜索用户名称或ID"><button class="search-clear" id="focusSearchClear" title="清空搜索">×</button></div>
             <button class="btn primary" id="addFocusBtn">添加关注用户</button>
           </div>
-          <div class="focus-shell">
+          <div class="focus-shell" id="focusShell">
             <aside class="focus-groups" id="focusGroups"></aside>
             <div class="focus-main">
               <div class="focus-summary" id="focusSummary">正在读取重点用户...</div>
-              <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody id="focusBody"></tbody></table></div>
+              <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody id="focusBody"></tbody><tfoot id="focusFoot"></tfoot></table></div>
             </div>
           </div>
         </section>
@@ -524,7 +526,7 @@
         <strong>用户流失分析：</strong>用户列表默认展示“流失风险 + 近7天”。今日对比昨日同时刻，近7天对比前7天，本月截至今天对比上月相同日期进度；连续3天无订单、近7天下降、月度同期下降和连续两周下降会形成风险原因。点击用户名称可展开周/月明细。
       </section>
       <section class="source">
-        <strong>各区域更新时间：</strong>业务指标卡、业务列表、每日业务数据和小时趋势每 10 分钟更新。业务行开启“前100用户更新”后，今日用户列表的前100名每 10 分钟更新；其余今日用户、近7天、本月和历史订单在设置中心配置的固定时段更新，默认12:00、17:00、22:00。“刷新用户”只分页刷新当前业务，刷新时保留旧数据，全部加载成功后一次替换。重点用户使用用户ID精确查询，今日订单每10分钟与业务轮次同步，历史日期仍使用固定时段数据。
+        <strong>各区域更新时间：</strong>业务指标卡、业务列表、每日业务数据和小时趋势每 10 分钟更新。业务行开启“前100用户更新”后，系统每10分钟重新按今日订单获取当时的前100名：新进入者从该轮开始继续更新；离开前100者停止高频更新，保留离开时的最后值，直到下一个固定全量时段或手动刷新。其余今日用户、近7天、本月和历史订单在设置中心配置的固定时段更新，默认12:00、17:00、22:00。“刷新用户”只分页刷新当前业务，刷新时保留旧数据，全部加载成功后一次替换。重点用户使用用户ID精确查询，今日订单每10分钟与业务轮次同步，历史日期仍使用固定时段数据。
       </section>
       <section class="source warn">
         <strong>请求频率与数量：</strong>页面每5分钟检查缓存，请求中台为0次。每10分钟约160次用于全部业务汇总、目录、小时趋势与快照；另约160次用于已勾选业务的前100用户。重点用户每人每10分钟增加1次精确查询，当前9人约1,296次/天。“65天全量历史”由一次日期范围返回65个日期列，再按业务用户分页；2026年7月14日12:00实测全业务一轮约4,000次，三个固定时段约1.2万次/天。手动刷新3300名用户的单个业务约330次。具体数量随业务数、重点用户数和失败重试变化。
@@ -598,7 +600,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusPlatform: "all", focusBusiness: "all", focusSearch: "", focusGroup: "all", focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: localStorage.getItem("businessDashboardFocusGroupsCollapsed") === "1", focusLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_USER_ALIASES_KEY = "businessDashboardPublicUserAliases";
@@ -1218,37 +1220,48 @@
 
     function renderFocusUsers() {
       const data = state.focusData || { dates: [], rows: [], range: { label: "本月" } };
-      const platforms = Array.from(new Set((data.rows || []).map(row => row.platform).filter(Boolean))).sort();
-      const businesses = (data.rows || []).filter(row => state.focusPlatform === "all" || row.platform === state.focusPlatform);
-      const businessNames = Array.from(new Set(businesses.map(row => row.businessName).filter(Boolean))).sort();
-      $("#focusPlatform").innerHTML = `<option value="all">全部平台</option>${platforms.map(item => `<option value="${item}">${item}</option>`).join("")}`;
-      $("#focusPlatform").value = platforms.includes(state.focusPlatform) ? state.focusPlatform : "all";
-      $("#focusBusiness").innerHTML = `<option value="all">全部业务</option>${businessNames.map(item => `<option value="${item}">${item}</option>`).join("")}`;
-      $("#focusBusiness").value = businessNames.includes(state.focusBusiness) ? state.focusBusiness : "all";
-      $("#focusGroups").innerHTML = `<button class="focus-group ${state.focusGroup === "all" ? "active" : ""}" data-focus-group="all"><span>全部关注</span><strong>${fmt(data.total || 0)}</strong></button>` + platforms.map(platform => {
-        const count = (data.rows || []).filter(row => row.platform === platform).length;
-        return `<button class="focus-group ${state.focusGroup === platform ? "active" : ""}" data-focus-group="${platform}"><span>${platform}</span><strong>${fmt(count)}</strong></button>`;
+      const businessMap = new Map();
+      (data.rows || []).forEach(row => {
+        const key = String(row.businessId || row.businessName || "");
+        if (!key) return;
+        const current = businessMap.get(key) || { key, name: row.businessName || "未命名业务", count: 0 };
+        current.count += 1;
+        businessMap.set(key, current);
+      });
+      const businesses = [...businessMap.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+      if (state.focusGroup !== "all" && !businessMap.has(state.focusGroup)) state.focusGroup = "all";
+      $("#focusShell").classList.toggle("focus-groups-collapsed", state.focusGroupsCollapsed);
+      $("#focusGroupToggle").textContent = state.focusGroupsCollapsed ? "展开业务筛选" : "收起业务筛选";
+      $("#focusGroups").innerHTML = `<button class="focus-group ${state.focusGroup === "all" ? "active" : ""}" data-focus-group="all"><span>全部关注</span><strong>${fmt(data.total || 0)}</strong></button>` + businesses.map(business => {
+        return `<button class="focus-group ${state.focusGroup === business.key ? "active" : ""}" data-focus-group="${escapeHtml(business.key)}"><span>${escapeHtml(business.name)}</span><strong>${fmt(business.count)}</strong></button>`;
       }).join("");
       const keyword = state.focusSearch.toLowerCase();
-      let rows = (data.rows || []).filter(row => state.focusGroup === "all" || row.platform === state.focusGroup);
-      if (state.focusPlatform !== "all") rows = rows.filter(row => row.platform === state.focusPlatform);
-      if (state.focusBusiness !== "all") rows = rows.filter(row => row.businessName === state.focusBusiness);
+      let rows = (data.rows || []).filter(row => state.focusGroup === "all" || String(row.businessId || row.businessName || "") === state.focusGroup);
       if (keyword) rows = rows.filter(row => `${userSearchText(row)}${row.platform}${row.businessName}`.toLowerCase().includes(keyword));
       rows = rows.slice().sort((a, b) => Number(b.periodTotal || 0) - Number(a.periodTotal || 0));
       const dates = data.dates || [];
-      $("#focusSummary").textContent = `${data.range?.label || "近7天"}｜当前显示 ${rows.length} 位重点用户｜今日订单每 10 分钟同步业务（已同步 ${fmt(data.realtimeUserCount || 0)}/${fmt(data.total || 0)}）｜历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}`;
-      $("#focusHead").innerHTML = `<tr><th>序号</th><th>平台 / 业务</th><th>用户</th><th>今日订单</th><th>昨日同时刻</th><th>今日变化比例</th><th>今日影响订单</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th><th>操作</th></tr>`;
+      const todaySum = rows.reduce((sum, row) => sum + Number(row.todayOrders || 0), 0);
+      const periodSum = rows.reduce((sum, row) => sum + Number(row.periodTotal || 0), 0);
+      const previousSum = rows.reduce((sum, row) => sum + Number(row.previousPeriodTotal || 0), 0);
+      const periodDiff = periodSum - previousSum;
+      const periodRatio = previousSum ? periodDiff / previousSum * 100 : null;
+      const yesterdayComparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
+      const yesterdaySum = yesterdayComparable.reduce((sum, row) => sum + Number(row.yesterdaySameTime || 0), 0);
+      const dailySums = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + Number(row.days?.[date] || 0), 0)]));
+      $("#focusSummary").textContent = `${data.range?.label || "近7天"}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜${data.range?.label || "本期"}合计 ${fmt(periodSum)}｜今日每 10 分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}`;
+      $("#focusHead").innerHTML = `<tr><th>序号</th><th>业务</th><th>用户</th><th>今日订单</th><th>昨日同时刻</th><th>今日变化比例</th><th>今日影响订单</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th><th>操作</th></tr>`;
       $("#focusBody").innerHTML = state.focusLoading && !rows.length
         ? `<tr><td colspan="${dates.length + 13}" class="muted">重点用户加载中...</td></tr>`
         : (rows.length ? rows.map((row, index) => `<tr>
           <td>${index + 1}</td>
-          <td><strong>${row.platform}</strong><div class="muted">${row.businessName}</div></td>
+          <td><strong>${row.businessName}</strong></td>
           <td class="focus-user"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<span class="muted">ID：${row.userId}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
           <td>${fmt(row.todayOrders)}</td><td>${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
           <td>${state.publicMode && !row.browserLocal ? "已同步" : `<button class="link" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}">移除</button>`}</td>
         </tr>`).join("") : `<tr><td colspan="${dates.length + 13}" class="muted">还没有重点用户，点击“添加关注用户”开始关注。</td></tr>`);
+      $("#focusFoot").innerHTML = rows.length ? `<tr><td colspan="3">当前列表合计</td><td>${fmt(todaySum)}</td><td>${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td>-</td><td>${fmt(rows.reduce((sum, row) => sum + Number(row.impact || 0), 0))}</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td><td></td></tr>` : "";
     }
 
     async function loadFocusUsers() {
@@ -2346,8 +2359,11 @@
       $$("#focusRangeTabs button").forEach(item => item.classList.toggle("active", item === btn));
       loadFocusUsers().catch(error => toast(error.message || "重点用户加载失败"));
     });
-    $("#focusPlatform").addEventListener("change", e => { state.focusPlatform = e.target.value; state.focusBusiness = "all"; renderFocusUsers(); });
-    $("#focusBusiness").addEventListener("change", e => { state.focusBusiness = e.target.value; renderFocusUsers(); });
+    $("#focusGroupToggle").addEventListener("click", () => {
+      state.focusGroupsCollapsed = !state.focusGroupsCollapsed;
+      localStorage.setItem("businessDashboardFocusGroupsCollapsed", state.focusGroupsCollapsed ? "1" : "0");
+      renderFocusUsers();
+    });
     $("#focusSearch").addEventListener("input", e => { state.focusSearch = e.target.value.trim(); renderFocusUsers(); });
     $("#focusSearchClear").addEventListener("click", () => { state.focusSearch = ""; $("#focusSearch").value = ""; renderFocusUsers(); $("#focusSearch").focus(); });
     $("#focusGroups").addEventListener("click", e => { const btn = e.target.closest("[data-focus-group]"); if (btn) { state.focusGroup = btn.dataset.focusGroup; renderFocusUsers(); } });
