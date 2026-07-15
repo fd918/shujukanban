@@ -2465,7 +2465,7 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/focus-users/note" && req.method === "POST") {
       const saved = await saveFocusUserNote(await readBody(req));
-      json(res, 200, { ok: true, saved, syncing: true });
+      json(res, 200, { ok: true, saved: { updatedAt: saved.updatedAt, updatedAtText: saved.updatedAtText }, syncing: true });
       publishPublicFocusNotes().catch(error => {
         console.error(`[${nowText()}] 重点用户观察备注公网同步失败：${error.message}`);
       });

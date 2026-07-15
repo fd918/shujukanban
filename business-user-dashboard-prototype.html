@@ -634,7 +634,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicFocusNotesUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -1735,6 +1735,7 @@
       state.publicBusinessTrends = data.businessTrends || {};
       state.focusData = data.focusUsers || state.focusData;
       state.publicFocusUsers = data.focusUsersByRange || { month: data.focusUsers };
+      if (state.publicFocusNotesUpdatedAt) state.focusData = mergedPublicFocusData(state.focusRange);
       state.dateRange = data.dateRange || null;
       state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
       if (previousDataTime && previousDataTime !== state.source.latestDataTime) {
@@ -1795,10 +1796,16 @@
           const res = await fetch(`${url}?_=${Date.now()}`, { cache: "no-store" });
           if (!res.ok) continue;
           const encrypted = await res.json();
+          if (encrypted.updatedAt && encrypted.updatedAt === state.publicFocusNotesEnvelopeUpdatedAt) {
+            state.focusData = mergedPublicFocusData(state.focusRange);
+            if (state.view === "focus") renderFocusUsers();
+            return true;
+          }
           const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
-          if (!data?.notes || data.updatedAt === state.publicFocusNotesUpdatedAt) return Boolean(data?.notes);
+          if (!data?.notes) continue;
           state.publicPublishedFocusNotes = data.notes;
           state.publicFocusNotesUpdatedAt = data.updatedAt || "";
+          state.publicFocusNotesEnvelopeUpdatedAt = encrypted.updatedAt || "";
           state.focusData = mergedPublicFocusData(state.focusRange);
           if (state.view === "focus") renderFocusUsers();
           return true;
