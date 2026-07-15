@@ -228,9 +228,9 @@
     .wide-date-table th:nth-child(2), .wide-date-table td:nth-child(2) { position: sticky; left: 52px; z-index: 3; min-width: 170px; background: #fff; }
     .wide-date-table th:nth-child(3), .wide-date-table td:nth-child(3) { position: sticky; left: 222px; z-index: 3; min-width: 70px; background: #fff; box-shadow: 5px 0 8px rgba(15,23,42,.05); }
     .wide-date-table th:nth-child(-n+3) { background: #f8fafc; z-index: 4; }
-    .user-data-table tbody td:nth-child(3), .user-data-table tfoot td:nth-child(3) { position: static; left: auto; min-width: 86px; box-shadow: none; }
+    .user-data-table tbody td:nth-child(3) { position: static; left: auto; min-width: 86px; box-shadow: none; }
     .user-data-table thead th:nth-child(3) { position: sticky; left: auto; top: 0; z-index: 2; min-width: 86px; box-shadow: none; background: #f8fafc; }
-    .user-data-table tfoot td { font-weight:700; background:#f8fafc; border-top:2px solid var(--line); }
+    .summary-body td { position:static !important; left:auto !important; z-index:1 !important; font-weight:700; background:#fff7ed !important; border-bottom:2px solid #fed7aa; box-shadow:none !important; }
     .scroll-hint { margin: 7px 2px 0; color: var(--muted); font-size: 12px; }
     .user-cell { max-width: 150px; white-space: normal; line-height: 1.35; }
     .user-cell strong { display: block; }
@@ -363,7 +363,7 @@
     .focus-note-editor { width:100%; min-height:220px; resize:vertical; line-height:1.65; font-family:inherit; }
     .focus-note-help { margin:0 0 10px; color:var(--muted); font-size:12px; }
     .focus-table thead .focus-business-col, .focus-table thead .focus-user-col, .focus-table th:first-child { background:#f8fafc; z-index:4; }
-    .focus-table tfoot td { position:static !important; font-weight:700; background:#f8fafc; border-top:2px solid var(--line); }
+    .focus-table .summary-body td { position:static !important; }
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
     .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
@@ -509,7 +509,7 @@
             <aside class="focus-groups" id="focusGroups"></aside>
             <div class="focus-main">
               <div class="focus-summary" id="focusSummary">正在读取重点用户...</div>
-              <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody id="focusBody"></tbody><tfoot id="focusFoot"></tfoot></table></div>
+              <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody class="summary-body" id="focusSummaryBody"></tbody><tbody id="focusBody"></tbody></table></div>
             </div>
           </div>
         </section>
@@ -1428,7 +1428,7 @@
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
         </tr>`).join("") : `<tr><td colspan="${dates.length + (showBusinessColumn ? 13 : 12)}" class="muted">还没有重点用户，点击“添加关注用户”开始关注。</td></tr>`);
-      $("#focusFoot").innerHTML = rows.length ? `<tr><td colspan="${showBusinessColumn ? 4 : 3}">当前列表合计</td><td class="focus-order-col">${fmt(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td>-</td><td>${fmt(rows.reduce((sum, row) => sum + Number(row.impact || 0), 0))}</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
+      $("#focusSummaryBody").innerHTML = rows.length ? `<tr><td colspan="${showBusinessColumn ? 4 : 3}">当前列表合计</td><td class="focus-order-col">${fmt(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td>-</td><td>${fmt(rows.reduce((sum, row) => sum + Number(row.impact || 0), 0))}</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
     }
 
     async function loadFocusUsers() {
@@ -2364,12 +2364,12 @@
         <div class="detail-table-wrap">
           <table class="compact wide-date-table user-data-table">
             <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "今日订单")}</th><th>昨日同时刻</th><th>上周同时刻</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
+            ${users.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(todaySum)}</td><td>${baseUsers.length ? fmt(baseSum) : "-"}</td><td>${lastWeekUsers.length ? fmt(lastWeekSum) : "-"}</td><td>-</td><td>${fmt(impactTotal)}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}</tr></tbody>` : ""}
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
               return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
             }).join("") : `<tr><td colspan="${dates.length + 8}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
-            ${users.length ? `<tfoot><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(todaySum)}</td><td>${baseUsers.length ? fmt(baseSum) : "-"}</td><td>${lastWeekUsers.length ? fmt(lastWeekSum) : "-"}</td><td>-</td><td>${fmt(impactTotal)}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}</tr></tfoot>` : ""}
           </table>
         </div>
         ${dates.length > 7 ? `<div class="scroll-hint">当前展示 ${dates.length} 天，每日订单列可在表格底部左右拖动查看。</div>` : ""}`;
@@ -2400,6 +2400,7 @@
         <div class="detail-table-wrap">
           <table class="compact user-data-table">
             <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", currentLabel)}</th><th>${baseLabel}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>近期趋势</th><th>风险等级</th><th>判断原因</th></tr></thead>
+            ${users.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(currentSum)}</td><td>${comparableUsers.length ? fmt(baseSum) : "-"}</td><td>-</td><td>${fmt(impactSum)}</td><td colspan="3">-</td></tr></tbody>` : ""}
             <tbody>${users.length ? users.map((user, index) => {
               const displayCmp = periodDisplayCmp(user) || {};
               const riskCmp = periodRiskCmp(user) || displayCmp;
@@ -2424,7 +2425,6 @@
                 <span>本月 <strong>${fmt(user.monthOrders)}</strong></span><span>上月同期 <strong>${fmt(user.prevMonthOrders)}</strong></span><span>变化 <strong>${pctValue(user.monthCmp?.ratio)}</strong></span>
               </div></td></tr>` : ""}`;
             }).join("") : `<tr><td colspan="9" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
-            ${users.length ? `<tfoot><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(currentSum)}</td><td>${comparableUsers.length ? fmt(baseSum) : "-"}</td><td>-</td><td>${fmt(impactSum)}</td><td colspan="3">-</td></tr></tfoot>` : ""}
           </table>
         </div>`;
     }
@@ -2450,8 +2450,8 @@
       ${selectedUser ? renderUserHistoryAnalysis(selectedUser, dates) : `<section class="source"><strong>用户分析：</strong>点击用户名称后，会在这里分析该用户的订单总量、日均订单、有单天数、最高单日和近期走势。</section>`}
       <div class="detail-table-wrap"><table class="compact wide-date-table user-data-table">
         <thead><tr><th>序号</th><th>用户</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
+        ${rows.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(rows.length)} 人）</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(totalSum)}</td></tr></tbody>` : ""}
         <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><button class="user-history-link" data-select-history-user="${user.id || ""}">${escapeHtml(userDisplayName(user))}</button>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
-        ${rows.length ? `<tfoot><tr><td colspan="2">当前列表合计（${fmt(rows.length)} 人）</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(totalSum)}</td></tr></tfoot>` : ""}
       </table></div>
       ${dates.length > 7 ? `<div class="scroll-hint">当前共 ${dates.length} 天，表格底部可左右拖动查看全部日期。</div>` : ""}`;
     }
