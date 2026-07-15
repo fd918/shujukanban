@@ -75,7 +75,16 @@ const defaultConfig = {
     mode: "immediate",
     criticalImmediate: true,
     enabled: false,
-    snapshotAlert: true
+    snapshotAlert: true,
+    events: {
+      startupWarmupFailed: true,
+      snapshotRecordFailed: true,
+      apiDataMissing: true,
+      businessEmpty: true,
+      ordersZero: true,
+      businessDataStale: true,
+      publicPublishFailed: true
+    }
   },
   public: {
     autoPush: true
@@ -304,11 +313,16 @@ async function loginWithCredentials(user, pass) {
 async function readConfig() {
   try {
     const saved = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
+    const savedNotification = saved.notification || {};
     return {
       ...defaultConfig,
       ...saved,
       rules: { ...defaultConfig.rules, ...(saved.rules || {}) },
-      notification: { ...defaultConfig.notification, ...(saved.notification || {}) },
+      notification: {
+        ...defaultConfig.notification,
+        ...savedNotification,
+        events: { ...defaultConfig.notification.events, ...(savedNotification.events || {}) }
+      },
       public: { ...defaultConfig.public, ...(saved.public || {}) }
     };
   } catch {
@@ -318,11 +332,16 @@ async function readConfig() {
 
 async function writeConfig(nextConfig) {
   await mkdir(join(ROOT, "data"), { recursive: true });
+  const nextNotification = nextConfig.notification || {};
   const config = {
     ...defaultConfig,
     ...nextConfig,
     rules: { ...defaultConfig.rules, ...(nextConfig.rules || {}) },
-    notification: { ...defaultConfig.notification, ...(nextConfig.notification || {}) },
+    notification: {
+      ...defaultConfig.notification,
+      ...nextNotification,
+      events: { ...defaultConfig.notification.events, ...(nextNotification.events || {}) }
+    },
     public: { ...defaultConfig.public, ...(nextConfig.public || {}) }
   };
   config.userRefreshTimes = normalizeRefreshTimes(config.userRefreshTimes);
@@ -1375,7 +1394,7 @@ async function warmStartupData() {
   } catch (error) {
     console.error(`[${nowText()}] 启动预热失败：${error.message}`);
     readConfig()
-      .then(config => notifyOperationalIssue("启动预热失败", error.message, config))
+      .then(config => notifyOperationalIssue("startupWarmupFailed", "启动预热失败", error.message, config))
       .catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
   } finally {
     startupWarmupRunning = false;
@@ -1705,7 +1724,7 @@ async function maybeRecordSnapshot(businesses, users, force = false, businessDai
   if (config.public?.autoPush) {
     await publishPublicDashboard({ businesses, users, businessDaily, summary, snapshot, config }).catch(error => {
       console.error(`[${nowText()}] 公开看板推送失败：${error.message}`);
-      notifyOperationalIssue("公开看板推送失败", error.message, config).catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
+      notifyOperationalIssue("publicPublishFailed", "公开看板推送失败", error.message, config).catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
     });
   }
   return true;
@@ -1739,11 +1758,11 @@ async function checkSnapshotHealth(snapshot, previousSnapshot, config = defaultC
   const businesses = Object.values(snapshot.business || {});
   const totalOrders = businesses.reduce((sum, item) => sum + number(item.orders), 0);
   if (!businesses.length) {
-    await notifyOperationalIssue("快照异常：业务为空", "本次快照没有业务数据，请检查中台接口或本地服务。", config);
+    await notifyOperationalIssue("businessEmpty", "快照异常：业务为空", "本次快照没有业务数据，请检查中台接口或本地服务。", config);
     return;
   }
   if (!totalOrders) {
-    await notifyOperationalIssue("快照异常：订单全为 0", "本次快照业务总订单为 0，可能是中台接口异常或数据尚未回传。", config);
+    await notifyOperationalIssue("ordersZero", "快照异常：订单全为 0", "本次快照业务总订单为 0，可能是中台接口异常或数据尚未回传。", config);
     return;
   }
   if (!previousSnapshot?.business) return;
@@ -1760,6 +1779,7 @@ async function checkSnapshotHealth(snapshot, previousSnapshot, config = defaultC
   const ratio = same.length / comparable.length;
   if (ratio >= 0.95 && snapshot.minuteOfDay !== previousSnapshot.minuteOfDay) {
     await notifyOperationalIssue(
+      "businessDataStale",
       "快照异常：大量业务数据未变化",
       `本次有 ${same.length}/${comparable.length} 个活跃业务订单数与上一条快照完全一致，且重点业务也未变化。重点业务按“美团外卖节、闪购、当前订单量前 5”判断，可能是中台接口返回旧数据。`,
       config
@@ -1787,7 +1807,7 @@ async function scheduleSnapshots() {
       const data = await liveDashboard({ recordSnapshot: false });
       const currentConfig = await readConfig();
       if (data.source?.missing?.length) {
-        await notifyOperationalIssue("快照异常：接口数据缺失", data.source.missing.join("；"), currentConfig);
+        await notifyOperationalIssue("apiDataMissing", "快照异常：接口数据缺失", data.source.missing.join("；"), currentConfig);
       }
       const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
       await warmTopBusinessUsers(data.businesses, dateRange, currentConfig);
@@ -1798,7 +1818,7 @@ async function scheduleSnapshots() {
     } catch (error) {
       console.error(`[${nowText()}] 记录快照失败：${error.message}`);
       readConfig()
-        .then(config => notifyOperationalIssue("快照异常：记录失败", error.message, config))
+        .then(config => notifyOperationalIssue("snapshotRecordFailed", "快照异常：记录失败", error.message, config))
         .catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
     } finally {
       snapshotTimer = setTimeout(run, nextSnapshotDelayMs(intervalMinutes));
@@ -1845,7 +1865,11 @@ async function saveConfig(body) {
     snapshotMinutes: body.snapshotMinutes || current.snapshotMinutes,
     userRefreshTimes: body.userRefreshTimes || current.userRefreshTimes,
     fastUserBusinessIds: body.fastUserBusinessIds || current.fastUserBusinessIds,
-    notification: { ...current.notification, ...(body.notification || {}) },
+    notification: {
+      ...current.notification,
+      ...(body.notification || {}),
+      events: { ...current.notification.events, ...(body.notification?.events || {}) }
+    },
     public: { ...current.public, ...(body.public || {}) }
   });
 }
@@ -2093,9 +2117,10 @@ async function sendFeishuText(text) {
   return { ok: true };
 }
 
-async function notifyOperationalIssue(title, detail, config = defaultConfig) {
+async function notifyOperationalIssue(eventKey, title, detail, config = defaultConfig) {
   if (!config.notification?.enabled || !config.notification?.snapshotAlert) return;
-  const key = title;
+  if (config.notification?.events?.[eventKey] === false) return;
+  const key = eventKey || title;
   if (lastOperationalAlert.key === key && Date.now() - lastOperationalAlert.at < 60 * 60 * 1000) return;
   lastOperationalAlert = { key, at: Date.now() };
   try {

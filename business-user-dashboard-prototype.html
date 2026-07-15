@@ -278,6 +278,13 @@
     .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 12px; }
     .setting { border: 1px solid var(--line); border-radius: 8px; padding: 13px; display: grid; gap: 8px; }
     .setting label { color: var(--muted); font-size: 12px; }
+    .notification-events { grid-column: 1 / -1; }
+    .notification-list { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 8px; }
+    .notification-item { display: flex; align-items: flex-start; gap: 9px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+    .notification-item input { margin-top: 3px; accent-color: var(--brand); }
+    .notification-item span { display: grid; gap: 3px; color: var(--text); }
+    .notification-item b { font-size: 13px; font-weight: 600; }
+    .notification-item small { color: var(--muted); line-height: 1.45; }
     .inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .mobile-filter-toggle { display: none; margin-bottom: 10px; }
     .chart-wrap { padding: 14px; }
@@ -371,7 +378,7 @@
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
 
     @media (max-width: 960px) {
-      .filters, .kpis, .settings-grid, .detail-grid, .history-analysis { grid-template-columns: 1fr; }
+      .filters, .kpis, .settings-grid, .detail-grid, .history-analysis, .notification-list { grid-template-columns: 1fr; }
       .topbar { align-items: start; flex-direction: column; }
       .content { padding: 14px; }
       .mobile-filter-toggle { display: block; width: 100%; }
@@ -604,7 +611,21 @@
       <div id="tabFeishu" class="settings-grid hidden">
         <div class="setting"><strong>Webhook URL</strong><label>保存到 macOS 钥匙串，不写入配置文件</label><input class="field" id="feishuWebhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."><span class="muted" id="webhookStatus">未配置</span></div>
         <div class="setting"><strong>签名密钥</strong><label>飞书机器人开启签名校验时填写</label><input class="field" id="feishuSecret" placeholder="签名密钥，可留空"><span class="muted" id="secretStatus">未配置</span></div>
-        <div class="setting"><strong>通知频率</strong><label>严重异常可以立即通知</label><select class="field" id="notifyMode"><option value="immediate">严重异常立即通知</option><option value="hourly">每小时汇总</option><option value="daily">每天固定时间汇总</option></select></div>
+        <div class="setting"><strong>通知总开关</strong><label>关闭后仅保留“发送测试消息”，不再自动发送运行异常</label><label class="refresh-switch"><input type="checkbox" id="notifyEnabled"><span>启用飞书自动通知</span></label></div>
+        <div class="setting"><strong>发送策略</strong><label>勾选项目发生后立即通知；同一项目 1 小时内最多发送 1 次</label><span>立即通知并自动去重</span></div>
+        <div class="setting notification-events">
+          <strong>通知项目</strong>
+          <label>只有勾选的项目才会自动发送飞书通知</label>
+          <div class="notification-list">
+            <label class="notification-item"><input type="checkbox" data-notification-event="startupWarmupFailed"><span><b>启动预热失败</b><small>服务启动后无法预加载业务或用户数据。</small></span></label>
+            <label class="notification-item"><input type="checkbox" data-notification-event="snapshotRecordFailed"><span><b>快照记录失败</b><small>包括登录失败、网络超时或中台请求异常导致的快照失败。</small></span></label>
+            <label class="notification-item"><input type="checkbox" data-notification-event="apiDataMissing"><span><b>接口数据缺失</b><small>本轮业务汇总需要的一个或多个中台接口没有返回有效数据。</small></span></label>
+            <label class="notification-item"><input type="checkbox" data-notification-event="businessEmpty"><span><b>业务列表为空</b><small>快照没有取得任何业务。</small></span></label>
+            <label class="notification-item"><input type="checkbox" data-notification-event="ordersZero"><span><b>全部订单为 0</b><small>本轮所有业务的订单合计为 0。</small></span></label>
+            <label class="notification-item"><input type="checkbox" data-notification-event="businessDataStale"><span><b>大量业务数据不变化</b><small>至少 95% 活跃业务与上一快照相同，且重点业务也没有变化。</small></span></label>
+            <label class="notification-item"><input type="checkbox" data-notification-event="publicPublishFailed"><span><b>公网发布失败</b><small>本地数据正常，但加密快照未能推送到公网。</small></span></label>
+          </div>
+        </div>
         <div class="setting"><strong>测试消息</strong><label>保存配置后可测试 Webhook 是否可用</label><button class="btn primary" id="testFeishuBtn">发送测试消息</button><span class="muted" id="testResult">等待测试</span></div>
       </div>
     </div>
@@ -1962,7 +1983,10 @@
       $("#refreshSeconds").value = cfg.refreshSeconds || 60;
       $("#snapshotMinutes").value = cfg.snapshotMinutes || 30;
       $("#userRefreshTimes").value = (cfg.userRefreshTimes || ["12:00", "17:00", "22:00"]).join(",");
-      $("#notifyMode").value = cfg.notification?.mode || "immediate";
+      $("#notifyEnabled").checked = Boolean(cfg.notification?.enabled);
+      document.querySelectorAll("[data-notification-event]").forEach(input => {
+        input.checked = cfg.notification?.events?.[input.dataset.notificationEvent] !== false;
+      });
       $("#webhookStatus").textContent = cfg.notification?.hasWebhook ? "已配置" : "未配置";
       $("#secretStatus").textContent = cfg.notification?.hasSignSecret ? "已配置" : "未配置";
       $("#credentialUserStatus").textContent = cfg.credentials?.hasUsername ? "已配置" : "未配置";
@@ -1972,13 +1996,23 @@
     function collectSettings() {
       const rules = {};
       for (const key of ["minorPct","minorOrders","majorPct","majorOrders","criticalPct","criticalOrders","upPct","upOrders"]) rules[key] = Number($("#" + key).value || 0);
+      const notificationEvents = {};
+      document.querySelectorAll("[data-notification-event]").forEach(input => {
+        notificationEvents[input.dataset.notificationEvent] = input.checked;
+      });
       return {
         rules,
         refreshSeconds: Number($("#refreshSeconds").value),
         snapshotMinutes: Number($("#snapshotMinutes").value),
         userRefreshTimes: $("#userRefreshTimes").value.split(/[,，\s]+/).map(item => item.trim()).filter(Boolean),
         fastUserBusinessIds: state.config?.fastUserBusinessIds || [],
-        notification: { mode: $("#notifyMode").value, criticalImmediate: $("#notifyMode").value === "immediate", enabled: true },
+        notification: {
+          mode: "immediate",
+          criticalImmediate: true,
+          enabled: $("#notifyEnabled").checked,
+          snapshotAlert: true,
+          events: notificationEvents
+        },
         credentials: { username: $("#dashboardUsername").value.trim(), password: $("#dashboardPassword").value },
         feishu: { webhookUrl: $("#feishuWebhook").value.trim(), signSecret: $("#feishuSecret").value.trim() }
       };
