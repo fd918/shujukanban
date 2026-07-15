@@ -40,6 +40,8 @@ const userPhoneCache = new Map();
 const userProfileCache = new Map();
 let userPhoneIndexLoadedAt = 0;
 let userPhoneIndexPromise = null;
+let userPhoneIndexComplete = false;
+let userPhoneIndexTotal = 0;
 let lastOperationalAlert = { key: "", at: 0 };
 let startupWarmupRunning = false;
 let publicHistoryWarmupRunning = false;
@@ -496,6 +498,30 @@ async function fetchPlainPhone(uid) {
   return userPhoneCache.get(id) || "";
 }
 
+function plainPhoneValue(userId, ...candidates) {
+  const indexed = String(userPhoneCache.get(String(userId || "")) || "");
+  if (/^1\d{10}$/.test(indexed)) return indexed;
+  const candidate = candidates.map(value => String(value || "")).find(value => /^1\d{10}$/.test(value));
+  return candidate || "-";
+}
+
+function attachPlainPhone(row) {
+  return { ...row, phone: plainPhoneValue(row?.id, row?.phone) };
+}
+
+function refreshCachedPlainPhones() {
+  let changed = false;
+  for (const payload of userDetailCache.values()) {
+    if (!Array.isArray(payload?.rows)) continue;
+    payload.rows = payload.rows.map(row => {
+      const phone = plainPhoneValue(row.id, row.phone);
+      if (phone !== row.phone) changed = true;
+      return { ...row, phone };
+    });
+  }
+  if (changed) scheduleUserDetailCacheSave();
+}
+
 async function loadUserPhoneIndexFromDisk() {
   if (!existsSync(USER_PHONE_INDEX_PATH)) return false;
   try {
@@ -508,9 +534,11 @@ async function loadUserPhoneIndexFromDisk() {
     Object.entries(profiles).forEach(([id, profile]) => {
       userProfileCache.set(String(id), {
         name: String(profile.name || ""),
-        phone: String(profile.phone || phones[id] || "")
+        phone: plainPhoneValue(id, profile.phone, phones[id])
       });
     });
+    userPhoneIndexComplete = saved.complete === true;
+    userPhoneIndexTotal = number(saved.indexedTotal || saved.total || userPhoneCache.size);
     userPhoneIndexLoadedAt = userPhoneCache.size && userProfileCache.size ? Date.now() : 0;
     return userPhoneCache.size > 0 && userProfileCache.size > 0;
   } catch {
@@ -523,6 +551,9 @@ async function writeUserPhoneIndexToDisk() {
   await writeFile(USER_PHONE_INDEX_PATH, JSON.stringify({
     savedAt: new Date().toISOString(),
     savedAtText: nowText(),
+    complete: userPhoneIndexComplete,
+    indexedTotal: userPhoneIndexTotal,
+    source: "/api/v2/dashboard/summary/index",
     phones: Object.fromEntries(userPhoneCache),
     profiles: Object.fromEntries(userProfileCache)
   }, null, 2));
@@ -561,15 +592,18 @@ function scheduleUserDetailCacheSave() {
 }
 
 async function ensureUserPhoneIndex(statuses = []) {
-  if (userPhoneCache.size && userProfileCache.size && Date.now() - userPhoneIndexLoadedAt < 24 * 60 * 60 * 1000) return;
+  if (userPhoneIndexComplete && userPhoneCache.size && userProfileCache.size && Date.now() - userPhoneIndexLoadedAt < 24 * 60 * 60 * 1000) return;
   if (!userPhoneCache.size && await loadUserPhoneIndexFromDisk()) {
-    statuses.push({ name: "用户明文手机号索引", ok: true, message: `使用本地索引：${userPhoneCache.size} 个手机号`, durationMs: 0 });
-    return;
+    refreshCachedPlainPhones();
+    if (userPhoneIndexComplete) {
+      statuses.push({ name: "用户明文手机号索引", ok: true, message: `使用完整本地索引：${userPhoneCache.size} 个手机号`, durationMs: 0 });
+      return;
+    }
   }
   if (userPhoneIndexPromise) return userPhoneIndexPromise;
   userPhoneIndexPromise = (async () => {
     const startedAt = Date.now();
-    const first = await apiCall("用户明文手机号索引第1页", "POST", "/api/v2/dashboard/user/day", { page: 1 }, 25000);
+    const first = await apiCall("完整用户手机号索引第1页", "POST", "/api/v2/dashboard/summary/index", { page: 1 }, 25000);
     if (!first.ok) {
       statuses.push(first);
       return;
@@ -577,23 +611,26 @@ async function ensureUserPhoneIndex(statuses = []) {
     const firstRows = asList(first.data);
     const total = number(first.data?.total);
     const pageSize = Math.max(1, number(first.data?.pageSize) || firstRows.length || 30);
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const totalPages = Math.min(1200, Math.max(1, Math.ceil(total / pageSize)));
     const pages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
-    const rest = await mapLimit(pages, 8, page => apiCall(`用户明文手机号索引第${page}页`, "POST", "/api/v2/dashboard/user/day", { page }, 25000));
+    const rest = await mapLimit(pages, 8, page => apiCall(`完整用户手机号索引第${page}页`, "POST", "/api/v2/dashboard/summary/index", { page }, 25000));
     const rows = firstRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
     rows.forEach(row => {
       const id = String(row.promotion_id || row.uid || row.accounts_id || "");
       const phone = String(row.telephone || row.phone || "");
       if (id && /^1\d{10}$/.test(phone)) userPhoneCache.set(id, phone);
-      if (id) userProfileCache.set(id, { name: String(row.nickname || ""), phone });
+      if (id) userProfileCache.set(id, { name: String(row.nickname || ""), phone: plainPhoneValue(id, phone) });
     });
-    userPhoneIndexLoadedAt = Date.now();
-    await writeUserPhoneIndexToDisk();
     const failed = rest.filter(item => !item.ok).length;
+    userPhoneIndexComplete = failed === 0 && rows.length >= total;
+    userPhoneIndexTotal = total;
+    userPhoneIndexLoadedAt = Date.now();
+    refreshCachedPlainPhones();
+    await writeUserPhoneIndexToDisk();
     statuses.push({
       name: "用户明文手机号索引",
-      ok: failed === 0,
-      message: `已索引 ${userPhoneCache.size} 个手机号${failed ? `，${failed} 页失败` : ""}`,
+      ok: userPhoneIndexComplete,
+      message: `已从完整用户列表索引 ${userPhoneCache.size}/${total} 个手机号${failed ? `，${failed} 页失败` : ""}`,
       durationMs: Date.now() - startedAt
     });
   })().finally(() => {
@@ -866,7 +903,7 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
   if (!refresh && userDetailCache.has(cacheKey)) {
     const cached = userDetailCache.get(cacheKey);
     statuses.push({ name: "业务用户历史缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
-    return { ...cached, cached: true };
+    return { ...cached, rows: cached.rows.map(attachPlainPhone), cached: true };
   }
   if (!refresh) {
     const covering = [...userDetailCache.entries()]
@@ -888,7 +925,7 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
       })[0];
     if (covering) {
       const dates = (covering.payload.dates || []).filter(date => date >= startDate && date <= endDate);
-      const rows = (covering.payload.rows || []).map(row => ({
+      const rows = (covering.payload.rows || []).map(row => attachPlainPhone({
         ...row,
         days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
         todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
@@ -940,7 +977,7 @@ function deduplicateBusinessUsers(rows = []) {
     if (!id) continue;
     const current = users.get(id);
     if (!current) {
-      users.set(id, { ...row, days: { ...(row.days || {}) } });
+      users.set(id, { ...attachPlainPhone(row), days: { ...(row.days || {}) } });
       continue;
     }
     const days = { ...(current.days || {}) };
@@ -948,7 +985,7 @@ function deduplicateBusinessUsers(rows = []) {
     users.set(id, {
       ...current,
       ...row,
-      phone: current.phone || row.phone,
+      phone: plainPhoneValue(id, current.phone, row.phone),
       version: current.version || row.version,
       todayOrders: number(current.todayOrders) + number(row.todayOrders),
       yesterdayOrders: number(current.yesterdayOrders) + number(row.yesterdayOrders),
@@ -1046,6 +1083,8 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     todayRows.push({ ...currentRow, days: { [endDate]: number(currentRow.todayOrders) }, realtimeToday: true });
   }
   const users = enrichBusinessUsersWithSnapshots(todayRows, snapshots, businessId, rangeFromQuery({ start_date: endDate, end_date: endDate }));
+  users.forEach(user => { user.phone = plainPhoneValue(user.id, user.phone); });
+  historyRows.forEach(user => { user.phone = plainPhoneValue(user.id, user.phone); });
   const topState = userRefreshState.top100[String(businessId)] || {};
   users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
   const historyLatestDataTime = history.savedAtText || "-";
@@ -1104,7 +1143,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   if (!refresh && userDetailCache.has(cacheKey)) {
     const cached = userDetailCache.get(cacheKey);
     statuses.push({ name: "业务用户缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
-    return { ...cached, cached: true };
+    return { ...cached, rows: cached.rows.map(attachPlainPhone), cached: true };
   }
   const params = { order_type: businessId, page, pre_page: pageSize, start_date: startDate, end_date: endDate, filter_field: "order_valid" };
   if (sortField && sortOrder) {
@@ -1479,7 +1518,7 @@ function cachedBusinessUsersSnapshot(dateRange) {
       }
       details[businessId] = Object.fromEntries([...currentById.entries()].map(([userId, row]) => [userId, {
         name: row.name,
-        phone: row.phone,
+        phone: plainPhoneValue(userId, row.phone),
         version: row.version,
         orders: number(row.todayOrders),
         commission: number(row.todayCommission)
@@ -1495,13 +1534,13 @@ function cachedBusinessUsersSnapshot(dateRange) {
     for (const row of deduplicateBusinessUsers(historyRows)) {
       const userId = String(row.id || "");
       if (!userId) continue;
-      byUser[userId] = { name: row.name, phone: row.phone, version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
+      byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
     }
     if (!group.history || group.exact?.savedAt > group.history.savedAt) {
       for (const row of deduplicateBusinessUsers(group.exact?.payload.rows || [])) {
         const userId = String(row.id || "");
         if (!userId) continue;
-        byUser[userId] = { name: row.name, phone: row.phone, version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
+        byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
       }
     }
     if (Object.keys(byUser).length) details[businessId] = byUser;
@@ -1827,14 +1866,14 @@ function cachedUserForBusiness(businessId, userId) {
       if (row) found = { ...found, ...row, days: row.days || found?.days || {} };
     } catch {}
   }
-  return found;
+  return found ? attachPlainPhone(found) : null;
 }
 
 function cachedFocusCurrentUser(businessId, userId) {
   const key = JSON.stringify({ type: "focus-current", businessId: String(businessId), userId: String(userId), date: dayKey() });
   const payload = userDetailCache.get(key);
   const row = payload?.rows?.[0];
-  return row ? { ...row, savedAtText: payload.savedAtText || "-" } : null;
+  return row ? { ...attachPlainPhone(row), savedAtText: payload.savedAtText || "-" } : null;
 }
 
 function focusRange(query = {}) {
@@ -1883,7 +1922,7 @@ async function buildFocusUsers(query = {}) {
     return {
       ...item,
       name: current?.name || cached.name || item.name,
-      phone: current?.phone || cached.phone || item.phone || "-",
+      phone: plainPhoneValue(item.userId, current?.phone, cached.phone, item.phone),
       version: current?.version || cached.version || item.version || "-",
       days,
       periodTotal: total,
