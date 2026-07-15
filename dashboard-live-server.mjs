@@ -23,6 +23,7 @@ const USER_ALIASES_PATH = join(ROOT, "data/business-user-aliases.json");
 const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.json");
 const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
 const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.json");
+const PUBLIC_FOCUS_NOTES_PATH = join(ROOT, "data/business-focus-notes-public.enc.json");
 const PUBLIC_USER_DETAIL_DIR = join(ROOT, "data/business-public-users");
 const USER_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.username";
 const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
@@ -53,6 +54,7 @@ let detailCacheSaveTimer = null;
 let requestStatsSaveTimer = null;
 let requestStats = { day: dayKey(), total: 0, byPath: {}, byName: {}, updatedAt: "" };
 let userRefreshState = { scheduledRuns: {}, top100: {} };
+let publicPublishQueue = Promise.resolve();
 
 const defaultConfig = {
   rules: {
@@ -2245,6 +2247,12 @@ async function publishLatestCachedDashboard() {
   return true;
 }
 
+function enqueuePublicPublish(task) {
+  const next = publicPublishQueue.catch(() => {}).then(task);
+  publicPublishQueue = next.catch(() => {});
+  return next;
+}
+
 async function encryptPublicPayload(payload, { compression = "gzip", contentHash = "" } = {}) {
   const password = await readSecret(PUBLIC_PASSWORD_SERVICE);
   if (!password) throw new Error("缺少公网看板访问密码，请先写入钥匙串。");
@@ -2300,13 +2308,34 @@ async function writePublicUserDetailShards(details = {}) {
   return manifest;
 }
 
-async function publishPublicDashboard(data) {
+async function publishPublicDashboardNow(data) {
   const payload = await sanitizePublicDashboard(data);
   payload.userDetails = await writePublicUserDetailShards(payload.userDetails || {});
   const encryptedPayload = await encryptPublicPayload(payload, { compression: "none" });
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(PUBLIC_DASHBOARD_PATH, JSON.stringify(encryptedPayload, null, 2));
   await pushPublicDashboard();
+}
+
+async function publishPublicDashboard(data) {
+  return enqueuePublicPublish(() => publishPublicDashboardNow(data));
+}
+
+async function publishPublicFocusNotes() {
+  return enqueuePublicPublish(async () => {
+    const saved = await readFocusUsers();
+    const notes = Object.fromEntries(saved.items.map(item => {
+      const key = `${item.businessId}:${item.userId}`;
+      const lines = Array.isArray(item.notes)
+        ? item.notes.map(value => String(value?.text || value || "").trim()).filter(Boolean)
+        : String(item.note || "").split("\n").map(value => value.trim()).filter(Boolean);
+      return [key, lines];
+    }));
+    const encrypted = await encryptPublicPayload({ ok: true, updatedAt: saved.updatedAt, notes }, { compression: "gzip" });
+    await mkdir(join(ROOT, "data"), { recursive: true });
+    await writeFile(PUBLIC_FOCUS_NOTES_PATH, JSON.stringify(encrypted));
+    await pushPublicFocusNotes();
+  });
 }
 
 async function pushPublicDashboard() {
@@ -2319,6 +2348,17 @@ async function pushPublicDashboard() {
   await runCommand("git", ["commit", "-m", `Update business dashboard ${nowText()}`]);
   await runCommand("git", ["push", "origin", "main"]);
   console.log(`[${nowText()}] 业务看板公开文件已推送到 GitHub。`);
+  return true;
+}
+
+async function pushPublicFocusNotes() {
+  const paths = ["business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "README.md", "data/business-focus-notes-public.enc.json"];
+  await runCommand("git", ["add", ...paths]);
+  const status = await runCommand("git", ["status", "--short", "--", ...paths]);
+  if (!status) return false;
+  await runCommand("git", ["commit", "-m", `Update focus notes ${nowText()}`]);
+  await runCommand("git", ["push", "origin", "main"]);
+  console.log(`[${nowText()}] 重点用户备注已快速推送到 GitHub。`);
   return true;
 }
 
@@ -2425,12 +2465,11 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/focus-users/note" && req.method === "POST") {
       const saved = await saveFocusUserNote(await readBody(req));
-      const data = await buildFocusUsers({ preset: "7" });
-      const published = await publishLatestCachedDashboard().catch(error => {
+      json(res, 200, { ok: true, saved, syncing: true });
+      publishPublicFocusNotes().catch(error => {
         console.error(`[${nowText()}] 重点用户观察备注公网同步失败：${error.message}`);
-        return false;
       });
-      return json(res, 200, { ok: true, saved, data, published });
+      return;
     }
     if (url.pathname === "/api/user-aliases" && req.method === "GET") return json(res, 200, { ok: true, ...(await readUserAliases()) });
     if (url.pathname === "/api/user-aliases" && req.method === "POST") {

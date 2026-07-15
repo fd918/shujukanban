@@ -634,11 +634,12 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicFocusNotesUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
     const PUBLIC_FOCUS_NOTES_KEY = "businessDashboardPublicFocusNotes";
+    const PUBLIC_FOCUS_NOTES_RAW_URL = "https://raw.githubusercontent.com/fd918/shujukanban/main/data/business-focus-notes-public.enc.json";
     const PUBLIC_USER_ALIASES_KEY = "businessDashboardPublicUserAliases";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -834,11 +835,19 @@
       });
       const hidden = readPublicFocusHidden();
       const notes = readPublicFocusNotes();
+      const publishedNotes = state.publicPublishedFocusNotes || {};
       const applyNote = row => {
         const key = `${row.businessId}:${row.userId}`;
-        if (!Object.prototype.hasOwnProperty.call(notes, key)) return row;
-        const lines = Array.isArray(notes[key]) ? notes[key] : String(notes[key] || "").split("\n").filter(Boolean);
-        return { ...row, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
+        let next = row;
+        if (Object.prototype.hasOwnProperty.call(publishedNotes, key)) {
+          const lines = Array.isArray(publishedNotes[key]) ? publishedNotes[key] : String(publishedNotes[key] || "").split("\n").filter(Boolean);
+          next = { ...next, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
+        }
+        if (Object.prototype.hasOwnProperty.call(notes, key)) {
+          const lines = Array.isArray(notes[key]) ? notes[key] : String(notes[key] || "").split("\n").filter(Boolean);
+          next = { ...next, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
+        }
+        return next;
       };
       const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyNote(row)]));
       localRows.forEach(row => {
@@ -1553,11 +1562,24 @@
       state.focusNoteTarget = null;
     }
 
+    function applyFocusNoteToData(data, target, notes) {
+      if (!data?.rows) return data;
+      return {
+        ...data,
+        rows: data.rows.map(row => String(row.businessId) === target.businessId && String(row.userId) === target.userId
+          ? { ...row, note: notes.join("\n"), notes: notes.map(text => ({ text })) }
+          : row)
+      };
+    }
+
     async function saveFocusNote() {
       const target = state.focusNoteTarget;
       if (!target) return;
       const notes = $("#focusNoteEditor").value.split("\n").map(value => value.trim().slice(0, 200)).filter(Boolean).slice(0, 20);
-      $("#focusNoteResult").textContent = "正在保存...";
+      const saveButton = $("#saveFocusNote");
+      saveButton.disabled = true;
+      saveButton.textContent = "保存中…";
+      $("#focusNoteResult").textContent = "正在写入本机...";
       if (state.publicMode && !isLocalSettings) {
         const savedNotes = readPublicFocusNotes();
         savedNotes[`${target.businessId}:${target.userId}`] = notes;
@@ -1566,21 +1588,28 @@
         renderFocusUsers();
         closeFocusNote();
         toast(notes.length ? "观察备注已保存在当前浏览器" : "观察备注已删除");
+        saveButton.disabled = false;
+        saveButton.textContent = "保存备注";
         return;
       }
-      const result = await requestJson(apiUrl("/api/focus-users/note"), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...target, notes })
-      });
-      if (state.focusRange === "7") {
-        state.focusData = result.data;
+      try {
+        const result = await requestJson(apiUrl("/api/focus-users/note"), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...target, notes })
+        });
+        state.focusUpdatedAt = result.saved?.updatedAt || state.focusUpdatedAt;
+        state.focusData = applyFocusNoteToData(state.focusData, target, notes);
+        Object.keys(state.publicFocusUsers).forEach(key => {
+          state.publicFocusUsers[key] = applyFocusNoteToData(state.publicFocusUsers[key], target, notes);
+        });
         renderFocusUsers();
-      } else {
-        await loadFocusUsers();
+        closeFocusNote();
+        toast(notes.length ? "备注已保存，正在后台同步公网" : "备注已删除，正在后台同步公网");
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "保存备注";
       }
-      closeFocusNote();
-      toast(notes.length ? "观察备注已保存并同步公网" : "观察备注已删除");
     }
 
     async function editUserAlias(userId) {
@@ -1751,10 +1780,31 @@
         if (!data) return Boolean(cached);
         applyPublicSnapshot(data);
         saveCachedPublicPayload(data);
+        loadPublicFocusNotesOverlay().catch(() => {});
         return true;
       } catch {
         return Boolean(cached);
       }
+    }
+
+    async function loadPublicFocusNotesOverlay() {
+      if (!state.publicMode) return false;
+      const urls = [PUBLIC_FOCUS_NOTES_RAW_URL, "data/business-focus-notes-public.enc.json"];
+      for (const url of urls) {
+        try {
+          const res = await fetch(`${url}?_=${Date.now()}`, { cache: "no-store" });
+          if (!res.ok) continue;
+          const encrypted = await res.json();
+          const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
+          if (!data?.notes || data.updatedAt === state.publicFocusNotesUpdatedAt) return Boolean(data?.notes);
+          state.publicPublishedFocusNotes = data.notes;
+          state.publicFocusNotesUpdatedAt = data.updatedAt || "";
+          state.focusData = mergedPublicFocusData(state.focusRange);
+          if (state.view === "focus") renderFocusUsers();
+          return true;
+        } catch {}
+      }
+      return false;
     }
 
     function base64ToBytes(value) {
@@ -2504,6 +2554,7 @@
     function setupAutoRefresh() {
       if (state.refreshTimer) clearInterval(state.refreshTimer);
       if (state.focusSyncTimer) clearInterval(state.focusSyncTimer);
+      if (state.publicFocusNotesTimer) clearInterval(state.publicFocusNotesTimer);
       const seconds = Math.max(10, Number(state.config?.refreshSeconds || 60));
       state.refreshTimer = setInterval(() => loadData(false, true), seconds * 1000);
       state.focusSyncTimer = setInterval(async () => {
@@ -2514,6 +2565,9 @@
           else if (!state.focusUpdatedAt) state.focusUpdatedAt = latest.updatedAt || "";
         } catch {}
       }, 5000);
+      if (state.publicMode) {
+        state.publicFocusNotesTimer = setInterval(() => loadPublicFocusNotesOverlay().catch(() => {}), 15000);
+      }
     }
 
     function refreshVisiblePageCache() {
