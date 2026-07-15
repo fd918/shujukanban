@@ -1957,6 +1957,7 @@ async function buildFocusUsers(query = {}) {
       name: current?.name || cached.name || item.name,
       phone: plainPhoneValue(item.userId, current?.phone, cached.phone, item.phone),
       version: current?.version || cached.version || item.version || "-",
+      pendingProfile: !(current?.name || cached.name),
       days,
       periodTotal: total,
       previousPeriodTotal,

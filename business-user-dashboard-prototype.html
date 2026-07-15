@@ -830,7 +830,7 @@
         const baseline = latest?.sameTime?.yesterday?.orders ?? latest?.yesterdaySameTime ?? item.yesterdaySameTime;
         const yesterdaySameTime = baseline === null || baseline === undefined ? null : Number(baseline);
         const todayDiff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
-        return { ...source, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), browserLocal: true };
+        return { ...source, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), pendingProfile: !latest?.name && Boolean(item.pendingProfile), browserLocal: true };
       });
       const hidden = readPublicFocusHidden();
       const notes = readPublicFocusNotes();
@@ -1422,7 +1422,7 @@
         : (rows.length ? rows.map((row, index) => `<tr>
           <td>${index + 1}</td>
           ${showBusinessColumn ? `<td class="focus-business-col"><strong>${row.businessName}</strong></td>` : ""}
-          <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
+          <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
           <td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-business-id="${escapeHtml(row.businessId)}" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注" aria-label="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>
           <td class="focus-order-col">${fmt(row.todayOrders)}</td><td class="focus-order-col">${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
