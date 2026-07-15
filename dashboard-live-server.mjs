@@ -1940,7 +1940,7 @@ async function buildFocusUsers(query = {}) {
     const periodRatio = previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null;
     const businessId = String(item.businessId);
     const userId = String(item.userId);
-    const comparableSnapshots = snapshots.filter(snapshot => snapshot?.businessUsers?.[businessId]?.[userId]);
+    const comparableSnapshots = snapshots.filter(snapshot => Object.keys(snapshot?.businessUsers?.[businessId] || {}).length > 0);
     const yesterday = nearestSnapshot(comparableSnapshots, shiftDay(dayKey(), -1), minuteOfDay());
     const yesterdaySameTime = yesterday?.businessUsers?.[businessId]?.[userId]?.orders;
     const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
