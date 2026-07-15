@@ -767,6 +767,21 @@
       localStorage.setItem(PUBLIC_FOCUS_NOTES_KEY, JSON.stringify(notes));
     }
 
+    function focusNoteLines(row = {}) {
+      const values = Array.isArray(row.notes) ? row.notes : String(row.note || "").split("\n");
+      return values.map(value => String(value?.text || value || "").trim()).filter(Boolean);
+    }
+
+    function focusNoteText(row = {}) {
+      return focusNoteLines(row).join("\n");
+    }
+
+    function latestPublicFocusUser(item) {
+      const business = state.businesses.find(row => String(row.platformBusinessId || row.businessId) === String(item.businessId) || String(row.businessId) === String(item.businessId));
+      const detail = state.publicUserDetails[String(item.businessId)] || state.publicUserDetails[String(business?.businessId || "")] || {};
+      return [...(detail.history?.rows || []), ...(detail.rows || [])].find(row => String(row.id || "") === String(item.userId)) || null;
+    }
+
     async function copyUserId(userId) {
       const value = String(userId || "");
       if (!value) return;
@@ -804,20 +819,26 @@
       const dates = dateTextList(range.startDate, range.endDate);
       const previousDates = dateTextList(range.comparisonStartDate, range.comparisonEndDate);
       const localRows = localItems.map(item => {
-        const days = Object.fromEntries(dates.map(date => [date, Number(item.days?.[date] || 0)]));
+        const latest = latestPublicFocusUser(item);
+        const source = latest ? { ...item, ...latest, userId: item.userId, businessId: item.businessId, businessName: item.businessName, platform: item.platform } : item;
+        const allDays = { ...(item.days || {}), ...(latest?.days || {}) };
+        const days = Object.fromEntries(dates.map(date => [date, Number(allDays[date] || 0)]));
         const periodTotal = Object.values(days).reduce((sum, value) => sum + value, 0);
-        const previousPeriodTotal = previousDates.reduce((sum, date) => sum + Number(item.days?.[date] || 0), 0);
+        const previousPeriodTotal = previousDates.reduce((sum, date) => sum + Number(allDays[date] || 0), 0);
         const periodDiff = periodTotal - previousPeriodTotal;
-        const todayOrders = Number(item.days?.[endDate] ?? item.todayOrders ?? 0);
-        const yesterdaySameTime = item.yesterdaySameTime === null || item.yesterdaySameTime === undefined ? null : Number(item.yesterdaySameTime);
+        const todayOrders = Number(latest?.todayOrders ?? allDays[endDate] ?? item.todayOrders ?? 0);
+        const baseline = latest?.sameTime?.yesterday?.orders ?? latest?.yesterdaySameTime ?? item.yesterdaySameTime;
+        const yesterdaySameTime = baseline === null || baseline === undefined ? null : Number(baseline);
         const todayDiff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
-        return { ...item, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), browserLocal: true };
+        return { ...source, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), browserLocal: true };
       });
       const hidden = readPublicFocusHidden();
       const notes = readPublicFocusNotes();
       const applyNote = row => {
         const key = `${row.businessId}:${row.userId}`;
-        return Object.prototype.hasOwnProperty.call(notes, key) ? { ...row, note: notes[key] } : row;
+        if (!Object.prototype.hasOwnProperty.call(notes, key)) return row;
+        const lines = Array.isArray(notes[key]) ? notes[key] : String(notes[key] || "").split("\n").filter(Boolean);
+        return { ...row, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
       };
       const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyNote(row)]));
       localRows.forEach(row => rowsByKey.set(`${row.businessId}:${row.userId}`, applyNote(row)));
@@ -1384,7 +1405,7 @@
           <td>${index + 1}</td>
           ${showBusinessColumn ? `<td class="focus-business-col"><strong>${row.businessName}</strong></td>` : ""}
           <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
-          <td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-business-id="${escapeHtml(row.businessId)}" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注" aria-label="编辑观察备注">✎</button><span class="focus-note-text ${row.note ? "" : "focus-note-empty"}" title="${escapeHtml(row.note || "添加观察备注")}">${escapeHtml(row.note || "添加备注")}</span></div></td>
+          <td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-business-id="${escapeHtml(row.businessId)}" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注" aria-label="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>
           <td class="focus-order-col">${fmt(row.todayOrders)}</td><td class="focus-order-col">${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
@@ -1484,24 +1505,46 @@
       toast("已移除重点用户");
     }
 
-    async function editFocusNote(businessId, userId) {
+    function openFocusNote(businessId, userId) {
       const row = (state.focusData?.rows || []).find(item => String(item.businessId) === String(businessId) && String(item.userId) === String(userId));
-      const next = window.prompt("记录需要持续观察的用户情况；留空并确定可删除备注。", row?.note || "");
-      if (next === null) return;
-      const note = next.trim().slice(0, 300);
+      if (!row) return;
+      state.focusNoteTarget = { businessId: String(businessId), userId: String(userId) };
+      $("#focusNoteUser").textContent = `${userDisplayName(row)}｜${row.businessName || "当前业务"}`;
+      $("#focusNoteEditor").value = focusNoteText(row);
+      $("#focusNoteResult").textContent = "";
+      $("#focusNoteStorageHint").textContent = state.publicMode && !isLocalSettings
+        ? "公网备注保存在当前浏览器；本机保存的备注会随加密快照同步到所有公网设备。"
+        : "本机保存后会写入本地配置，并随加密快照同步到公网。";
+      $("#modalMask").classList.add("open");
+      $("#focusNoteModal").classList.add("open");
+      setTimeout(() => $("#focusNoteEditor").focus(), 0);
+    }
+
+    function closeFocusNote() {
+      $("#focusNoteModal").classList.remove("open");
+      $("#modalMask").classList.remove("open");
+      state.focusNoteTarget = null;
+    }
+
+    async function saveFocusNote() {
+      const target = state.focusNoteTarget;
+      if (!target) return;
+      const notes = $("#focusNoteEditor").value.split("\n").map(value => value.trim().slice(0, 200)).filter(Boolean).slice(0, 20);
+      $("#focusNoteResult").textContent = "正在保存...";
       if (state.publicMode && !isLocalSettings) {
-        const notes = readPublicFocusNotes();
-        notes[`${businessId}:${userId}`] = note;
-        writePublicFocusNotes(notes);
+        const savedNotes = readPublicFocusNotes();
+        savedNotes[`${target.businessId}:${target.userId}`] = notes;
+        writePublicFocusNotes(savedNotes);
         state.focusData = mergedPublicFocusData(state.focusRange);
         renderFocusUsers();
-        toast(note ? "观察备注已保存在当前浏览器" : "观察备注已删除");
+        closeFocusNote();
+        toast(notes.length ? "观察备注已保存在当前浏览器" : "观察备注已删除");
         return;
       }
       const result = await requestJson(apiUrl("/api/focus-users/note"), {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ businessId, userId, note })
+        body: JSON.stringify({ ...target, notes })
       });
       if (state.focusRange === "7") {
         state.focusData = result.data;
@@ -1509,7 +1552,8 @@
       } else {
         await loadFocusUsers();
       }
-      toast(note ? "观察备注已保存并同步公网" : "观察备注已删除");
+      closeFocusNote();
+      toast(notes.length ? "观察备注已保存并同步公网" : "观察备注已删除");
     }
 
     async function editUserAlias(userId) {
@@ -2585,7 +2629,7 @@
     $("#focusBody").addEventListener("click", e => {
       const note = e.target.closest("[data-edit-focus-note]");
       if (note) {
-        editFocusNote(note.dataset.businessId, note.dataset.userId).catch(error => toast(error.message || "观察备注保存失败"));
+        openFocusNote(note.dataset.businessId, note.dataset.userId);
         return;
       }
       const copyId = e.target.closest("[data-copy-user-id]");
@@ -2606,6 +2650,9 @@
     $("#closeFocusModal").addEventListener("click", closeFocusModal);
     $("#cancelFocusAdd").addEventListener("click", closeFocusModal);
     $("#confirmFocusAdd").addEventListener("click", () => addFocusUser().catch(error => { $("#focusAddResult").textContent = error.message; toast(error.message); }));
+    $("#closeFocusNoteModal").addEventListener("click", closeFocusNote);
+    $("#cancelFocusNote").addEventListener("click", closeFocusNote);
+    $("#saveFocusNote").addEventListener("click", () => saveFocusNote().catch(error => { $("#focusNoteResult").textContent = error.message; toast(error.message || "观察备注保存失败"); }));
     $("#detailBody").addEventListener("click", e => {
       const dailyRange = e.target.closest("[data-business-daily-range]");
       if (dailyRange) {
@@ -2749,70 +2796,6 @@
     }));
     $("#testFeishuBtn").addEventListener("click", testFeishu);
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
-
-    function updateHorizontalScrollbarThumb(wrap, rail) {
-      const thumb = rail.querySelector(".horizontal-scrollbar-thumb");
-      const maxScroll = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
-      const thumbWidth = Math.min(rail.clientWidth, Math.max(58, rail.clientWidth * wrap.clientWidth / Math.max(wrap.scrollWidth, 1)));
-      const maxLeft = Math.max(0, rail.clientWidth - thumbWidth);
-      thumb.style.width = `${thumbWidth}px`;
-      thumb.style.transform = `translateX(${maxScroll ? wrap.scrollLeft / maxScroll * maxLeft : 0}px)`;
-      rail.classList.toggle("hidden", maxScroll <= 2);
-    }
-
-    function syncHorizontalScrollbars() {
-      $$(".table-wrap, .detail-table-wrap").forEach(wrap => {
-        let rail = wrap.nextElementSibling;
-        if (!rail?.classList.contains("horizontal-scrollbar")) {
-          rail = document.createElement("div");
-          rail.className = "horizontal-scrollbar";
-          rail.innerHTML = '<div class="horizontal-scrollbar-thumb" title="左右拖动查看完整表格"></div>';
-          wrap.insertAdjacentElement("afterend", rail);
-        }
-        updateHorizontalScrollbarThumb(wrap, rail);
-        if (!wrap.dataset.scrollbarBound) {
-          wrap.dataset.scrollbarBound = "1";
-          wrap.addEventListener("scroll", () => updateHorizontalScrollbarThumb(wrap, rail));
-          const thumb = rail.querySelector(".horizontal-scrollbar-thumb");
-          thumb.addEventListener("pointerdown", event => {
-            event.stopPropagation();
-            thumb.setPointerCapture(event.pointerId);
-            const startX = event.clientX;
-            const startScroll = wrap.scrollLeft;
-            const maxScroll = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
-            const maxLeft = Math.max(1, rail.clientWidth - thumb.getBoundingClientRect().width);
-            const move = moveEvent => { wrap.scrollLeft = startScroll + (moveEvent.clientX - startX) * maxScroll / maxLeft; };
-            const up = () => {
-              thumb.removeEventListener("pointermove", move);
-              thumb.removeEventListener("pointerup", up);
-              thumb.removeEventListener("pointercancel", up);
-            };
-            thumb.addEventListener("pointermove", move);
-            thumb.addEventListener("pointerup", up);
-            thumb.addEventListener("pointercancel", up);
-          });
-          rail.addEventListener("pointerdown", event => {
-            if (event.target !== rail) return;
-            const rect = rail.getBoundingClientRect();
-            const thumbWidth = thumb.getBoundingClientRect().width;
-            const maxLeft = Math.max(1, rail.clientWidth - thumbWidth);
-            wrap.scrollLeft = Math.max(0, Math.min(maxLeft, event.clientX - rect.left - thumbWidth / 2)) / maxLeft * Math.max(0, wrap.scrollWidth - wrap.clientWidth);
-          });
-        }
-      });
-    }
-
-    let scrollbarSyncQueued = false;
-    function scheduleHorizontalScrollbarSync() {
-      if (scrollbarSyncQueued) return;
-      scrollbarSyncQueued = true;
-      requestAnimationFrame(() => {
-        scrollbarSyncQueued = false;
-        syncHorizontalScrollbars();
-      });
-    }
-    new MutationObserver(scheduleHorizontalScrollbarSync).observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("resize", scheduleHorizontalScrollbarSync);
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
     state.overviewCollapsed = localStorage.getItem("businessDashboardOverviewCollapsed") === "1";
