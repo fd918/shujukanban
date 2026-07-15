@@ -70,6 +70,7 @@
       padding: 0 12px;
     }
     .icon-btn { width: 38px; padding: 0; font-size: 17px; }
+    .icon-btn svg { width:17px; height:17px; vertical-align:middle; }
     .primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; }
     .danger { background: #fff1f2; border-color: #fecdd3; color: var(--red); }
 
@@ -373,8 +374,8 @@
 
     /* 重点用户页：在不改变数据逻辑的前提下，使用独立的紧凑运营看板视觉。 */
     body.focus-mode {
-      --focus-accent:#ed7a00;
-      --focus-accent-dark:#c85f00;
+      --focus-accent:#c65300;
+      --focus-accent-dark:#a64b00;
       --focus-accent-soft:#fff6eb;
       --focus-ink:#172033;
       --focus-muted:#667085;
@@ -402,6 +403,7 @@
     body.focus-mode .content { padding:16px 18px 26px; }
     body.focus-mode #sourceBox,
     body.focus-mode #overviewToggle,
+    body.focus-mode .mobile-filter-toggle,
     body.focus-mode #dataPanel > .panel-head { display:none; }
     body.focus-mode #dataPanel { margin-top:0; border:0; border-radius:0; background:transparent; overflow:visible; }
     body.focus-mode #dataPanel > .table-wrap { overflow:visible; max-height:none; min-height:0; }
@@ -486,6 +488,7 @@
     .copy-user-id svg { width:13px; height:13px; }
     body.focus-mode .focus-table .down::after { content:" 下降"; font-size:10px; }
     body.focus-mode .focus-table .up::after { content:" 上升"; font-size:10px; }
+    body.focus-mode .focus-table .up { color:#067647; }
     .focus-table-empty { height:220px !important; text-align:center; color:var(--focus-muted); }
 
     @media (prefers-reduced-motion: reduce) {
@@ -807,6 +810,7 @@
       pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4 6 0-.7 5 3.2 3.2v1.3h-11v-1.3L9.7 9 9 4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 13.5V21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
       remove: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>'
+      ,refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M18.2 9A7 7 0 0 0 6.4 6.4L4 9m16 6-2.4 2.6A7 7 0 0 1 5.8 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     }[name] || "");
     const userIdOf = user => String(user?.id || user?.userId || "");
     const userDisplayName = user => Object.prototype.hasOwnProperty.call(state.userAliases, userIdOf(user)) ? (state.userAliases[userIdOf(user)] || user?.name || "-") : (user?.name || "-");
@@ -1894,6 +1898,8 @@
       state.loading = !hasOldData;
       state.refreshing = hasOldData;
       $("#refreshBtn").textContent = "…";
+      $("#refreshBtn").disabled = true;
+      $("#refreshBtn").setAttribute("aria-busy", "true");
       if (manual && !hasOldData) showLoading("正在查询中台数据，请稍等...");
       renderSource();
       renderTable();
@@ -1954,7 +1960,9 @@
         render();
         toast(error.message || "刷新失败");
       } finally {
-        $("#refreshBtn").textContent = "↻";
+        $("#refreshBtn").innerHTML = uiIcon("refresh");
+        $("#refreshBtn").disabled = false;
+        $("#refreshBtn").removeAttribute("aria-busy");
         hideLoading();
       }
     }
