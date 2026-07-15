@@ -1184,7 +1184,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   });
   await mapLimit(rows, 8, async row => {
     const plainPhone = await fetchPlainPhone(row.id);
-    if (plainPhone) row.phone = plainPhone;
+    row.phone = plainPhoneValue(row.id, plainPhone, row.phone);
   });
   const payload = {
     ok: result.ok,
@@ -1299,6 +1299,7 @@ async function refreshFocusUsersToday() {
     const matched = asList(result.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
     if (!matched) return;
     const row = normalizeUser(matched, today);
+    row.phone = plainPhoneValue(row.id, row.phone);
     const cacheKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: today });
     userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
     users += 1;
