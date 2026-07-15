@@ -92,7 +92,8 @@ function json(res, status, data) {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type"
+    "access-control-allow-headers": "content-type",
+    "access-control-allow-private-network": "true"
   });
   res.end(JSON.stringify(data));
 }
@@ -1283,32 +1284,36 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
   return { businesses: rows.length, users, newTop100 };
 }
 
+async function refreshFocusUserToday(item) {
+  const today = dayKey();
+  const result = await apiCall("重点用户今日订单", "GET", "/api/v2/dashboard/business/user-order-statistics", {
+    order_type: item.businessId,
+    page: 1,
+    pre_page: 10,
+    start_date: today,
+    end_date: today,
+    filter_field: "order_valid",
+    keyword: item.userId
+  }, 20000);
+  if (!result.ok) return false;
+  const matched = asList(result.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
+  if (!matched) return false;
+  const row = normalizeUser(matched, today);
+  row.phone = plainPhoneValue(row.id, row.phone);
+  const cacheKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: today });
+  userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
+  scheduleUserDetailCacheSave();
+  return true;
+}
+
 async function refreshFocusUsersToday() {
   const saved = await readFocusUsers();
   const items = saved.items || [];
   if (!items.length) return { users: 0 };
-  const today = dayKey();
   let users = 0;
   await mapLimit(items, 4, async item => {
-    const result = await apiCall("重点用户今日订单", "GET", "/api/v2/dashboard/business/user-order-statistics", {
-      order_type: item.businessId,
-      page: 1,
-      pre_page: 10,
-      start_date: today,
-      end_date: today,
-      filter_field: "order_valid",
-      keyword: item.userId
-    }, 20000);
-    if (!result.ok) return;
-    const matched = asList(result.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
-    if (!matched) return;
-    const row = normalizeUser(matched, today);
-    row.phone = plainPhoneValue(row.id, row.phone);
-    const cacheKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: today });
-    userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
-    users += 1;
+    if (await refreshFocusUserToday(item)) users += 1;
   });
-  if (users) scheduleUserDetailCacheSave();
   console.log(`[${nowText()}] 已同步重点用户今日订单：${users}/${items.length}`);
   return { users };
 }
@@ -1970,6 +1975,7 @@ async function buildFocusUsers(query = {}) {
   const currentTimes = rows.map(row => row.userDataTime).filter(Boolean).sort();
   return {
     ok: true,
+    focusUpdatedAt: saved.updatedAt || "",
     range,
     dates,
     rows,
@@ -1990,22 +1996,7 @@ async function addFocusUser(body) {
   }
   const business = businessRows.find(row => String(row.platformBusinessId || row.businessId) === businessId || String(row.businessId) === businessId);
   if (!business) throw new Error("没有找到所选业务，请先刷新业务列表。");
-  let user = cachedUserForBusiness(businessId, userId);
-  if (!user) {
-    const statuses = [];
-    const result = await fetchBusinessUsers({
-      businessId,
-      startDate: dayKey(),
-      endDate: dayKey(),
-      pageSize: Math.min(5000, Math.max(500, number(business.users) + 50)),
-      sortField: dayKey(),
-      sortOrder: "desc",
-      refresh: true,
-      includePrevious: false
-    }, statuses);
-    user = (result.rows || []).find(item => String(item.id) === userId);
-  }
-  if (!user) throw new Error("该业务下没有找到这个用户ID，请核对平台、业务和用户ID。");
+  const user = cachedUserForBusiness(businessId, userId) || {};
   const saved = await readFocusUsers();
   if (saved.items.some(item => String(item.businessId) === businessId && String(item.userId) === userId)) return writeFocusUsers(saved.items);
   saved.items.push({
@@ -2014,9 +2005,10 @@ async function addFocusUser(body) {
     businessId,
     catalogBusinessId: String(business.businessId || ""),
     userId,
-    name: user.name,
-    phone: user.phone,
-    version: user.version,
+    name: user.name || `用户 ${userId}`,
+    phone: plainPhoneValue(userId, user.phone),
+    version: user.version || "-",
+    pendingProfile: !user.name,
     addedAt: new Date().toISOString(),
     addedAtText: nowText()
   });
@@ -2406,14 +2398,20 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { ok: true, config });
     }
     if (url.pathname === "/api/focus-users" && req.method === "GET") return json(res, 200, await buildFocusUsers(Object.fromEntries(url.searchParams.entries())));
+    if (url.pathname === "/api/focus-users/state" && req.method === "GET") {
+      const saved = await readFocusUsers();
+      return json(res, 200, { ok: true, updatedAt: saved.updatedAt || "", total: saved.items?.length || 0 });
+    }
     if (url.pathname === "/api/focus-users" && req.method === "POST") {
-      const saved = await addFocusUser(await readBody(req));
+      const body = await readBody(req);
+      const saved = await addFocusUser(body);
       const data = await buildFocusUsers({ preset: "7" });
-      const published = await publishLatestCachedDashboard().catch(error => {
-        console.error(`[${nowText()}] 重点用户公网同步失败：${error.message}`);
-        return false;
-      });
-      return json(res, 200, { ok: true, saved, data, published });
+      json(res, 200, { ok: true, saved, data, syncing: true });
+      const item = saved.items?.find(row => String(row.businessId) === String(body.businessId) && String(row.userId) === String(body.userId));
+      Promise.resolve(item ? refreshFocusUserToday(item) : false)
+        .then(() => publishLatestCachedDashboard())
+        .catch(error => console.error(`[${nowText()}] 重点用户后台补全或公网同步失败：${error.message}`));
+      return;
     }
     if (url.pathname === "/api/focus-users/remove" && req.method === "POST") {
       const saved = await removeFocusUser(await readBody(req));

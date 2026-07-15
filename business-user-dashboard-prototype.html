@@ -615,7 +615,7 @@
       <div><label>平台</label><select class="field" id="focusAddPlatform"></select></div>
       <div><label>业务</label><select class="field" id="focusAddBusiness"></select></div>
       <div style="grid-column:1/-1"><label>用户ID</label><input class="field" id="focusAddUserId" placeholder="请输入用户ID"></div>
-    </div><section class="source" style="margin-top:14px;">添加时会校验用户是否属于所选业务；首次查询可能需要读取该业务用户缓存。</section></div>
+    </div><section class="source" style="margin-top:14px;">填写后立即加入重点用户列表，不等待用户快照；姓名、手机号和订单会在后台按用户ID精确补全。</section></div>
     <div class="modal-foot"><span class="muted" id="focusAddResult"></span><button class="btn" id="cancelFocusAdd">取消</button><button class="btn primary" id="confirmFocusAdd">确认添加</button></div>
   </section>
 
@@ -634,7 +634,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -841,7 +841,11 @@
         return { ...row, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
       };
       const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyNote(row)]));
-      localRows.forEach(row => rowsByKey.set(`${row.businessId}:${row.userId}`, applyNote(row)));
+      localRows.forEach(row => {
+        const key = `${row.businessId}:${row.userId}`;
+        const published = rowsByKey.get(key);
+        rowsByKey.set(key, applyNote(published ? { ...row, ...published, browserLocal: true } : row));
+      });
       return { ...base, ok: true, range, dates, rows: [...rowsByKey.values()], total: rowsByKey.size, latestDataTime: base.latestDataTime || state.source.latestDataTime || "-" };
     }
 
@@ -850,19 +854,32 @@
       if (!business) throw new Error("没有找到该业务。");
       const detail = state.publicUserDetails[String(businessId)] || state.publicUserDetails[String(business.businessId)] || {};
       const users = [...(detail.history?.rows || []), ...(detail.rows || [])];
-      const user = users.find(item => String(item.id || "") === String(userId));
-      if (!user) throw new Error("公网快照里没有找到这个用户，请等待下一次数据发布。");
+      const user = users.find(item => String(item.id || "") === String(userId)) || {};
       const key = `${businessId}:${userId}`;
       const hidden = readPublicFocusHidden();
       if (hidden.delete(key)) localStorage.setItem(PUBLIC_FOCUS_HIDDEN_KEY, JSON.stringify([...hidden]));
       const existingPublished = Object.values(state.publicFocusUsers).some(data => (data?.rows || []).some(row => `${row.businessId}:${row.userId}` === key));
-      if (existingPublished) return true;
+      if (existingPublished) return false;
       const items = readPublicFocusItems();
-      const saved = { platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || ""), userId: String(userId), name: user.name, phone: user.phone, version: user.version, note: "", days: user.days || {}, todayOrders: user.todayOrders, yesterdaySameTime: user.sameTime?.yesterday?.orders ?? null, addedAt: new Date().toISOString() };
+      const saved = { platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || ""), userId: String(userId), name: user.name || `用户 ${userId}`, phone: user.phone || "-", version: user.version || "-", pendingProfile: !user.name, note: "", days: user.days || {}, todayOrders: user.todayOrders || 0, yesterdaySameTime: user.sameTime?.yesterday?.orders ?? null, addedAt: new Date().toISOString() };
       const index = items.findIndex(item => `${item.businessId}:${item.userId}` === key);
       if (index >= 0) items[index] = saved; else items.push(saved);
       writePublicFocusItems(items);
-      return true;
+      return index < 0;
+    }
+
+    async function syncPublicFocusToLocal(businessId, userId) {
+      try {
+        const response = await fetch("http://127.0.0.1:8791/api/focus-users", {
+          method: "POST",
+          mode: "cors",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ businessId, userId })
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
     }
 
     function setDailyRange(type) {
@@ -1424,6 +1441,7 @@
       renderFocusUsers();
       try {
         state.focusData = await requestJson(apiUrl(`/api/focus-users?preset=${state.focusRange}&_=${Date.now()}`));
+        state.focusUpdatedAt = state.focusData.focusUpdatedAt || state.focusUpdatedAt;
       } finally {
         state.focusLoading = false;
         renderFocusUsers();
@@ -1458,12 +1476,16 @@
     async function addFocusUser() {
       const businessId = $("#focusAddBusiness").value;
       const userId = $("#focusAddUserId").value.trim();
-      $("#focusAddResult").textContent = "正在校验用户...";
+      if (!businessId || !userId) throw new Error("请选择业务并填写用户ID。");
+      $("#focusAddResult").textContent = "正在添加...";
       if (state.publicMode) {
         const added = savePublicFocusUser(businessId, userId);
         closeFocusModal();
         await loadFocusUsers();
-        toast(added ? "已加入当前浏览器的重点用户" : "该用户已经在重点用户看板中");
+        toast(added ? "已添加，正在后台补全用户数据" : "该用户已经在重点用户看板中");
+        syncPublicFocusToLocal(businessId, userId).then(synced => {
+          if (synced) toast("已同步到本地重点用户看板");
+        });
         return;
       }
       const result = await requestJson(apiUrl("/api/focus-users"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId, userId }) });
@@ -2477,8 +2499,17 @@
 
     function setupAutoRefresh() {
       if (state.refreshTimer) clearInterval(state.refreshTimer);
+      if (state.focusSyncTimer) clearInterval(state.focusSyncTimer);
       const seconds = Math.max(10, Number(state.config?.refreshSeconds || 60));
       state.refreshTimer = setInterval(() => loadData(false, true), seconds * 1000);
+      state.focusSyncTimer = setInterval(async () => {
+        if (state.publicMode || state.view !== "focus" || state.focusLoading) return;
+        try {
+          const latest = await requestJson(apiUrl(`/api/focus-users/state?_=${Date.now()}`));
+          if (state.focusUpdatedAt && latest.updatedAt && latest.updatedAt !== state.focusUpdatedAt) await loadFocusUsers();
+          else if (!state.focusUpdatedAt) state.focusUpdatedAt = latest.updatedAt || "";
+        } catch {}
+      }, 5000);
     }
 
     function refreshVisiblePageCache() {
