@@ -1419,10 +1419,11 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
 function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange = rangeFromQuery()) {
   const currentDate = dateFromDay(dateRange.endDate);
   const minute = minuteOfDay();
-  const yesterday = nearestSnapshot(snapshots, dayKey(addDays(currentDate, -1)), minute);
-  const lastWeek = nearestSnapshot(snapshots, dayKey(addDays(currentDate, -7)), minute);
-  const recent = Array.from({ length: 7 }, (_, index) => nearestSnapshot(snapshots, dayKey(addDays(currentDate, -(index + 1))), minute)).filter(Boolean);
   const businessKey = String(businessId || "");
+  const usableSnapshots = snapshots.filter(snapshot => Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
+  const yesterday = nearestSnapshot(usableSnapshots, dayKey(addDays(currentDate, -1)), minute);
+  const lastWeek = nearestSnapshot(usableSnapshots, dayKey(addDays(currentDate, -7)), minute);
+  const recent = Array.from({ length: 7 }, (_, index) => nearestSnapshot(usableSnapshots, dayKey(addDays(currentDate, -(index + 1))), minute)).filter(Boolean);
 
   return rows.map(row => {
     const id = String(row.id || "");
