@@ -239,9 +239,11 @@
     .user-toggle:hover { color: var(--blue); }
     .user-history-link { border:0; background:transparent; color:var(--text); padding:0; font-weight:700; text-align:left; cursor:pointer; }
     .user-history-link:hover { color:var(--blue); text-decoration:underline; }
-    .alias-edit, .user-remove-icon { width:22px; height:22px; border:0; border-radius:4px; background:transparent; padding:0; font-size:15px; line-height:22px; cursor:pointer; }
+    .alias-edit, .user-pin-icon, .user-remove-icon { width:22px; height:22px; border:0; border-radius:4px; background:transparent; padding:0; font-size:15px; line-height:22px; cursor:pointer; }
     .alias-edit { color:var(--blue); }
     .alias-edit:hover { background:#eff6ff; }
+    .user-pin-icon { color:var(--muted); }
+    .user-pin-icon:hover, .user-pin-icon.active { color:var(--orange); background:#fff7ed; }
     .user-remove-icon { color:var(--red); }
     .user-remove-icon:hover { background:#fff1f2; }
     .copy-user-id { border:0; background:transparent; color:var(--muted); padding:0; font-size:12px; cursor:pointer; }
@@ -634,11 +636,12 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
     const PUBLIC_FOCUS_NOTES_KEY = "businessDashboardPublicFocusNotes";
+    const PUBLIC_FOCUS_PINS_KEY = "businessDashboardPublicFocusPins";
     const PUBLIC_FOCUS_NOTES_RAW_URL = "https://raw.githubusercontent.com/fd918/shujukanban/main/data/business-focus-notes-public.enc.json";
     const PUBLIC_USER_ALIASES_KEY = "businessDashboardPublicUserAliases";
     const $ = s => document.querySelector(s);
@@ -768,6 +771,14 @@
       localStorage.setItem(PUBLIC_FOCUS_NOTES_KEY, JSON.stringify(notes));
     }
 
+    function readPublicFocusPins() {
+      try { return JSON.parse(localStorage.getItem(PUBLIC_FOCUS_PINS_KEY) || "{}"); } catch { return {}; }
+    }
+
+    function writePublicFocusPins(pins) {
+      localStorage.setItem(PUBLIC_FOCUS_PINS_KEY, JSON.stringify(pins));
+    }
+
     function focusNoteLines(row = {}) {
       const values = Array.isArray(row.notes) ? row.notes : String(row.note || "").split("\n");
       return values.map(value => String(value?.text || value || "").trim()).filter(Boolean);
@@ -835,8 +846,10 @@
       });
       const hidden = readPublicFocusHidden();
       const notes = readPublicFocusNotes();
+      const pins = readPublicFocusPins();
       const publishedNotes = state.publicPublishedFocusNotes || {};
-      const applyNote = row => {
+      const publishedPins = state.publicPublishedFocusPins || {};
+      const applyFocusOverrides = row => {
         const key = `${row.businessId}:${row.userId}`;
         let next = row;
         if (Object.prototype.hasOwnProperty.call(publishedNotes, key)) {
@@ -847,13 +860,15 @@
           const lines = Array.isArray(notes[key]) ? notes[key] : String(notes[key] || "").split("\n").filter(Boolean);
           next = { ...next, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
         }
+        if (Object.prototype.hasOwnProperty.call(publishedPins, key)) next = { ...next, ...publishedPins[key] };
+        if (Object.prototype.hasOwnProperty.call(pins, key)) next = { ...next, ...pins[key] };
         return next;
       };
-      const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyNote(row)]));
+      const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyFocusOverrides(row)]));
       localRows.forEach(row => {
         const key = `${row.businessId}:${row.userId}`;
         const published = rowsByKey.get(key);
-        rowsByKey.set(key, applyNote(published ? { ...row, ...published, browserLocal: true } : row));
+        rowsByKey.set(key, applyFocusOverrides(published ? { ...row, ...published, browserLocal: true } : row));
       });
       return { ...base, ok: true, range, dates, rows: [...rowsByKey.values()], total: rowsByKey.size, latestDataTime: base.latestDataTime || state.source.latestDataTime || "-" };
     }
@@ -1411,7 +1426,11 @@
       const keyword = state.focusSearch.toLowerCase();
       let rows = (data.rows || []).filter(row => state.focusGroup === "all" || String(row.businessId || row.businessName || "") === state.focusGroup);
       if (keyword) rows = rows.filter(row => `${userSearchText(row)}${row.platform}${row.businessName}`.toLowerCase().includes(keyword));
-      rows = rows.slice().sort((a, b) => Number(b.periodTotal || 0) - Number(a.periodTotal || 0));
+      rows = rows.slice().sort((a, b) => {
+        if (Boolean(a.pinned) !== Boolean(b.pinned)) return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+        if (a.pinned && b.pinned && a.pinnedAt !== b.pinnedAt) return String(b.pinnedAt || "").localeCompare(String(a.pinnedAt || ""));
+        return Number(b.periodTotal || 0) - Number(a.periodTotal || 0);
+      });
       const dates = data.dates || [];
       const todaySum = rows.reduce((sum, row) => sum + Number(row.todayOrders || 0), 0);
       const periodSum = rows.reduce((sum, row) => sum + Number(row.periodTotal || 0), 0);
@@ -1431,7 +1450,7 @@
         : (rows.length ? rows.map((row, index) => `<tr>
           <td>${index + 1}</td>
           ${showBusinessColumn ? `<td class="focus-business-col"><strong>${row.businessName}</strong></td>` : ""}
-          <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
+          <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}" aria-label="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
           <td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-business-id="${escapeHtml(row.businessId)}" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注" aria-label="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>
           <td class="focus-order-col">${fmt(row.todayOrders)}</td><td class="focus-order-col">${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
@@ -1539,6 +1558,53 @@
       state.focusData = result.data;
       renderFocusUsers();
       toast("已移除重点用户");
+    }
+
+    function applyFocusPinToData(data, businessId, userId, pinned, pinnedAt) {
+      if (!data?.rows) return data;
+      return {
+        ...data,
+        rows: data.rows.map(row => String(row.businessId) === String(businessId) && String(row.userId) === String(userId)
+          ? { ...row, pinned, pinnedAt }
+          : row)
+      };
+    }
+
+    async function toggleFocusPin(businessId, userId, pinned) {
+      const nextPinned = !pinned;
+      const pinnedAt = nextPinned ? new Date().toISOString() : "";
+      if (state.publicMode && !isLocalSettings) {
+        const pins = readPublicFocusPins();
+        pins[`${businessId}:${userId}`] = { pinned: nextPinned, pinnedAt };
+        writePublicFocusPins(pins);
+        state.focusData = mergedPublicFocusData(state.focusRange);
+        renderFocusUsers();
+        toast(nextPinned ? "已置顶用户" : "已取消置顶");
+        fetch("http://127.0.0.1:8791/api/focus-users/pin", {
+          method: "POST",
+          mode: "cors",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ businessId, userId, pinned: nextPinned })
+        }).then(response => {
+          if (!response.ok) return;
+          const syncedPins = readPublicFocusPins();
+          delete syncedPins[`${businessId}:${userId}`];
+          writePublicFocusPins(syncedPins);
+        }).catch(() => {});
+        return;
+      }
+      const result = await requestJson(apiUrl("/api/focus-users/pin"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ businessId, userId, pinned: nextPinned })
+      });
+      state.focusUpdatedAt = result.saved?.updatedAt || state.focusUpdatedAt;
+      state.focusData = applyFocusPinToData(state.focusData, businessId, userId, nextPinned, pinnedAt);
+      Object.keys(state.publicFocusUsers).forEach(key => {
+        state.publicFocusUsers[key] = applyFocusPinToData(state.publicFocusUsers[key], businessId, userId, nextPinned, pinnedAt);
+      });
+      renderFocusUsers();
+      toast(nextPinned ? "已置顶用户，正在同步公网" : "已取消置顶，正在同步公网");
     }
 
     function openFocusNote(businessId, userId) {
@@ -1804,6 +1870,7 @@
           const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
           if (!data?.notes) continue;
           state.publicPublishedFocusNotes = data.notes;
+          state.publicPublishedFocusPins = data.pins || {};
           state.publicFocusNotesUpdatedAt = data.updatedAt || "";
           state.publicFocusNotesEnvelopeUpdatedAt = encrypted.updatedAt || "";
           state.focusData = mergedPublicFocusData(state.focusRange);
@@ -2727,6 +2794,11 @@
     $("#focusSearchClear").addEventListener("click", () => { state.focusSearch = ""; $("#focusSearch").value = ""; renderFocusUsers(); $("#focusSearch").focus(); });
     $("#focusGroups").addEventListener("click", e => { const btn = e.target.closest("[data-focus-group]"); if (btn) { state.focusGroup = btn.dataset.focusGroup; renderFocusUsers(); } });
     $("#focusBody").addEventListener("click", e => {
+      const pin = e.target.closest("[data-pin-focus]");
+      if (pin) {
+        toggleFocusPin(pin.dataset.businessId, pin.dataset.userId, pin.dataset.pinned === "1").catch(error => toast(error.message || "置顶失败"));
+        return;
+      }
       const note = e.target.closest("[data-edit-focus-note]");
       if (note) {
         openFocusNote(note.dataset.businessId, note.dataset.userId);

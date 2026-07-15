@@ -2049,6 +2049,22 @@ async function saveFocusUserNote(body) {
   return writeFocusUsers(saved.items);
 }
 
+async function saveFocusUserPin(body) {
+  const businessId = String(body.businessId || "");
+  const userId = String(body.userId || "");
+  if (!businessId || !userId) throw new Error("缺少业务ID或用户ID。");
+  const saved = await readFocusUsers();
+  const index = saved.items.findIndex(item => String(item.businessId) === businessId && String(item.userId) === userId);
+  if (index < 0) throw new Error("重点用户不存在，请刷新后重试。");
+  const pinned = Boolean(body.pinned);
+  saved.items[index] = {
+    ...saved.items[index],
+    pinned,
+    pinnedAt: pinned ? new Date().toISOString() : ""
+  };
+  return writeFocusUsers(saved.items);
+}
+
 async function testFeishu() {
   await sendFeishuText(`业务异常监控测试消息：${nowText()}。如果你收到这条消息，说明 Webhook 可用。`);
   return { ok: true, message: "测试成功，飞书机器人已返回成功状态。" };
@@ -2331,7 +2347,11 @@ async function publishPublicFocusNotes() {
         : String(item.note || "").split("\n").map(value => value.trim()).filter(Boolean);
       return [key, lines];
     }));
-    const encrypted = await encryptPublicPayload({ ok: true, updatedAt: saved.updatedAt, notes }, { compression: "gzip" });
+    const pins = Object.fromEntries(saved.items.map(item => [
+      `${item.businessId}:${item.userId}`,
+      { pinned: Boolean(item.pinned), pinnedAt: item.pinnedAt || "" }
+    ]));
+    const encrypted = await encryptPublicPayload({ ok: true, updatedAt: saved.updatedAt, notes, pins }, { compression: "gzip" });
     await mkdir(join(ROOT, "data"), { recursive: true });
     await writeFile(PUBLIC_FOCUS_NOTES_PATH, JSON.stringify(encrypted));
     await pushPublicFocusNotes();
@@ -2468,6 +2488,14 @@ const server = createServer(async (req, res) => {
       json(res, 200, { ok: true, saved: { updatedAt: saved.updatedAt, updatedAtText: saved.updatedAtText }, syncing: true });
       publishPublicFocusNotes().catch(error => {
         console.error(`[${nowText()}] 重点用户观察备注公网同步失败：${error.message}`);
+      });
+      return;
+    }
+    if (url.pathname === "/api/focus-users/pin" && req.method === "POST") {
+      const saved = await saveFocusUserPin(await readBody(req));
+      json(res, 200, { ok: true, saved: { updatedAt: saved.updatedAt, updatedAtText: saved.updatedAtText }, syncing: true });
+      publishPublicFocusNotes().catch(error => {
+        console.error(`[${nowText()}] 重点用户置顶状态公网同步失败：${error.message}`);
       });
       return;
     }
