@@ -537,13 +537,13 @@
         <strong>数据来源：</strong>业务列表来自中台业务列表接口和业务汇总接口；每日业务数据按每一天单独请求中台业务汇总接口；用户明细来自中台业务用户下钻接口；手机号来自中台用户数据接口补全。
       </section>
       <section class="source">
-        <strong>当前快照记录：</strong>业务快照记录业务订单、业务佣金、平台和业务名；全局用户快照记录用户订单、佣金和手机号；业务用户快照记录业务ID、用户ID、订单、佣金、手机号和版本。
+        <strong>当前快照记录：</strong>每 10 分钟记录业务订单、业务佣金，以及已有用户缓存中的订单和佣金。快照只保留“今天 + 前 7 个自然日”共 8 天，并自动删除用户姓名、手机号、版本等重复资料；每日历史订单由独立缓存保存，不受快照清理影响。
       </section>
       <section class="source">
         <strong>异常规则：</strong>业务和今日用户优先按同时刻基准判断，缺少同时刻基准则不纳入异常；波动在 10% 以内按正常处理。超过正常波动后，再按设置中心的比例和订单数阈值判断轻微、重点、严重或上升异常。
       </section>
       <section class="source warn">
-        <strong>昨日同时刻：</strong>业务列表和用户明细都优先使用昨日相同 10 分钟时间槽的历史快照，允许最多相差 20 分钟；订单与佣金使用同一份快照。没有对应基准就显示“-”，不会用整点小时数据或昨日全天代替。
+        <strong>昨日同时刻：</strong>业务列表、流失风险、增长用户、全部用户和重点用户统一使用昨日相同 10 分钟时间槽的历史快照，允许最多相差 20 分钟；订单与佣金使用同一份快照。用户快照必须同时包含该业务和该用户才可作为基准，没有对应基准就显示“-”，不会用整点小时数据或昨日全天代替。
       </section>
       <section class="source warn">
         <strong>口径差异：</strong>业务汇总接口、业务用户明细接口、推广用户数不是同一个口径。用户弹窗会显示“用户明细求和”和“求和差异”，用于判断是否和外层业务订单一致。
@@ -563,7 +563,7 @@
         <strong>用户数据时间：</strong>只显示当前业务用户缓存自身的保存时间，不再使用业务列表时间代替。公网和本地都选择结束日期最新、覆盖天数最长的同一份用户历史缓存；没有用户缓存时显示“-”。
       </section>
       <section class="source">
-        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。公网直接添加的重点用户只保存在当前浏览器；本地新增、移除或修改观察备注后会立即重新生成公网加密快照，不刷新全量用户。观察备注只在重点用户看板展示；公网自行添加用户的备注只保存在当前浏览器。重点用户集中展示每日订单；今日订单对比昨日同时刻，缺少昨日同时刻快照时显示“-”。
+        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。公网直接添加的重点用户只保存在当前浏览器；本地新增、移除或修改观察备注后会立即重新生成公网加密快照，不刷新全量用户。观察备注支持在弹窗中按行保存多条；本地备注会同步到所有公网设备，公网直接修改只保存在当前浏览器。重点用户集中展示每日订单；今日订单与用户列表共用昨日同时刻快照，缺少对应用户快照时显示“-”。
         <strong>用户备注名：</strong>本地用户名称旁可点击“修改”，备注按用户ID统一应用到用户列表、历史订单和重点用户，并同步进入公网加密快照；留空保存会删除备注并恢复接口原名。
       </section>
     </div>
@@ -590,7 +590,7 @@
       </div>
       <div id="tabSnapshot" class="settings-grid hidden">
         <div class="setting"><strong>页面自动检查频率</strong><label>页面只读取本机最新缓存，不额外请求中台；中台业务数据仍按快照频率更新</label><select class="field" id="refreshSeconds"><option value="30">每 30 秒</option><option value="60">每 60 秒</option><option value="120">每 2 分钟</option><option value="300">每 5 分钟</option></select></div>
-        <div class="setting"><strong>快照记录频率</strong><label>用于生成昨日同时刻、上周同时刻和近7日同期均值</label><select class="field" id="snapshotMinutes"><option value="10">每 10 分钟</option><option value="30">每 30 分钟</option><option value="60">每 60 分钟</option></select></div>
+        <div class="setting"><strong>快照记录频率</strong><label>用于生成昨日同时刻、上周同时刻和近7日同期均值；自动保留最近8个自然日</label><select class="field" id="snapshotMinutes"><option value="10">每 10 分钟</option><option value="30">每 30 分钟</option><option value="60">每 60 分钟</option></select></div>
         <div class="setting"><strong>全量用户更新时间</strong><label>关闭业务高频开关后，用户明细和历史在这些时间更新；可增加，使用逗号分隔</label><input class="field" id="userRefreshTimes" placeholder="12:00,17:00,22:00"></div>
         <div class="setting"><strong>今日接口请求统计</strong><label>按中台接口累计实际请求，服务重启后仍保留当天记录</label><span id="requestStatsText">打开设置时读取...</span></div>
         <div class="setting"><strong>手动补记</strong><label>立即记录当前业务和用户快照</label><button class="btn primary" id="settingSnapshotBtn">立即记录快照</button></div>
@@ -1394,10 +1394,11 @@
       const periodRatio = previousSum ? periodDiff / previousSum * 100 : null;
       const yesterdayComparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
       const yesterdaySum = yesterdayComparable.reduce((sum, row) => sum + Number(row.yesterdaySameTime || 0), 0);
+      const comparisonSlots = [...new Set(yesterdayComparable.map(row => row.comparisonSlotLabel).filter(Boolean))];
       const dailySums = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + Number(row.days?.[date] || 0), 0)]));
       const showBusinessColumn = state.focusGroup === "all";
       const selectedBusinessName = state.focusGroup === "all" ? "全部关注" : (businessMap.get(state.focusGroup)?.name || "当前业务");
-      $("#focusSummary").textContent = `${selectedBusinessName}｜${data.range?.label || "近7天"}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜${data.range?.label || "本期"}合计 ${fmt(periodSum)}｜今日每 10 分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}`;
+      $("#focusSummary").textContent = `${selectedBusinessName}｜${data.range?.label || "近7天"}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜${data.range?.label || "本期"}合计 ${fmt(periodSum)}｜今日每 10 分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}｜昨日基准槽：${comparisonSlots.length === 1 ? comparisonSlots[0] : comparisonSlots.length ? "多个历史槽" : "-"}`;
       $("#focusHead").innerHTML = `<tr><th>序号</th>${showBusinessColumn ? "<th class=\"focus-business-col\">业务</th>" : ""}<th class="focus-user-col ${showBusinessColumn ? "with-business" : ""}">用户</th><th class="focus-note-col">观察备注</th><th class="focus-order-col">今日订单</th><th class="focus-order-col">昨日同时刻</th><th>今日变化比例</th><th>今日影响订单</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
       $("#focusBody").innerHTML = state.focusLoading && !rows.length
         ? `<tr><td colspan="${dates.length + (showBusinessColumn ? 13 : 12)}" class="muted">重点用户加载中...</td></tr>`
@@ -2512,6 +2513,9 @@
       $("#detailModal").classList.remove("open");
       $("#settingsModal").classList.remove("open");
       $("#helpModal").classList.remove("open");
+      $("#focusModal").classList.remove("open");
+      $("#focusNoteModal").classList.remove("open");
+      state.focusNoteTarget = null;
       state.businessDailyModalRow = null;
     }
 
