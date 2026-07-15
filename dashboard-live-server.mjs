@@ -675,14 +675,6 @@ function normalizeBusinessSummary(row, dateRange, metricRows = {}, previousRows 
   };
 }
 
-function currentHourForRange(dateRange) {
-  if (dateRange.days === 1 && dateRange.endDate === dayKey()) {
-    const parts = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", hour12: false }).formatToParts(new Date());
-    return Number(parts.find(item => item.type === "hour")?.value || 0);
-  }
-  return 23;
-}
-
 function dashboardCacheKey(dateRange) {
   return `${dateRange.startDate}_${dateRange.endDate}`;
 }
@@ -712,13 +704,6 @@ function latestValidDashboardCache(cache) {
   return Object.entries(cache)
     .filter(([, value]) => Array.isArray(value?.payload?.businesses) && value.payload.businesses.length)
     .sort((a, b) => String(b[1].savedAt || "").localeCompare(String(a[1].savedAt || "")))[0] || null;
-}
-
-function sumTrendUntil(rows, hour) {
-  return rows.reduce((sum, item) => {
-    const itemHour = Number(String(item.paid_date || "").slice(0, 2));
-    return Number.isFinite(itemHour) && itemHour <= hour ? sum + number(item.value) : sum;
-  }, 0);
 }
 
 function normalizeHourlyTrend(rows) {
@@ -792,21 +777,8 @@ async function fetchBusinessSummary(dateRange, statuses) {
     previousRows.commission[String(row.order_type || row.business_id || row.subtitle || "")] = number(row[key] ?? row.period_total ?? row.total);
   });
 
-  const sameTimeHour = currentHourForRange(dateRange);
   previousRows.sameTimeOrders = {};
   previousRows.sameTimeCommission = {};
-  const trendTargets = rows
-    .map(row => ({ id: String(row.order_type || row.business_id || row.subtitle || ""), platform: String(row.order_category_id || row.platform_business_id || "") }))
-    .filter(item => item.id && item.platform);
-  const trendResults = dateRange.days === 1 ? await mapLimit(trendTargets, 8, item => apiCall(`业务基准趋势-${item.platform}`, "POST", "/api/v2/order-statistic/trend-new", {
-    platform: item.platform,
-    paid_date: [dateRange.previousEndDate, dateRange.previousEndDate],
-    filter_field: "order_count"
-  }, 12000)) : [];
-  trendResults.forEach((result, index) => {
-    const target = trendTargets[index];
-    if (result?.ok) previousRows.sameTimeOrders[target.id] = sumTrendUntil(result.data?.data || [], sameTimeHour);
-  });
 
   const businesses = rows.map(row => normalizeBusinessSummary(row, dateRange, byId, previousRows));
   const trendRows = Array.isArray(trend.data?.data) ? trend.data.data : [];
@@ -1404,10 +1376,11 @@ async function readSnapshots(limit = 5000) {
   return text.trim().split("\n").filter(Boolean).slice(-limit).map(line => JSON.parse(line));
 }
 
-function nearestSnapshot(snapshots, targetDay, targetMinute) {
+function nearestSnapshot(snapshots, targetDay, targetMinute, maxDistanceMinutes = 20) {
   const candidates = snapshots.filter(item => item.day === targetDay);
   if (!candidates.length) return null;
-  return candidates.sort((a, b) => Math.abs(a.minuteOfDay - targetMinute) - Math.abs(b.minuteOfDay - targetMinute))[0];
+  const nearest = candidates.sort((a, b) => Math.abs(a.minuteOfDay - targetMinute) - Math.abs(b.minuteOfDay - targetMinute))[0];
+  return Math.abs(number(nearest.minuteOfDay) - number(targetMinute)) <= maxDistanceMinutes ? nearest : null;
 }
 
 function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()) {
@@ -1421,14 +1394,6 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
     const id = String(type === "business" ? row.businessId : row.id);
     const pick = snap => snap?.[type]?.[id] || null;
     const snapshotYesterday = pick(yesterday);
-    const apiYesterday = type === "business" && (row.yesterdaySameTimeOrders || row.yesterdaySameTimeCommission)
-      ? {
-          name: row.name,
-          platform: row.platform,
-          orders: number(row.yesterdaySameTimeOrders),
-          commission: number(row.yesterdaySameTimeCommission)
-        }
-      : null;
     const sevenValues = recent.map(pick).filter(Boolean);
     const avg = sevenValues.length
       ? {
@@ -1439,11 +1404,12 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
     return {
       ...row,
       sameTime: {
-        yesterday: apiYesterday || snapshotYesterday,
+        yesterday: snapshotYesterday,
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
+        yesterdaySource: snapshotYesterday ? "10分钟快照" : "",
         hasSnapshot: Boolean(snapshotYesterday || pick(lastWeek) || avg),
-        hasApiBaseline: Boolean(apiYesterday || row.yesterdayOrders)
+        hasApiBaseline: Boolean(row.yesterdayOrders)
       }
     };
   });

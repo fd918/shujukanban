@@ -232,6 +232,9 @@
     .wide-date-table th:nth-child(2), .wide-date-table td:nth-child(2) { position: sticky; left: 52px; z-index: 3; min-width: 170px; background: #fff; }
     .wide-date-table th:nth-child(3), .wide-date-table td:nth-child(3) { position: sticky; left: 222px; z-index: 3; min-width: 70px; background: #fff; box-shadow: 5px 0 8px rgba(15,23,42,.05); }
     .wide-date-table th:nth-child(-n+3) { background: #f8fafc; z-index: 4; }
+    .user-data-table tbody td:nth-child(3), .user-data-table tfoot td:nth-child(3) { position: static; left: auto; min-width: 86px; box-shadow: none; }
+    .user-data-table thead th:nth-child(3) { position: sticky; left: auto; top: 0; z-index: 2; min-width: 86px; box-shadow: none; background: #f8fafc; }
+    .user-data-table tfoot td { font-weight:700; background:#f8fafc; border-top:2px solid var(--line); }
     .scroll-hint { margin: 7px 2px 0; color: var(--muted); font-size: 12px; }
     .user-cell { max-width: 150px; white-space: normal; line-height: 1.35; }
     .user-cell strong { display: block; }
@@ -541,11 +544,11 @@
         <strong>异常规则：</strong>业务和今日用户优先按同时刻基准判断，缺少同时刻基准则不纳入异常；波动在 10% 以内按正常处理。超过正常波动后，再按设置中心的比例和订单数阈值判断轻微、重点、严重或上升异常。
       </section>
       <section class="source warn">
-        <strong>昨日同时刻：</strong>业务列表优先使用中台小时趋势接口计算昨日同时刻；用户明细使用历史快照匹配同一天同一时刻附近的数据。没有对应基准就显示“-”，不会再用昨日全天代替。昨日全天订单只作为单独字段展示，用于人工核对。
+        <strong>昨日同时刻：</strong>业务列表和用户明细都优先使用昨日相同 10 分钟时间槽的历史快照，允许最多相差 20 分钟；订单与佣金使用同一份快照。没有对应基准就显示“-”，不会用整点小时数据或昨日全天代替。
       </section>
       <section class="source warn">
         <strong>口径差异：</strong>业务汇总接口、业务用户明细接口、推广用户数不是同一个口径。用户弹窗会显示“用户明细求和”和“求和差异”，用于判断是否和外层业务订单一致。
-        <strong>用户流失分析：</strong>用户列表固定用今日订单对比昨日同时刻判断流失风险、高增长和影响订单；右侧每日订单列默认展示近7天，也可切换本月、近30天或自定义日期。日期范围只改变每日订单列，不改变今日异常结论。
+        <strong>用户流失分析：</strong>用户列表固定用今日订单对比昨日同时刻判断流失风险、增长用户和影响订单；“增长用户”包含所有同时刻订单净增长大于 0 的用户，再按增长影响量从高到低排序。右侧每日订单列默认展示近7天，也可切换本月、近30天或自定义日期。日期范围只改变每日订单列，不改变今日异常结论。
       </section>
       <section class="source">
         <strong>各区域更新时间：</strong>业务指标卡、业务列表、每日业务数据和小时趋势每 10 分钟更新。业务行开启“前100用户更新”后，系统每10分钟重新按今日订单获取当时的前100名：新进入者从该轮开始继续更新；离开前100者停止高频更新，保留离开时的最后值，直到下一个固定全量时段或手动刷新。其余今日用户、近7天、本月和历史订单在设置中心配置的固定时段更新，默认12:00、17:00、22:00。“刷新用户”只分页刷新当前业务，刷新时保留旧数据，全部加载成功后一次替换。重点用户使用用户ID精确查询，今日订单每10分钟与业务轮次同步，历史日期仍使用固定时段数据。
@@ -553,7 +556,7 @@
       <section class="source warn">
         <strong>请求频率与数量：</strong>页面每1分钟检查本机缓存，请求中台为0次；页面重新获得焦点时也会立即检查一次。每10分钟约160次用于全部业务汇总、目录、小时趋势与快照；另约160次用于已勾选业务的前100用户。重点用户每人每10分钟增加1次精确查询，当前9人约1,296次/天。“65天全量历史”由一次日期范围返回65个日期列，再按业务用户分页；2026年7月14日12:00实测全业务一轮约4,000次，三个固定时段约1.2万次/天。手动刷新3300名用户的单个业务约330次。具体数量随业务数、重点用户数和失败重试变化。
       </p><p>
-        <strong>影响订单定位：</strong>外层影响量是业务汇总接口的净下降；用户弹窗会同时展示全部下降用户、增长抵消、用户净下降和未定位差额。“流失风险”仅包含达到异常阈值的用户，“全部下降”包含10%以内的下降用户。缺少昨日同时刻快照或两个中台接口口径不一致时会产生未定位差额，页面不会虚构分摊到某个用户。
+        <strong>影响订单定位：</strong>外层影响量是业务当前值与昨日同时刻快照的净差额；用户弹窗会同时展示下降用户、增长抵消、用户净下降和未定位差额。“流失风险”仅包含达到异常阈值的用户，“增长用户”包含所有同时刻净增长用户。缺少昨日同时刻快照或两个中台接口口径不一致时会产生未定位差额，页面不会虚构分摊到某个用户。
       </p><p>
         <strong>公网备注名：</strong>公网可修改用户备注，保存在当前浏览器，不写入公开文件；本地修改的统一备注仍会加密同步到公网。公网留空保存会在当前浏览器恢复接口原名。
       </section>
@@ -640,6 +643,7 @@
     const userDisplayName = user => Object.prototype.hasOwnProperty.call(state.userAliases, userIdOf(user)) ? (state.userAliases[userIdOf(user)] || user?.name || "-") : (user?.name || "-");
     const userSearchText = user => `${userDisplayName(user)}${user?.name || ""}${userIdOf(user)}`.toLowerCase();
     const aliasEditButton = user => `<button class="alias-edit" data-edit-user-alias="${escapeHtml(userIdOf(user))}" title="修改用户备注名" aria-label="修改用户备注名">✎</button>`;
+    const addFocusButton = user => `<button class="add-focus-icon" data-add-detail-focus="${escapeHtml(userIdOf(user))}" title="加入重点用户" aria-label="加入重点用户">+</button>`;
     const copyUserIdButton = user => `<button class="copy-user-id" data-copy-user-id="${escapeHtml(userIdOf(user))}" title="点击复制用户ID">ID：${escapeHtml(userIdOf(user) || "-")}</button>`;
     const pad = n => String(n).padStart(2, "0");
     const dayText = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -1216,6 +1220,7 @@
       const rows = filteredBusinesses();
       $("#currentHeader").textContent = currentMetricLabel();
       $("#baselineHeader").textContent = baselineLabel();
+      $("#baselineHeader").title = "优先使用昨日相同10分钟时间槽快照；缺失时显示-";
       $$(".sort-btn").forEach(btn => {
         const active = btn.dataset.sort === state.sort;
         btn.classList.toggle("active", active);
@@ -2168,13 +2173,14 @@
     function renderDetail(cached = false) {
       const row = state.detailRow;
       const periodScope = false;
+      if (state.detailMode === "decline") state.detailMode = "abnormal";
       const allUsers = state.detailUsers || [];
       const downUsers = allUsers.filter(user => {
         const cmp = periodScope ? periodRiskCmp(user) : user.cmp;
         return cmp?.diff < 0 && cmp?.level !== "normal" && cmp?.level !== "missing";
       });
       const allDecliningUsers = allUsers.filter(user => (periodScope ? periodDisplayCmp(user) : user.cmp)?.diff < 0);
-      const upUsers = allUsers.filter(user => (periodScope ? periodRiskCmp(user) : user.cmp)?.level === "up");
+      const upUsers = allUsers.filter(user => Number((periodScope ? periodDisplayCmp(user) : user.cmp)?.diff || 0) > 0);
       const declineImpact = allDecliningUsers.reduce((sum, user) => sum + Math.abs(Number((periodScope ? periodDisplayCmp(user) : user.cmp)?.diff || 0)), 0);
       const growthImpact = allUsers.reduce((sum, user) => {
         const cmp = periodScope ? periodDisplayCmp(user) : user.cmp;
@@ -2197,14 +2203,13 @@
         <div class="detail-grid">
           <div class="detail"><label>${detailScopeLabel()}订单</label><strong>${fmt(userOrderSum)}</strong></div>
           <div class="detail"><label>${compareBaseLabel()}基准</label><strong>${fmt(baselineSum)}</strong></div>
-          <div class="detail"><label>全部用户下降</label><strong class="${declineImpact ? "down" : ""}">${fmt(declineImpact)}</strong></div>
+          <div class="detail"><label>下降影响合计</label><strong class="${declineImpact ? "down" : ""}">${fmt(declineImpact)}</strong></div>
           <div class="detail"><label>${periodScope ? "净变化订单" : "未定位差额"}</label><strong class="${periodScope ? (netDiff < 0 ? "down" : netDiff > 0 ? "up" : "") : (unattributed ? "down" : "")}">${periodScope ? fmt(netDiff) : fmtValue(unattributed)}</strong></div>
         </div>
         <div class="toolbar" style="margin-bottom:10px;">
           <div class="segmented">
             <button class="${state.detailMode === "abnormal" ? "active" : ""}" data-detail-mode="abnormal">流失风险 ${fmt(downUsers.length)}</button>
-            <button class="${state.detailMode === "decline" ? "active" : ""}" data-detail-mode="decline">全部下降 ${fmt(allDecliningUsers.length)}</button>
-            <button class="${state.detailMode === "up" ? "active" : ""}" data-detail-mode="up">高增长 ${fmt(upUsers.length)}</button>
+            <button class="${state.detailMode === "up" ? "active" : ""}" data-detail-mode="up">增长用户 ${fmt(upUsers.length)}</button>
             <button class="${state.detailMode === "all" ? "active" : ""}" data-detail-mode="all">全部用户 ${fmt(allUsers.length)}</button>
           </div>
           <div class="segmented">
@@ -2241,13 +2246,18 @@
       return `<button class="sort-btn ${active ? "active" : ""}" data-detail-sort="${key}">${label}${active ? (state.detailSortDir === "asc" ? "↑" : "↓") : ""}</button>`;
     }
 
+    function detailUserStatusTag(user, cmp = user?.cmp || {}) {
+      if (Number(cmp.diff || 0) > 0 && cmp.level === "normal") return tag("up", "增长");
+      return tag(cmp.level, cmp.label);
+    }
+
     function renderDetailResult() {
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
       const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
       const allDecliningUsers = allUsers.filter(user => user.cmp.diff < 0);
-      const upUsers = allUsers.filter(user => user.cmp.level === "up");
-      const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "decline" ? allDecliningUsers : state.detailMode === "up" ? upUsers : allUsers;
+      const upUsers = allUsers.filter(user => Number(user.cmp?.diff || 0) > 0);
+      const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "up" ? upUsers : allUsers;
       const keyword = state.detailSearch.toLowerCase();
       const users = (keyword ? sourceUsers.filter(user => userSearchText(user).includes(keyword)) : sourceUsers)
         .slice()
@@ -2262,16 +2272,24 @@
       const dates = state.detailHistoryStart && state.detailHistoryEnd
         ? dateTextList(state.detailHistoryStart, state.detailHistoryEnd)
         : [];
+      const todaySum = users.reduce((sum, user) => sum + Number(user.cmp?.today || 0), 0);
+      const baseUsers = users.filter(user => user.cmp?.base !== null && user.cmp?.base !== undefined);
+      const baseSum = baseUsers.reduce((sum, user) => sum + Number(user.cmp.base || 0), 0);
+      const lastWeekUsers = users.filter(user => user.sameTime?.lastWeek?.orders !== null && user.sameTime?.lastWeek?.orders !== undefined);
+      const lastWeekSum = lastWeekUsers.reduce((sum, user) => sum + Number(user.sameTime.lastWeek.orders || 0), 0);
+      const impactTotal = users.reduce((sum, user) => sum + Number(user.cmp?.impact || 0), 0);
+      const dailySums = Object.fromEntries(dates.map(date => [date, users.reduce((sum, user) => sum + Number(user.days?.[date] || 0), 0)]));
       return `
-        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；全部下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者，“全部下降”可查看所有下降用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。<br><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人${diff === null ? "。" : `，当前订单口径差异 ${fmt(diff)}。`}</section>
+        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；“增长用户”显示所有同一时刻订单净增长大于 0 的用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。<br><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人${diff === null ? "。" : `，当前订单口径差异 ${fmt(diff)}。`}</section>
         <div class="detail-table-wrap">
-          <table class="compact wide-date-table">
-            <thead><tr><th>序号</th><th>用户</th><th>关注</th><th>${detailSortButton("orders", "今日订单")}</th><th>昨日同时刻</th><th>上周同时刻</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
+          <table class="compact wide-date-table user-data-table">
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "今日订单")}</th><th>昨日同时刻</th><th>上周同时刻</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
-              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td><button class="add-focus-icon" data-add-detail-focus="${user.id || ""}" title="加入重点用户">+</button></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${tag(user.cmp.level, user.cmp.label)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
-            }).join("") : `<tr><td colspan="${dates.length + 9}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "decline" ? "当前业务没有可对比的下降用户。" : state.detailMode === "up" ? "当前业务没有达到阈值的上升用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
+            }).join("") : `<tr><td colspan="${dates.length + 8}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+            ${users.length ? `<tfoot><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(todaySum)}</td><td>${baseUsers.length ? fmt(baseSum) : "-"}</td><td>${lastWeekUsers.length ? fmt(lastWeekSum) : "-"}</td><td>-</td><td>${fmt(impactTotal)}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}</tr></tfoot>` : ""}
           </table>
         </div>
         ${dates.length > 7 ? `<div class="scroll-hint">当前展示 ${dates.length} 天，每日订单列可在表格底部左右拖动查看。</div>` : ""}`;
@@ -2285,20 +2303,23 @@
         const cmp = periodRiskCmp(user);
         return cmp?.diff < 0 && cmp?.level !== "normal" && cmp?.level !== "missing";
       });
-      const allDecliningUsers = allUsers.filter(user => periodDisplayCmp(user)?.diff < 0);
-      const upUsers = allUsers.filter(user => periodRiskCmp(user)?.level === "up");
-      const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "decline" ? allDecliningUsers : state.detailMode === "up" ? upUsers : allUsers;
+      const upUsers = allUsers.filter(user => Number(periodDisplayCmp(user)?.diff || 0) > 0);
+      const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "up" ? upUsers : allUsers;
       const keyword = state.detailSearch.toLowerCase();
       const users = (keyword ? sourceUsers.filter(user => userSearchText(user).includes(keyword)) : sourceUsers)
         .slice()
         .sort((a, b) => (monthSortValue(a, state.detailSort) - monthSortValue(b, state.detailSort)) * (state.detailSortDir === "asc" ? 1 : -1));
       const currentLabel = state.detailScope === "seven" ? "近7天订单" : "本月订单";
       const baseLabel = state.detailScope === "seven" ? "前7天订单" : "上月同期";
+      const currentSum = users.reduce((sum, user) => sum + Number(periodDisplayCmp(user)?.today || 0), 0);
+      const comparableUsers = users.filter(user => periodDisplayCmp(user)?.base !== null && periodDisplayCmp(user)?.base !== undefined);
+      const baseSum = comparableUsers.reduce((sum, user) => sum + Number(periodDisplayCmp(user)?.base || 0), 0);
+      const impactSum = users.reduce((sum, user) => sum + Number(periodRiskCmp(user)?.impact || 0), 0);
       return `
-        <section class="source"><strong>${detailScopeLabel()}用户评估：</strong>${state.detailScope === "seven" ? "最近7天对比前7天" : "本月截至今天对比上月相同日期进度"}；数据在 ${userRefreshTimesText()} 固定更新，也可手动刷新当前业务。流失风险只显示达到阈值者，“全部下降”包含10%以内的下降用户。</section>
+        <section class="source"><strong>${detailScopeLabel()}用户评估：</strong>${state.detailScope === "seven" ? "最近7天对比前7天" : "本月截至今天对比上月相同日期进度"}；数据在 ${userRefreshTimesText()} 固定更新，也可手动刷新当前业务。流失风险只显示达到阈值者，增长用户显示净增长大于 0 的用户。</section>
         <div class="detail-table-wrap">
-          <table class="compact">
-            <thead><tr><th>序号</th><th>用户</th><th>关注</th><th>${detailSortButton("orders", currentLabel)}</th><th>${baseLabel}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>近期趋势</th><th>风险等级</th><th>判断原因</th></tr></thead>
+          <table class="compact user-data-table">
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", currentLabel)}</th><th>${baseLabel}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>近期趋势</th><th>风险等级</th><th>判断原因</th></tr></thead>
             <tbody>${users.length ? users.map((user, index) => {
               const displayCmp = periodDisplayCmp(user) || {};
               const riskCmp = periodRiskCmp(user) || displayCmp;
@@ -2309,8 +2330,7 @@
                 : (user.cmp?.reason || riskCmp.reason || "-");
               return `<tr>
                 <td>${index + 1}</td>
-                <td class="user-cell"><div class="user-name-line"><button class="user-toggle" data-detail-user-toggle="${user.id || ""}" title="展开周期数据">${expanded ? "▾" : "›"}</button><button class="user-history-link" data-user-history="${user.id || ""}" title="查看该用户历史订单">${escapeHtml(userDisplayName(user))}</button>${aliasEditButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
-                <td><button class="add-focus-icon" data-add-detail-focus="${user.id || ""}" title="加入重点用户">+</button></td>
+                <td class="user-cell"><div class="user-name-line"><button class="user-toggle" data-detail-user-toggle="${user.id || ""}" title="展开周期数据">${expanded ? "▾" : "›"}</button><button class="user-history-link" data-user-history="${user.id || ""}" title="查看该用户历史订单">${escapeHtml(userDisplayName(user))}</button>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
                 <td>${fmt(displayCmp.today)}</td>
                 <td>${fmtValue(displayCmp.base)}</td>
                 <td class="${displayCmp.diff < 0 ? "down" : displayCmp.diff > 0 ? "up" : ""}">${pctValue(displayCmp.ratio)}</td>
@@ -2318,12 +2338,13 @@
                 <td>${trendText}</td>
                 <td>${tag(riskCmp.level, riskCmp.label)}</td>
                 <td>${reason}</td>
-              </tr>${expanded ? `<tr><td></td><td colspan="9" class="expanded-detail"><div class="expanded-metrics">
+              </tr>${expanded ? `<tr><td></td><td colspan="8" class="expanded-detail"><div class="expanded-metrics">
                 <span>本周 <strong>${fmt(user.weekOrders)}</strong></span><span>上周同期 <strong>${fmt(user.lastWeekSamePeriodOrders)}</strong></span><span>变化 <strong>${pctValue(user.weekCmp?.ratio)}</strong></span>
                 <span>上周完整 <strong>${fmt(user.lastWeekOrders)}</strong></span><span>上上周 <strong>${fmt(user.prevWeekOrders)}</strong></span><span>变化 <strong>${pctValue(user.lastWeekCmp?.ratio)}</strong></span>
                 <span>本月 <strong>${fmt(user.monthOrders)}</strong></span><span>上月同期 <strong>${fmt(user.prevMonthOrders)}</strong></span><span>变化 <strong>${pctValue(user.monthCmp?.ratio)}</strong></span>
               </div></td></tr>` : ""}`;
-            }).join("") : `<tr><td colspan="10" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
+            }).join("") : `<tr><td colspan="9" class="muted">当前筛选下没有用户。</td></tr>`}</tbody>
+            ${users.length ? `<tfoot><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(currentSum)}</td><td>${comparableUsers.length ? fmt(baseSum) : "-"}</td><td>-</td><td>${fmt(impactSum)}</td><td colspan="3">-</td></tr></tfoot>` : ""}
           </table>
         </div>`;
     }
@@ -2335,6 +2356,8 @@
       const keyword = state.detailSearch.toLowerCase();
       const rows = keyword ? (history.rows || []).filter(user => userSearchText(user).includes(keyword)) : (history.rows || []);
       const selectedUser = rows.find(user => String(user.id || "") === state.detailHistoryUserId) || (rows.length === 1 ? rows[0] : null);
+      const dailySums = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, user) => sum + Number(user.days?.[date] || 0), 0)]));
+      const totalSum = rows.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
       return `<div class="toolbar" style="margin-bottom:10px;">
         <button class="btn" data-history-back="1">← 返回用户列表</button>
         <input class="field" id="detailHistoryStart" type="date" value="${state.detailHistoryStart || ""}" title="历史开始日期">
@@ -2345,9 +2368,10 @@
         <button class="btn primary" data-detail-history-apply="1">查询历史</button>
       </div>
       ${selectedUser ? renderUserHistoryAnalysis(selectedUser, dates) : `<section class="source"><strong>用户分析：</strong>点击用户名称后，会在这里分析该用户的订单总量、日均订单、有单天数、最高单日和近期走势。</section>`}
-      <div class="detail-table-wrap"><table class="compact wide-date-table">
-        <thead><tr><th>序号</th><th>用户</th><th>关注</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
-        <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><button class="user-history-link" data-select-history-user="${user.id || ""}">${escapeHtml(userDisplayName(user))}</button>${aliasEditButton(user)}<span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td><button class="add-focus-icon" data-add-detail-focus="${user.id || ""}" title="加入重点用户">+</button></td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 4}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
+      <div class="detail-table-wrap"><table class="compact wide-date-table user-data-table">
+        <thead><tr><th>序号</th><th>用户</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
+        <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><button class="user-history-link" data-select-history-user="${user.id || ""}">${escapeHtml(userDisplayName(user))}</button>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
+        ${rows.length ? `<tfoot><tr><td colspan="2">当前列表合计（${fmt(rows.length)} 人）</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(totalSum)}</td></tr></tfoot>` : ""}
       </table></div>
       ${dates.length > 7 ? `<div class="scroll-hint">当前共 ${dates.length} 天，表格底部可左右拖动查看全部日期。</div>` : ""}`;
     }
@@ -2637,6 +2661,10 @@
       const mode = e.target.closest("[data-detail-mode]");
       if (mode) {
         state.detailMode = mode.dataset.detailMode;
+        if (state.detailMode === "up") {
+          state.detailSort = "impact";
+          state.detailSortDir = "desc";
+        }
         renderDetail(true);
         return;
       }
