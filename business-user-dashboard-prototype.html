@@ -563,7 +563,7 @@
         <strong>用户数据时间：</strong>只显示当前业务用户缓存自身的保存时间，不再使用业务列表时间代替。公网和本地都选择结束日期最新、覆盖天数最长的同一份用户历史缓存；没有用户缓存时显示“-”。
       </section>
       <section class="source">
-        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。公网直接添加的重点用户只保存在当前浏览器；本地新增、移除或修改观察备注后会立即重新生成公网加密快照，不刷新全量用户。观察备注支持在弹窗中按行保存多条；本地备注会同步到所有公网设备，公网直接修改只保存在当前浏览器。重点用户集中展示每日订单；今日订单与用户列表共用昨日同时刻快照，缺少对应用户快照时显示“-”。
+        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。添加时立即保存，不再等待公网用户快照；姓名、手机号和订单随后按用户ID精确补全。同一台运行本地服务的电脑从公网添加时，会同时写入本地重点用户配置，本地页面最多约5秒自动发现变化。手机或其他电脑添加的数据仍先保存在该浏览器，因为静态公网没有可写数据库。观察备注支持在弹窗中按行保存多条；本地备注会同步到所有公网设备，公网直接修改只保存在当前浏览器。今日订单与用户列表共用昨日同时刻快照，缺少对应用户快照时显示“-”。
         <strong>用户备注名：</strong>本地用户名称旁可点击“修改”，备注按用户ID统一应用到用户列表、历史订单和重点用户，并同步进入公网加密快照；留空保存会删除备注并恢复接口原名。
       </section>
     </div>
@@ -1500,7 +1500,11 @@
       if (!businessId || !userId) return;
       if (state.publicMode) {
         const added = savePublicFocusUser(businessId, userId);
-        toast(added ? "已加入当前浏览器的重点用户" : "该用户已经在重点用户看板中");
+        state.focusData = mergedPublicFocusData(state.focusRange);
+        toast(added ? "已添加，正在后台补全用户数据" : "该用户已经在重点用户看板中");
+        syncPublicFocusToLocal(businessId, userId).then(synced => {
+          if (synced) toast("已同步到本地重点用户看板");
+        });
         return;
       }
       await requestJson(apiUrl("/api/focus-users"), {
