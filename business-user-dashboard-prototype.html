@@ -141,15 +141,11 @@
     }
     .segmented button.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(15,23,42,.1); }
 
-    .table-wrap { overflow-x: scroll; overflow-y: auto; max-height: calc(100vh - 330px); min-height: 360px; scrollbar-gutter: stable both-edges; overscroll-behavior-x: contain; }
-    .table-wrap::-webkit-scrollbar, .detail-table-wrap::-webkit-scrollbar, .modal-body::-webkit-scrollbar { width: 12px; height: 14px; }
-    .table-wrap::-webkit-scrollbar-track, .detail-table-wrap::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track { background: #e8edf3; border-radius: 8px; }
-    .table-wrap::-webkit-scrollbar-thumb, .detail-table-wrap::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb { background: #8b98aa; border: 3px solid #e8edf3; border-radius: 8px; }
+    .table-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 330px); min-height: 360px; scrollbar-gutter: stable; overscroll-behavior-x: contain; }
+    .table-wrap::-webkit-scrollbar, .detail-table-wrap::-webkit-scrollbar, .modal-body::-webkit-scrollbar { width: 10px; height: 10px; }
+    .table-wrap::-webkit-scrollbar-track, .detail-table-wrap::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track { background: #eef2f6; border-radius: 6px; }
+    .table-wrap::-webkit-scrollbar-thumb, .detail-table-wrap::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb { background: #98a2b3; border: 2px solid #eef2f6; border-radius: 6px; }
     .table-wrap::-webkit-scrollbar-thumb:hover, .detail-table-wrap::-webkit-scrollbar-thumb:hover, .modal-body::-webkit-scrollbar-thumb:hover { background: #667085; }
-    .horizontal-scrollbar { height:18px; overflow:hidden; margin:6px 0 0; border:1px solid #cbd5e1; border-radius:7px; background:#e8edf3; position:sticky; bottom:0; z-index:8; cursor:pointer; }
-    .horizontal-scrollbar.hidden { display:none; }
-    .horizontal-scrollbar-thumb { position:absolute; top:3px; bottom:3px; left:0; min-width:58px; border-radius:6px; background:#667085; cursor:grab; touch-action:none; }
-    .horizontal-scrollbar-thumb:active { cursor:grabbing; background:#475467; }
     table { width: 100%; border-collapse: collapse; min-width: 1280px; }
     th, td {
       padding: 11px 10px;
@@ -363,6 +359,9 @@
     .focus-note-empty { color:var(--muted); }
     .focus-note-edit { width:24px; height:24px; flex:0 0 24px; border:0; border-radius:4px; background:#f2f4f7; color:var(--muted); padding:0; cursor:pointer; }
     .focus-note-edit:hover { color:var(--blue); background:#eff6ff; }
+    .focus-note-modal { width:min(640px,94vw); }
+    .focus-note-editor { width:100%; min-height:220px; resize:vertical; line-height:1.65; font-family:inherit; }
+    .focus-note-help { margin:0 0 10px; color:var(--muted); font-size:12px; }
     .focus-table thead .focus-business-col, .focus-table thead .focus-user-col, .focus-table th:first-child { background:#f8fafc; z-index:4; }
     .focus-table tfoot td { position:static !important; font-weight:700; background:#f8fafc; border-top:2px solid var(--line); }
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
@@ -620,12 +619,22 @@
     <div class="modal-foot"><span class="muted" id="focusAddResult"></span><button class="btn" id="cancelFocusAdd">取消</button><button class="btn primary" id="confirmFocusAdd">确认添加</button></div>
   </section>
 
+  <section class="modal focus-note-modal" id="focusNoteModal">
+    <div class="modal-head"><div><h2>观察备注</h2><small id="focusNoteUser">重点用户</small></div><button class="icon-btn" id="closeFocusNoteModal">×</button></div>
+    <div class="modal-body">
+      <p class="focus-note-help">每行是一条备注。原有内容会完整保留，可在末尾继续新增；删除某一行后保存，即删除该条备注。</p>
+      <textarea class="field focus-note-editor" id="focusNoteEditor" maxlength="4020" placeholder="例如：7月15日已联系，客户反馈近期活动减少"></textarea>
+      <section class="source" id="focusNoteStorageHint"></section>
+    </div>
+    <div class="modal-foot"><span class="muted" id="focusNoteResult"></span><button class="btn" id="cancelFocusNote">取消</button><button class="btn primary" id="saveFocusNote">保存备注</button></div>
+  </section>
+
   <div class="toast" id="toast">已刷新</div>
   <div class="loading-mask" id="loadingMask"><div class="loading-card">正在加载<span id="loadingText">正在请求中台数据，请稍等...</span></div></div>
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
