@@ -1,9 +1,11 @@
 import { createHash, createHmac, createCipheriv, pbkdf2Sync, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir, appendFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { readFile, writeFile, mkdir, appendFile, rename } from "node:fs/promises";
+import { createReadStream, createWriteStream, existsSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { extname, join } from "node:path";
+import { createInterface } from "node:readline";
+import { once } from "node:events";
 import { promisify } from "node:util";
 import { gzipSync } from "node:zlib";
 
@@ -27,12 +29,14 @@ const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
 const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook";
 const FEISHU_SECRET_SERVICE = "com.tanwenjie.business-dashboard.feishu.secret";
 const PUBLIC_PASSWORD_SERVICE = "com.tanwenjie.business-dashboard.public.password";
+const SNAPSHOT_RETENTION_DAYS = 8;
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
 let snapshotTimer = null;
 let lastSnapshotAt = 0;
 let lastSnapshotSlotKey = "";
+let lastSnapshotPruneDay = "";
 let lastGood = { businesses: [], users: [], summary: null, hourlyTrend: [] };
 const userDetailCache = new Map();
 let userDetailCacheSavedAtText = "";
@@ -1377,6 +1381,56 @@ async function readSnapshots(limit = 5000) {
   return text.trim().split("\n").filter(Boolean).slice(-limit).map(line => JSON.parse(line));
 }
 
+function compactSnapshot(snapshot) {
+  const compactValues = values => Object.fromEntries(Object.entries(values || {}).map(([id, value]) => [id, {
+    orders: number(value?.orders),
+    commission: number(value?.commission)
+  }]));
+  return {
+    createdAt: snapshot.createdAt,
+    createdAtText: snapshot.createdAtText,
+    day: snapshot.day,
+    minuteOfDay: number(snapshot.minuteOfDay),
+    snapshotSlotKey: snapshot.snapshotSlotKey,
+    snapshotSlotLabel: snapshot.snapshotSlotLabel,
+    actualMinuteOfDay: number(snapshot.actualMinuteOfDay),
+    business: Object.fromEntries(Object.entries(snapshot.business || {}).map(([id, value]) => [id, {
+      name: value?.name || "",
+      platform: value?.platform || "",
+      orders: number(value?.orders),
+      commission: number(value?.commission)
+    }])),
+    users: compactValues(snapshot.users),
+    businessUsers: Object.fromEntries(Object.entries(snapshot.businessUsers || {}).map(([businessId, values]) => [businessId, compactValues(values)]))
+  };
+}
+
+async function pruneSnapshots() {
+  const today = dayKey();
+  if (!existsSync(SNAPSHOT_PATH) || lastSnapshotPruneDay === today) return;
+  const cutoff = shiftDay(today, -(SNAPSHOT_RETENTION_DAYS - 1));
+  const tempPath = `${SNAPSHOT_PATH}.tmp`;
+  const input = createInterface({ input: createReadStream(SNAPSHOT_PATH, { encoding: "utf8" }), crlfDelay: Infinity });
+  const output = createWriteStream(tempPath, { encoding: "utf8" });
+  let kept = 0;
+  for await (const line of input) {
+    if (!line.trim()) continue;
+    try {
+      const snapshot = JSON.parse(line);
+      if (String(snapshot.day || "") < cutoff) continue;
+      if (!output.write(`${JSON.stringify(compactSnapshot(snapshot))}\n`)) await once(output, "drain");
+      kept += 1;
+    } catch {
+      // Skip a damaged line without discarding the rest of the snapshot file.
+    }
+  }
+  output.end();
+  await once(output, "finish");
+  await rename(tempPath, SNAPSHOT_PATH);
+  lastSnapshotPruneDay = today;
+  console.log(`[${nowText()}] 快照清理完成：保留 ${cutoff} 至 ${today}，共 ${kept} 条`);
+}
+
 function nearestSnapshot(snapshots, targetDay, targetMinute, maxDistanceMinutes = 20) {
   const candidates = snapshots.filter(item => item.day === targetDay);
   if (!candidates.length) return null;
@@ -1408,6 +1462,7 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
         yesterday: snapshotYesterday,
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
+        comparisonSlotLabel: yesterday?.snapshotSlotLabel || "",
         yesterdaySource: snapshotYesterday ? "10分钟快照" : "",
         hasSnapshot: Boolean(snapshotYesterday || pick(lastWeek) || avg),
         hasApiBaseline: Boolean(row.yesterdayOrders)
@@ -1441,6 +1496,7 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
         yesterday: pick(yesterday),
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
+        comparisonSlotLabel: yesterday?.snapshotSlotLabel || "",
         hasSnapshot: Boolean(pick(yesterday) || pick(lastWeek) || avg),
         hasApiBaseline: Boolean(row.yesterdayOrders || row.yesterdayCommission)
       }
@@ -1636,6 +1692,7 @@ async function maybeRecordSnapshot(businesses, users, force = false, businessDai
   };
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
+  await pruneSnapshots();
   lastSnapshotAt = Date.now();
   if (!options.manual) lastSnapshotSlotKey = slot.key;
   if (config.public?.autoPush) {
@@ -1869,7 +1926,6 @@ async function buildFocusUsers(query = {}) {
   const dates = dayList(range.startDate, range.endDate);
   const previousDates = dayList(range.comparisonStartDate, range.comparisonEndDate);
   const snapshots = await readSnapshots();
-  const yesterday = nearestSnapshot(snapshots, shiftDay(dayKey(), -1), minuteOfDay());
   const rows = saved.items.map(item => {
     const cached = cachedUserForBusiness(item.businessId, item.userId) || {};
     const current = cachedFocusCurrentUser(item.businessId, item.userId);
@@ -1882,7 +1938,11 @@ async function buildFocusUsers(query = {}) {
     const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(cached.days?.[date]), 0);
     const periodDiff = total - previousPeriodTotal;
     const periodRatio = previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null;
-    const yesterdaySameTime = yesterday?.businessUsers?.[String(item.businessId)]?.[String(item.userId)]?.orders;
+    const businessId = String(item.businessId);
+    const userId = String(item.userId);
+    const comparableSnapshots = snapshots.filter(snapshot => snapshot?.businessUsers?.[businessId]?.[userId]);
+    const yesterday = nearestSnapshot(comparableSnapshots, shiftDay(dayKey(), -1), minuteOfDay());
+    const yesterdaySameTime = yesterday?.businessUsers?.[businessId]?.[userId]?.orders;
     const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
     const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
     const ratio = yesterdaySameTime ? diff / number(yesterdaySameTime) * 100 : null;
@@ -1899,6 +1959,7 @@ async function buildFocusUsers(query = {}) {
       periodImpact: Math.abs(periodDiff),
       todayOrders,
       yesterdaySameTime: yesterdaySameTime === undefined ? null : number(yesterdaySameTime),
+      comparisonSlotLabel: yesterday?.snapshotSlotLabel || "",
       ratio,
       impact: diff === null ? null : Math.abs(diff),
       newTop100At: topState.entered?.[String(item.userId)] || "",
@@ -1972,12 +2033,24 @@ async function removeFocusUser(body) {
 async function saveFocusUserNote(body) {
   const businessId = String(body.businessId || "");
   const userId = String(body.userId || "");
-  const note = String(body.note || "").trim().slice(0, 300);
   if (!businessId || !userId) throw new Error("缺少业务ID或用户ID。");
   const saved = await readFocusUsers();
   const index = saved.items.findIndex(item => String(item.businessId) === businessId && String(item.userId) === userId);
   if (index < 0) throw new Error("重点用户不存在，请刷新后重试。");
-  saved.items[index] = { ...saved.items[index], note, noteUpdatedAt: new Date().toISOString(), noteUpdatedAtText: nowText() };
+  const previousNotes = Array.isArray(saved.items[index].notes)
+    ? saved.items[index].notes
+    : String(saved.items[index].note || "").split("\n").filter(Boolean).map(text => ({ text }));
+  const requested = Array.isArray(body.notes) ? body.notes : String(body.note || "").split("\n");
+  const texts = requested.map(value => String(value?.text || value || "").trim().slice(0, 200)).filter(Boolean).slice(0, 20);
+  const existingByText = new Map(previousNotes.map(value => [String(value?.text || value || ""), value]));
+  const notes = texts.map(text => existingByText.get(text) || { text, createdAt: new Date().toISOString(), createdAtText: nowText() });
+  saved.items[index] = {
+    ...saved.items[index],
+    note: texts.join("\n"),
+    notes,
+    noteUpdatedAt: new Date().toISOString(),
+    noteUpdatedAtText: nowText()
+  };
   return writeFocusUsers(saved.items);
 }
 
