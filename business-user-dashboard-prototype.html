@@ -397,6 +397,10 @@
     .mobile-data-cards { display:none; }
     .mobile-daily-matrix, .mobile-detail-back { display:none; }
 
+    @media (prefers-reduced-motion: reduce) {
+      .modal, .modal-mask, .toast { transition:none; }
+    }
+
     @media (max-width: 960px) {
       .filters, .kpis, .settings-grid, .detail-grid, .history-analysis, .notification-list { grid-template-columns: 1fr; }
       .topbar { align-items: start; flex-direction: column; }
