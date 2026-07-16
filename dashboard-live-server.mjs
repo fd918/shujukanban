@@ -32,6 +32,7 @@ const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook"
 const FEISHU_SECRET_SERVICE = "com.tanwenjie.business-dashboard.feishu.secret";
 const PUBLIC_PASSWORD_SERVICE = "com.tanwenjie.business-dashboard.public.password";
 const SNAPSHOT_RETENTION_DAYS = 8;
+const PUBLIC_KDF_ITERATIONS = 120000;
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
@@ -317,7 +318,7 @@ async function readConfig() {
   try {
     const saved = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
     const savedNotification = saved.notification || {};
-    return {
+    const config = {
       ...defaultConfig,
       ...saved,
       rules: { ...defaultConfig.rules, ...(saved.rules || {}) },
@@ -328,6 +329,9 @@ async function readConfig() {
       },
       public: { ...defaultConfig.public, ...(saved.public || {}) }
     };
+    const refreshTimes = normalizeRefreshTimes(config.userRefreshTimes);
+    config.userRefreshTimes = refreshTimes.length ? refreshTimes : [...defaultConfig.userRefreshTimes];
+    return config;
   } catch {
     return defaultConfig;
   }
@@ -347,7 +351,8 @@ async function writeConfig(nextConfig) {
     },
     public: { ...defaultConfig.public, ...(nextConfig.public || {}) }
   };
-  config.userRefreshTimes = normalizeRefreshTimes(config.userRefreshTimes);
+  const refreshTimes = normalizeRefreshTimes(config.userRefreshTimes);
+  config.userRefreshTimes = refreshTimes.length ? refreshTimes : [...defaultConfig.userRefreshTimes];
   config.fastUserBusinessIds = Array.from(new Set((config.fastUserBusinessIds || []).map(String).filter(Boolean)));
   await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
   scheduleSnapshots();
@@ -2730,7 +2735,7 @@ async function encryptPublicPayload(payload, { compression = "gzip", contentHash
   if (!password) throw new Error("缺少公网看板访问密码，请先写入钥匙串。");
   const salt = randomBytes(16);
   const iv = randomBytes(12);
-  const iterations = 600000;
+  const iterations = PUBLIC_KDF_ITERATIONS;
   const key = pbkdf2Sync(password, salt, iterations, 32, "sha256");
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const source = Buffer.from(JSON.stringify(payload), "utf8");
@@ -2764,7 +2769,7 @@ async function writePublicUserDetailShards(details = {}) {
     if (existsSync(filePath)) {
       try {
         const current = JSON.parse(await readFile(filePath, "utf8"));
-        shouldWrite = current.contentHash !== contentHash;
+        shouldWrite = current.contentHash !== contentHash || current.compression !== "gzip" || Number(current.iterations) !== PUBLIC_KDF_ITERATIONS;
       } catch {}
     }
     if (shouldWrite) {
@@ -2783,7 +2788,7 @@ async function writePublicUserDetailShards(details = {}) {
 async function publishPublicDashboardNow(data) {
   const payload = await sanitizePublicDashboard(data);
   payload.userDetails = await writePublicUserDetailShards(payload.userDetails || {});
-  const encryptedPayload = await encryptPublicPayload(payload, { compression: "none" });
+  const encryptedPayload = await encryptPublicPayload(payload, { compression: "gzip" });
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(PUBLIC_DASHBOARD_PATH, JSON.stringify(encryptedPayload, null, 2));
   await pushPublicDashboard();
@@ -2859,7 +2864,12 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (req.method === "OPTIONS") return json(res, 204, {});
   try {
-    if (url.pathname === "/api/live-dashboard") return json(res, 200, await liveDashboard({ recordSnapshot: false, query: Object.fromEntries(url.searchParams.entries()) }));
+    if (url.pathname === "/api/live-dashboard") {
+      const query = Object.fromEntries(url.searchParams.entries());
+      // Old or duplicated browser tabs must never turn their periodic page check into a full upstream refresh.
+      if (query.force !== "1") query.cache = "1";
+      return json(res, 200, await liveDashboard({ recordSnapshot: false, query }));
+    }
     if (url.pathname === "/api/business-users-sync") {
       const statuses = [];
       const endDate = parseDay(url.searchParams.get("end_date") || dayKey());

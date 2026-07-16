@@ -60,6 +60,7 @@
     .subtitle { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
     .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
     .top-actions strong { display: block; color: var(--text); font-size: 12px; }
+    .mobile-header-toggle { display:none; }
 
     .btn, .icon-btn {
       min-height: 36px;
@@ -221,6 +222,7 @@
     }
     .modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
     .modal.detail-modal { width: min(1680px, 98vw); max-height: 94vh; }
+    .modal.detail-info-modal { width: min(760px, 92vw); z-index: 44; }
     .modal-body { overflow: auto; padding: 16px 18px; }
     .detail-table-wrap { overflow-x: scroll; overflow-y: auto; max-height: 52vh; border: 1px solid var(--line); border-radius: 8px; scrollbar-gutter: stable both-edges; overscroll-behavior-x: contain; }
     .detail-table-wrap table { min-width: 1120px; }
@@ -396,6 +398,16 @@
     @media (max-width: 960px) {
       .filters, .kpis, .settings-grid, .detail-grid, .history-analysis, .notification-list { grid-template-columns: 1fr; }
       .topbar { align-items: start; flex-direction: column; }
+      .mobile-header-toggle { display:inline-flex; align-items:center; justify-content:center; min-width:96px; min-height:44px; touch-action:manipulation; }
+      .topbar.mobile-header-collapsed { min-height:60px; padding:8px 14px; flex-direction:row; align-items:center; gap:10px; }
+      .topbar.mobile-header-collapsed h1 { font-size:18px; }
+      .topbar.mobile-header-collapsed .subtitle,
+      .topbar.mobile-header-collapsed #topbarStatus,
+      .topbar.mobile-header-collapsed #refreshBtn,
+      .topbar.mobile-header-collapsed #overviewToggle,
+      .topbar.mobile-header-collapsed #helpBtn,
+      .topbar.mobile-header-collapsed #settingsBtn { display:none !important; }
+      .topbar.mobile-header-collapsed .top-actions { width:auto; margin-left:auto; }
       .content { padding: 14px; }
       .mobile-filter-toggle { display: block; width: 100%; }
       .filters.mobile-collapsed { display: none; }
@@ -451,13 +463,14 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar" id="dashboardTopbar">
     <div>
       <h1 id="pageTitle">业务异常监控</h1>
       <p class="subtitle" id="pageSubtitle">默认展示今日业务订单，支持筛选异常业务并下钻定位异常客户。</p>
     </div>
     <div class="top-actions">
-      <div><strong id="latestTime">最新数据：等待刷新</strong><span id="snapshotInfo">快照：等待记录</span></div>
+      <div id="topbarStatus"><strong id="latestTime">最新数据：等待刷新</strong><span id="snapshotInfo">快照：等待记录</span></div>
+      <button class="btn mobile-header-toggle" id="mobileHeaderToggle" type="button" aria-expanded="true" aria-controls="pageSubtitle topbarStatus">收起页头</button>
       <button class="icon-btn primary" id="refreshBtn" title="刷新">↻</button>
       <button class="btn" id="overviewToggle">收起概览</button>
       <button class="btn" id="helpBtn">说明</button>
@@ -599,6 +612,15 @@
     <div class="modal-foot"><button class="btn" id="closeDetailFoot">关闭</button></div>
   </section>
 
+  <section class="modal detail-info-modal" id="detailInfoModal">
+    <div class="modal-head">
+      <div><h2>用户数据说明</h2><small>更新时间、影响定位与口径校验</small></div>
+      <button class="icon-btn" id="closeDetailInfo">×</button>
+    </div>
+    <div class="modal-body" id="detailInfoBody"></div>
+    <div class="modal-foot"><button class="btn" id="closeDetailInfoFoot">关闭</button></div>
+  </section>
+
   <section class="modal" id="helpModal">
     <div class="modal-head">
       <div><h2>系统说明</h2><small>数据来源、异常规则和快照口径</small></div>
@@ -718,7 +740,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -728,6 +750,9 @@
     const PUBLIC_USER_ALIASES_KEY = "businessDashboardPublicUserAliases";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
+    const readLocalValue = (key, fallback = "") => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } };
+    const writeLocalValue = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { return false; } };
+    const removeLocalValue = key => { try { localStorage.removeItem(key); } catch {} };
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
     const money = n => Number(n || 0).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
     const pct = n => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}%`;
@@ -800,7 +825,8 @@
     }
 
     function userRefreshTimesText() {
-      const times = state.config?.userRefreshTimes || ["12:00", "17:00", "22:00"];
+      const configured = state.config?.userRefreshTimes;
+      const times = Array.isArray(configured) && configured.length ? configured : ["12:00", "17:00", "22:00"];
       return times.join("、") || "未配置";
     }
 
@@ -2013,16 +2039,34 @@
       if (manual && !hasOldData) showLoading("正在查询中台数据，请稍等...");
       renderSource();
       renderTable();
-      try {
-        const today = dayText(new Date());
-        if (!state.dailyEnd) state.dailyEnd = today;
-        if (!state.dailyStart) {
-          const start = new Date();
-          start.setDate(start.getDate() - 6);
-          state.dailyStart = dayText(start);
+      const today = dayText(new Date());
+      if (!state.dailyEnd) state.dailyEnd = today;
+      if (!state.dailyStart) {
+        const start = new Date();
+        start.setDate(start.getDate() - 6);
+        state.dailyStart = dayText(start);
+      }
+      $("#dailyStart").value = state.dailyStart;
+      $("#dailyEnd").value = state.dailyEnd;
+      if (!isLocalSettings) {
+        try {
+          const publicLoaded = await loadPublicSnapshot();
+          state.loading = false;
+          state.refreshing = false;
+          render();
+          if (!publicLoaded) toast("公网数据暂时加载失败，请检查网络后重试");
+        } catch (error) {
+          state.loading = false;
+          state.refreshing = false;
+          render();
+          toast(error.message || "公网数据加载失败");
+        } finally {
+          $("#refreshBtn").textContent = "↻";
+          hideLoading();
         }
-        $("#dailyStart").value = state.dailyStart;
-        $("#dailyEnd").value = state.dailyEnd;
+        return;
+      }
+      try {
         const params = new URLSearchParams({
           preset: "today",
           start_date: today,
@@ -2130,8 +2174,10 @@
         const res = await fetch(`data/business-dashboard-public.enc.json?_=${Date.now()}`);
         if (!res.ok) return Boolean(cached);
         const encrypted = await res.json();
+        if (encrypted.updatedAt && encrypted.updatedAt === state.publicEnvelopeUpdatedAt && state.businesses.length) return true;
         const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
         if (!data) return Boolean(cached);
+        state.publicEnvelopeUpdatedAt = encrypted.updatedAt || state.publicEnvelopeUpdatedAt;
         applyPublicSnapshot(data);
         saveCachedPublicPayload(data);
         loadPublicFocusNotesOverlay().catch(() => {});
@@ -2169,7 +2215,10 @@
     }
 
     function base64ToBytes(value) {
-      return Uint8Array.from(atob(value), char => char.charCodeAt(0));
+      const binary = atob(value);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return bytes;
     }
 
     async function decodePublicPayload(plain, compression) {
@@ -2204,14 +2253,21 @@
         const saved = JSON.parse(localStorage.getItem("businessDashboardPublicPassword") || "{}");
         if (saved.password && saved.expiresAt > Date.now()) return saved.password;
       } catch {}
+      try {
+        if (window.parent !== window && typeof window.parent.getDashboardPublicPassword === "function") {
+          return window.parent.getDashboardPublicPassword() || "";
+        }
+      } catch {}
       return "";
     }
 
     function savePublicPassword(password) {
-      localStorage.setItem("businessDashboardPublicPassword", JSON.stringify({
-        password,
-        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
-      }));
+      try {
+        localStorage.setItem("businessDashboardPublicPassword", JSON.stringify({
+          password,
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
+        }));
+      } catch {}
     }
 
     async function decryptPublicSnapshot(encrypted, { clearOnFailure = true, promptOnMissing = true } = {}) {
@@ -2233,7 +2289,7 @@
           savePublicPassword(password);
           return JSON.parse(text);
         } catch {
-          if (clearOnFailure) localStorage.removeItem("businessDashboardPublicPassword");
+          if (clearOnFailure) removeLocalValue("businessDashboardPublicPassword");
           password = "";
           if (clearOnFailure) toast("密码错误或公网数据解密失败");
           else break;
@@ -2725,9 +2781,36 @@
           <button class="btn" data-detail-display-apply="1">应用日期</button>
           <div class="search-with-clear"><input class="field" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID"><button class="search-clear ${state.detailSearch ? "" : "hidden"}" data-detail-search-clear="1" title="清空搜索">×</button></div>
           <button class="btn" data-detail-refresh="1">刷新用户</button>
-          <span class="muted">${state.detailRefreshing ? `正在刷新${state.detailLoadingLabel || "用户"}，当前先保留上次结果` : (cached ? "当前使用缓存数据" : "当前为最新请求数据")}｜今日数据：${detailFrequencyText()}｜时间 ${detailDataTime || "-"}；每日订单：${userRefreshTimesText()} 更新｜时间 ${state.detailStats?.historyLatestDataTime || "-"}</span>
+          <span class="muted">${state.detailRefreshing ? `正在刷新${state.detailLoadingLabel || "用户"}，暂时保留原数据` : (cached ? "当前使用缓存" : "当前为最新请求")}｜今日 ${detailDataTime || "-"}｜每日 ${state.detailStats?.historyLatestDataTime || "-"}</span>
+          <button class="btn" data-detail-info="1">数据说明</button>
         </div>
         <div id="detailResult">${renderDetailResult()}</div>`;
+    }
+
+    function detailInfoMarkup() {
+      const row = state.detailRow || { cmp: {} };
+      const allUsers = state.detailUsers || [];
+      const allDecliningUsers = allUsers.filter(user => Number(user.cmp?.diff || 0) < 0);
+      const impactSum = allDecliningUsers.reduce((sum, user) => sum + Number(user.cmp?.impact || 0), 0);
+      const growthSum = allUsers.reduce((sum, user) => sum + (Number(user.cmp?.diff || 0) > 0 ? Number(user.cmp.diff) : 0), 0);
+      const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
+      const businessImpact = Number(row.cmp?.diff) < 0 ? Math.abs(Number(row.cmp.diff)) : 0;
+      const locatedNet = Math.max(0, impactSum - growthSum);
+      const unattributed = businessImpact ? businessImpact - locatedNet : null;
+      const diff = userOrderSum - Number(row.cmp?.today || 0);
+      return `
+        <section class="source"><strong>更新时间：</strong>今日数据按“${detailFrequencyText()}”执行，当前时间 ${state.detailStats?.currentLatestDataTime || "-"}；每日订单在 ${userRefreshTimesText()} 更新，当前历史时间 ${state.detailStats?.historyLatestDataTime || "-"}。页面自动检查只读取缓存，不请求中台。</section>
+        <section class="source warn"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；增长用户显示所有同一时刻订单净增长大于0的用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。</section>
+        <section class="source ${diff ? "warn" : ""}"><strong>数据校验：</strong>今日用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人，当前订单口径差异 ${fmt(diff)}。</section>`;
+    }
+
+    function openDetailInfo() {
+      $("#detailInfoBody").innerHTML = detailInfoMarkup();
+      $("#detailInfoModal").classList.add("open");
+    }
+
+    function closeDetailInfo() {
+      $("#detailInfoModal").classList.remove("open");
     }
 
     function detailSortValue(user, key) {
@@ -2788,7 +2871,6 @@
       const lastWeekMatched = users.map(user => user.sameTime?.lastWeekReference || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
       const lastWeekMajority = majorityMinute(lastWeekMatched.map(reference => reference.comparisonMinute));
       return `
-        <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；“增长用户”显示所有同一时刻订单净增长大于 0 的用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。<br><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人${diff === null ? "。" : `，当前订单口径差异 ${fmt(diff)}。`}</section>
         <div class="detail-table-wrap">
           <table class="compact wide-date-table user-data-table">
             <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "今日订单")}${majorityHeader("多数数据", currentMajority, users.length)}</th><th>昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>上周同时刻${majorityHeader("多数参考", lastWeekMajority, lastWeekMatched.length)}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
@@ -2933,11 +3015,20 @@
       renderDetail(true);
     }
 
+    function setMobileHeaderCollapsed(collapsed, persist = false) {
+      const mobile = window.matchMedia("(max-width: 960px)").matches;
+      const shouldCollapse = mobile && collapsed;
+      $("#dashboardTopbar").classList.toggle("mobile-header-collapsed", shouldCollapse);
+      $("#mobileHeaderToggle").textContent = shouldCollapse ? "展开页头" : "收起页头";
+      $("#mobileHeaderToggle").setAttribute("aria-expanded", String(!shouldCollapse));
+      if (persist) writeLocalValue("businessDashboardMobileHeader", shouldCollapse ? "collapsed" : "expanded");
+    }
+
     function setupAutoRefresh() {
       if (state.refreshTimer) clearInterval(state.refreshTimer);
       if (state.focusSyncTimer) clearInterval(state.focusSyncTimer);
       if (state.publicFocusNotesTimer) clearInterval(state.publicFocusNotesTimer);
-      const seconds = Math.max(10, Number(state.config?.refreshSeconds || 60));
+      const seconds = state.publicMode ? Math.max(300, Number(state.config?.refreshSeconds || 60)) : Math.max(10, Number(state.config?.refreshSeconds || 60));
       state.refreshTimer = setInterval(() => loadData(false, true), seconds * 1000);
       state.focusSyncTimer = setInterval(async () => {
         if (state.publicMode || state.view !== "focus" || state.focusLoading) return;
@@ -2963,7 +3054,8 @@
       if (isLocalSettings) requestJson(apiUrl("/api/request-stats")).then(data => {
         const stats = data.stats || {};
         const detail = Number(stats.byPath?.["/api/v2/dashboard/business/user-order-statistics"] || 0);
-        $("#requestStatsText").textContent = `今日共 ${fmt(stats.total || 0)} 次，其中业务用户接口 ${fmt(detail)} 次；统计更新于 ${stats.updatedAt || "-"}`;
+        const fullRefreshes = Number(stats.byName?.["用户统计汇总"] || 0);
+        $("#requestStatsText").textContent = `今日累计 ${fmt(stats.total || 0)} 次，其中业务用户接口 ${fmt(detail)} 次、主看板完整刷新 ${fmt(fullRefreshes)} 轮。该数字保留今天已发生的真实请求；当前已限制为只有手动刷新才能请求中台，页面自动检查与旧标签页均只读缓存。统计更新于 ${stats.updatedAt || "-"}`;
       }).catch(error => { $("#requestStatsText").textContent = error.message; });
     }
     function closeSettings() {
@@ -2986,6 +3078,7 @@
       $("#helpModal").classList.remove("open");
       $("#focusModal").classList.remove("open");
       $("#focusNoteModal").classList.remove("open");
+      $("#detailInfoModal").classList.remove("open");
       state.focusNoteTarget = null;
       state.businessDailyModalRow = null;
     }
@@ -3027,14 +3120,17 @@
     $$("[data-range]").forEach(btn => btn.addEventListener("click", () => setDailyRange(btn.dataset.range)));
     $("#applyBtn").addEventListener("click", () => loadData(true));
     $("#refreshBtn").addEventListener("click", () => loadData(true));
+    $("#mobileHeaderToggle").addEventListener("click", () => {
+      setMobileHeaderCollapsed(!$("#dashboardTopbar").classList.contains("mobile-header-collapsed"), true);
+    });
     $("#overviewToggle").addEventListener("click", () => {
       state.overviewCollapsed = !state.overviewCollapsed;
-      localStorage.setItem("businessDashboardOverviewCollapsed", state.overviewCollapsed ? "1" : "0");
+      writeLocalValue("businessDashboardOverviewCollapsed", state.overviewCollapsed ? "1" : "0");
       renderOverviewToggle();
     });
     $("#trendToggle").addEventListener("click", () => {
       state.trendCollapsed = !state.trendCollapsed;
-      localStorage.setItem("businessDashboardTrendCollapsed", state.trendCollapsed ? "1" : "0");
+      writeLocalValue("businessDashboardTrendCollapsed", state.trendCollapsed ? "1" : "0");
       renderOverviewToggle();
       if (!state.trendCollapsed) loadBusinessTrend(false);
     });
@@ -3063,6 +3159,8 @@
     $("#modalMask").addEventListener("click", closeDetail);
     $("#closeDetail").addEventListener("click", closeDetail);
     $("#closeDetailFoot").addEventListener("click", closeDetail);
+    $("#closeDetailInfo").addEventListener("click", closeDetailInfo);
+    $("#closeDetailInfoFoot").addEventListener("click", closeDetailInfo);
     function handleBusinessListClick(e) {
       if (e.target.closest("[data-fast-business]")) return;
       const dailyTarget = e.target.closest("[data-business-daily-index]");
@@ -3159,6 +3257,10 @@
     $("#cancelFocusNote").addEventListener("click", closeFocusNote);
     $("#saveFocusNote").addEventListener("click", () => saveFocusNote().catch(error => { $("#focusNoteResult").textContent = error.message; toast(error.message || "观察备注保存失败"); }));
     $("#detailBody").addEventListener("click", e => {
+      if (e.target.closest("[data-detail-info]")) {
+        openDetailInfo();
+        return;
+      }
       const dailyRange = e.target.closest("[data-business-daily-range]");
       if (dailyRange) {
         setDailyRange(dailyRange.dataset.businessDailyRange);
@@ -3303,8 +3405,13 @@
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
-    state.overviewCollapsed = localStorage.getItem("businessDashboardOverviewCollapsed") === "1";
-    state.trendCollapsed = localStorage.getItem("businessDashboardTrendCollapsed") !== "0";
+    state.overviewCollapsed = readLocalValue("businessDashboardOverviewCollapsed") === "1";
+    state.trendCollapsed = readLocalValue("businessDashboardTrendCollapsed") !== "0";
+    const mobileHeaderMedia = window.matchMedia("(max-width: 960px)");
+    setMobileHeaderCollapsed(readLocalValue("businessDashboardMobileHeader", "collapsed") !== "expanded");
+    const syncMobileHeader = () => setMobileHeaderCollapsed(readLocalValue("businessDashboardMobileHeader", "collapsed") !== "expanded");
+    if (typeof mobileHeaderMedia.addEventListener === "function") mobileHeaderMedia.addEventListener("change", syncMobileHeader);
+    else if (typeof mobileHeaderMedia.addListener === "function") mobileHeaderMedia.addListener(syncMobileHeader);
     document.addEventListener("visibilitychange", refreshVisiblePageCache);
     window.addEventListener("focus", refreshVisiblePageCache);
     loadData(false, true).then(setupAutoRefresh);
