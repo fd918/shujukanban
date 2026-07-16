@@ -1,6 +1,6 @@
 import { createHash, createHmac, createCipheriv, pbkdf2Sync, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir, appendFile, rename } from "node:fs/promises";
+import { readFile, writeFile, mkdir, appendFile, rename, copyFile } from "node:fs/promises";
 import { createReadStream, createWriteStream, existsSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { extname, join } from "node:path";
@@ -19,6 +19,7 @@ const DASHBOARD_CACHE_PATH = join(ROOT, "data/business-dashboard-cache.json");
 const USER_PHONE_INDEX_PATH = join(ROOT, "data/user-phone-index.json");
 const USER_DETAIL_CACHE_PATH = join(ROOT, "data/business-user-detail-cache.json");
 const FOCUS_USERS_PATH = join(ROOT, "data/business-focus-users.json");
+const FOCUS_USERS_BACKUP_PATH = join(ROOT, "data/business-focus-users.pre-global-backup.json");
 const USER_ALIASES_PATH = join(ROOT, "data/business-user-aliases.json");
 const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.json");
 const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
@@ -1341,12 +1342,28 @@ async function refreshFocusUsersToday() {
   const saved = await readFocusUsers();
   const items = saved.items || [];
   if (!items.length) return { users: 0 };
+  const catalog = await focusBusinessCatalog();
+  const targets = [];
+  const seen = new Set();
+  for (const item of items) {
+    const hinted = new Set((item.businessHints || []).flatMap(hint => [String(hint.businessId || ""), String(hint.catalogBusinessId || "")]).filter(Boolean));
+    for (const business of catalog) {
+      const cached = cachedUserForBusiness(business.businessId, item.userId);
+      const recentOrders = cached ? Object.entries(cached.days || {}).some(([date, value]) => date >= shiftDay(dayKey(), -30) && number(value) > 0) : false;
+      if (!recentOrders && !number(cached?.todayOrders) && !hinted.has(business.businessId) && !hinted.has(business.catalogBusinessId)) continue;
+      const key = `${business.businessId}:${item.userId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        targets.push({ ...item, ...business });
+      }
+    }
+  }
   let users = 0;
-  await mapLimit(items, 4, async item => {
+  await mapLimit(targets, 4, async item => {
     if (await refreshFocusUserToday(item)) users += 1;
   });
-  console.log(`[${nowText()}] 已同步重点用户今日订单：${users}/${items.length}`);
-  return { users };
+  console.log(`[${nowText()}] 已同步全局重点用户今日订单：${users}/${targets.length} 条有单业务关系，${items.length} 位用户。`);
+  return { users, targets: targets.length };
 }
 
 function publicHistoryRange() {
@@ -2039,17 +2056,99 @@ async function saveConfig(body) {
   });
 }
 
+function mergeFocusUserRecords(items = []) {
+  const users = new Map();
+  for (const source of items) {
+    const userId = String(source?.userId || source?.id || "").trim();
+    if (!userId) continue;
+    const current = users.get(userId) || {
+      userId,
+      name: "",
+      phone: "-",
+      version: "-",
+      pendingProfile: true,
+      addedAt: "",
+      addedAtText: "",
+      note: "",
+      notes: [],
+      noteUpdatedAt: "",
+      noteUpdatedAtText: "",
+      pinned: false,
+      pinnedAt: "",
+      businessHints: []
+    };
+    const candidateName = String(source.name || "").trim();
+    if (candidateName && !candidateName.startsWith("用户 ") && candidateName !== "未填写昵称") current.name = candidateName;
+    const phone = plainPhoneValue(userId, source.phone, current.phone);
+    if (phone !== "-") current.phone = phone;
+    if (source.version && source.version !== "-") current.version = source.version;
+    const sourceAddedAt = String(source.addedAt || "");
+    if (sourceAddedAt && (!current.addedAt || sourceAddedAt < current.addedAt)) {
+      current.addedAt = sourceAddedAt;
+      current.addedAtText = source.addedAtText || current.addedAtText;
+    }
+    const incomingNotes = Array.isArray(source.notes)
+      ? source.notes
+      : String(source.note || "").split("\n").filter(Boolean).map(text => ({ text }));
+    const notesByText = new Map(current.notes.map(note => [String(note?.text || note || "").trim(), note]));
+    incomingNotes.forEach(note => {
+      const text = String(note?.text || note || "").trim().slice(0, 200);
+      if (text && !notesByText.has(text)) notesByText.set(text, typeof note === "object" ? { ...note, text } : { text });
+    });
+    current.notes = [...notesByText.values()].slice(0, 20);
+    current.note = current.notes.map(note => note.text).join("\n");
+    if (String(source.noteUpdatedAt || "") > current.noteUpdatedAt) {
+      current.noteUpdatedAt = source.noteUpdatedAt || "";
+      current.noteUpdatedAtText = source.noteUpdatedAtText || "";
+    }
+    if (source.pinned) current.pinned = true;
+    if (String(source.pinnedAt || "") > current.pinnedAt) current.pinnedAt = source.pinnedAt || "";
+    const hints = Array.isArray(source.businessHints) ? source.businessHints : [];
+    if (source.businessId || source.businessName) {
+      hints.push({
+        platform: source.platform || "",
+        businessName: source.businessName || "",
+        businessId: String(source.businessId || ""),
+        catalogBusinessId: String(source.catalogBusinessId || "")
+      });
+    }
+    const hintMap = new Map(current.businessHints.map(hint => [String(hint.businessId || hint.catalogBusinessId || hint.businessName), hint]));
+    hints.forEach(hint => {
+      const key = String(hint?.businessId || hint?.catalogBusinessId || hint?.businessName || "");
+      if (key) hintMap.set(key, {
+        platform: hint.platform || "",
+        businessName: hint.businessName || hint.name || "",
+        businessId: String(hint.businessId || hint.platformBusinessId || ""),
+        catalogBusinessId: String(hint.catalogBusinessId || "")
+      });
+    });
+    current.businessHints = [...hintMap.values()];
+    current.pendingProfile = !(current.name || userProfileCache.get(userId)?.name);
+    users.set(userId, current);
+  }
+  return [...users.values()];
+}
+
 async function readFocusUsers() {
   try {
     const saved = JSON.parse(await readFile(FOCUS_USERS_PATH, "utf8"));
-    return { items: Array.isArray(saved.items) ? saved.items : [], updatedAt: saved.updatedAt || "", updatedAtText: saved.updatedAtText || "" };
+    const sourceItems = Array.isArray(saved.items) ? saved.items : [];
+    const items = mergeFocusUserRecords(sourceItems);
+    if (saved.schemaVersion !== 2 || items.length !== sourceItems.length) {
+      if (!existsSync(FOCUS_USERS_BACKUP_PATH)) await copyFile(FOCUS_USERS_PATH, FOCUS_USERS_BACKUP_PATH);
+      const payload = { schemaVersion: 2, items, updatedAt: saved.updatedAt || new Date().toISOString(), updatedAtText: saved.updatedAtText || nowText() };
+      await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
+      console.log(`[${nowText()}] 重点用户已迁移为全局用户：${sourceItems.length} 条业务记录合并为 ${items.length} 位用户。`);
+      return payload;
+    }
+    return { schemaVersion: 2, items, updatedAt: saved.updatedAt || "", updatedAtText: saved.updatedAtText || "" };
   } catch {
-    return { items: [], updatedAt: "", updatedAtText: "" };
+    return { schemaVersion: 2, items: [], updatedAt: "", updatedAtText: "" };
   }
 }
 
 async function writeFocusUsers(items) {
-  const payload = { items, updatedAt: new Date().toISOString(), updatedAtText: nowText() };
+  const payload = { schemaVersion: 2, items: mergeFocusUserRecords(items), updatedAt: new Date().toISOString(), updatedAtText: nowText() };
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
   return payload;
@@ -2084,7 +2183,7 @@ function cachedUserForBusiness(businessId, userId) {
       const key = JSON.parse(cacheKey);
       if (String(key.businessId) !== String(businessId)) continue;
       const row = (payload.rows || []).find(item => String(item.id) === String(userId));
-      if (row) found = { ...found, ...row, days: row.days || found?.days || {} };
+      if (row) found = { ...found, ...row, days: { ...(found?.days || {}), ...(row.days || {}) }, cacheSavedAtText: payload.savedAtText || found?.cacheSavedAtText || "" };
     } catch {}
   }
   return found ? attachPlainPhone(found) : null;
@@ -2100,6 +2199,15 @@ function cachedFocusCurrentUser(businessId, userId) {
 function focusRange(query = {}) {
   const today = dayKey();
   const preset = query.preset || "7";
+  if (preset === "custom") {
+    let endDate = parseDay(query.end_date || today);
+    let startDate = parseDay(query.start_date || shiftDay(endDate, -6));
+    if (startDate > endDate) [startDate, endDate] = [endDate, startDate];
+    if (dayList(startDate, endDate).length > 65) startDate = shiftDay(endDate, -64);
+    const days = dayList(startDate, endDate).length;
+    const comparisonEndDate = shiftDay(startDate, -1);
+    return { preset, startDate, endDate, comparisonStartDate: shiftDay(comparisonEndDate, -(days - 1)), comparisonEndDate, label: `${startDate} 至 ${endDate}` };
+  }
   if (preset === "week") {
     const current = dateFromDay(today);
     const offset = (current.getDay() + 6) % 7;
@@ -2116,15 +2224,29 @@ function focusRange(query = {}) {
   return { preset: "month", startDate, endDate: today, comparisonStartDate, comparisonEndDate, label: "本月" };
 }
 
-async function buildFocusUsers(query = {}) {
-  const saved = await readFocusUsers();
-  const range = focusRange(query);
-  const dates = dayList(range.startDate, range.endDate);
-  const previousDates = dayList(range.comparisonStartDate, range.comparisonEndDate);
-  const snapshots = await readSnapshots();
-  const rows = saved.items.map(item => {
-    const cached = cachedUserForBusiness(item.businessId, item.userId) || {};
-    const current = cachedFocusCurrentUser(item.businessId, item.userId);
+async function focusBusinessCatalog() {
+  let rows = lastGood.businesses || [];
+  if (!rows.length) {
+    const cache = await readDashboardCache();
+    rows = latestValidDashboardCache(cache)?.[1]?.payload?.businesses || [];
+  }
+  const byId = new Map();
+  rows.forEach(row => {
+    const businessId = String(row.platformBusinessId || row.businessId || "");
+    if (!businessId) return;
+    byId.set(businessId, {
+      platform: row.platform || "-",
+      businessName: row.name || row.businessName || "未命名业务",
+      businessId,
+      catalogBusinessId: String(row.businessId || "")
+    });
+  });
+  return [...byId.values()];
+}
+
+function focusBusinessRow(item, business, dates, previousDates, snapshots) {
+    const cached = cachedUserForBusiness(business.businessId, item.userId) || {};
+    const current = cachedFocusCurrentUser(business.businessId, item.userId);
     const days = Object.fromEntries(dates.map(date => [date, number(cached.days?.[date])]));
     if (dates.includes(dayKey())) {
       const hasDailyToday = cached.days && Object.prototype.hasOwnProperty.call(cached.days, dayKey());
@@ -2134,10 +2256,10 @@ async function buildFocusUsers(query = {}) {
     const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(cached.days?.[date]), 0);
     const periodDiff = total - previousPeriodTotal;
     const periodRatio = previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null;
-    const businessId = String(item.businessId);
+    const businessId = String(business.businessId);
     const userId = String(item.userId);
     const topState = userRefreshState.top100[businessId] || {};
-    const userDataTime = current?.savedAtText || topState.updatedAtText || "";
+    const userDataTime = current?.savedAtText || cached.cacheSavedAtText || topState.updatedAtText || "";
     const yesterdayMatch = businessUserSnapshotMatch(
       snapshots,
       shiftDay(dayKey(), -1),
@@ -2150,8 +2272,12 @@ async function buildFocusUsers(query = {}) {
     const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
     const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
     const ratio = yesterdaySameTime ? diff / number(yesterdaySameTime) * 100 : null;
-    return {
+    const row = {
       ...item,
+      platform: business.platform,
+      businessName: business.businessName,
+      businessId,
+      catalogBusinessId: business.catalogBusinessId,
       name: current?.name || cached.name || item.name,
       phone: plainPhoneValue(item.userId, current?.phone, cached.phone, item.phone),
       version: current?.version || cached.version || item.version || "-",
@@ -2175,44 +2301,116 @@ async function buildFocusUsers(query = {}) {
       realtimeToday: Boolean(current),
       userDataTime: userDataTime || userDetailCacheSavedAtText || "-"
     };
+    const hinted = (item.businessHints || []).some(hint => String(hint.businessId || hint.catalogBusinessId) === businessId);
+    const hasOrders = todayOrders > 0 || previousPeriodTotal > 0 || total > 0 || number(yesterdaySameTime) > 0;
+    return hasOrders || hinted ? row : null;
+}
+
+async function buildFocusUsers(query = {}) {
+  const saved = await readFocusUsers();
+  const range = focusRange(query);
+  const dates = dayList(range.startDate, range.endDate);
+  const previousDates = dayList(range.comparisonStartDate, range.comparisonEndDate);
+  const snapshots = await readSnapshots();
+  const catalog = await focusBusinessCatalog();
+  const businessRows = [];
+  for (const item of saved.items) {
+    const hintMap = new Map(catalog.map(row => [row.businessId, row]));
+    (item.businessHints || []).forEach(hint => {
+      const businessId = String(hint.businessId || hint.catalogBusinessId || "");
+      if (businessId && !hintMap.has(businessId)) hintMap.set(businessId, { ...hint, businessId, businessName: hint.businessName || "未命名业务" });
+    });
+    for (const business of hintMap.values()) {
+      const row = focusBusinessRow(item, business, dates, previousDates, snapshots);
+      if (row) businessRows.push(row);
+    }
+  }
+  const rowsByUser = new Map();
+  businessRows.forEach(row => {
+    const list = rowsByUser.get(String(row.userId)) || [];
+    list.push(row);
+    rowsByUser.set(String(row.userId), list);
   });
-  const currentTimes = rows.map(row => row.userDataTime).filter(Boolean).sort();
+  const users = saved.items.map(item => {
+    const rows = rowsByUser.get(String(item.userId)) || [];
+    const profile = rows.find(row => row.name && !String(row.name).startsWith("用户 ")) || rows[0] || {};
+    const days = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + number(row.days?.[date]), 0)]));
+    const periodTotal = rows.reduce((sum, row) => sum + number(row.periodTotal), 0);
+    const previousPeriodTotal = rows.reduce((sum, row) => sum + number(row.previousPeriodTotal), 0);
+    const todayOrders = rows.reduce((sum, row) => sum + number(row.todayOrders), 0);
+    const comparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
+    const yesterdaySameTime = comparable.length ? comparable.reduce((sum, row) => sum + number(row.yesterdaySameTime), 0) : null;
+    const diff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
+    return {
+      ...item,
+      name: profile.name || userProfileCache.get(String(item.userId))?.name || item.name || `用户 ${item.userId}`,
+      phone: plainPhoneValue(item.userId, profile.phone, item.phone, userProfileCache.get(String(item.userId))?.phone),
+      version: profile.version || item.version || "-",
+      pendingProfile: !(profile.name || item.name || userProfileCache.get(String(item.userId))?.name),
+      businessCount: rows.length,
+      days,
+      periodTotal,
+      previousPeriodTotal,
+      periodRatio: previousPeriodTotal ? (periodTotal - previousPeriodTotal) / previousPeriodTotal * 100 : null,
+      periodImpact: Math.abs(periodTotal - previousPeriodTotal),
+      todayOrders,
+      yesterdaySameTime,
+      ratio: yesterdaySameTime ? diff / yesterdaySameTime * 100 : null,
+      impact: diff === null ? null : Math.abs(diff),
+      userDataTime: rows.map(row => row.userDataTime).filter(Boolean).sort().at(-1) || "-"
+    };
+  });
+  const businessMap = new Map();
+  businessRows.forEach(row => {
+    const current = businessMap.get(row.businessId) || { businessId: row.businessId, catalogBusinessId: row.catalogBusinessId, businessName: row.businessName, platform: row.platform, count: 0 };
+    current.count += 1;
+    businessMap.set(row.businessId, current);
+  });
+  const currentTimes = businessRows.map(row => row.userDataTime).filter(Boolean).sort();
   return {
     ok: true,
+    schemaVersion: 2,
     focusUpdatedAt: saved.updatedAt || "",
     range,
     dates,
-    rows,
-    total: rows.length,
-    realtimeUserCount: rows.filter(row => row.realtimeToday).length,
+    users,
+    businessRows,
+    rows: businessRows,
+    businesses: [...businessMap.values()].sort((a, b) => a.businessName.localeCompare(b.businessName, "zh-CN")),
+    total: users.length,
+    relationshipTotal: businessRows.length,
+    realtimeUserCount: businessRows.filter(row => row.realtimeToday).length,
     latestDataTime: currentTimes.at(-1) || userDetailCacheSavedAtText || "-"
   };
 }
 
 async function addFocusUser(body) {
-  const businessId = String(body.businessId || "");
   const userId = String(body.userId || "").trim();
-  if (!businessId || !userId) throw new Error("请选择业务并填写用户ID。");
-  let businessRows = lastGood.businesses || [];
-  if (!businessRows.length) {
-    const cache = await readDashboardCache();
-    businessRows = latestValidDashboardCache(cache)?.[1]?.payload?.businesses || [];
+  if (!userId) throw new Error("请填写用户ID。");
+  const businessId = String(body.businessId || "");
+  const catalog = await focusBusinessCatalog();
+  const business = catalog.find(row => row.businessId === businessId || row.catalogBusinessId === businessId);
+  let user = business ? cachedUserForBusiness(business.businessId, userId) : null;
+  if (!user) {
+    for (const row of catalog) {
+      user = cachedUserForBusiness(row.businessId, userId);
+      if (user) break;
+    }
   }
-  const business = businessRows.find(row => String(row.platformBusinessId || row.businessId) === businessId || String(row.businessId) === businessId);
-  if (!business) throw new Error("没有找到所选业务，请先刷新业务列表。");
-  const user = cachedUserForBusiness(businessId, userId) || {};
+  user = user || userProfileCache.get(userId) || {};
   const saved = await readFocusUsers();
-  if (saved.items.some(item => String(item.businessId) === businessId && String(item.userId) === userId)) return writeFocusUsers(saved.items);
+  const existing = saved.items.find(item => String(item.userId) === userId);
+  if (existing) {
+    if (business && !(existing.businessHints || []).some(hint => String(hint.businessId) === business.businessId)) existing.businessHints = [...(existing.businessHints || []), business];
+    return writeFocusUsers(saved.items);
+  }
   saved.items.push({
-    platform: business.platform,
-    businessName: business.name,
-    businessId,
-    catalogBusinessId: String(business.businessId || ""),
     userId,
     name: user.name || `用户 ${userId}`,
     phone: plainPhoneValue(userId, user.phone),
     version: user.version || "-",
     pendingProfile: !user.name,
+    businessHints: business ? [business] : [],
     addedAt: new Date().toISOString(),
     addedAtText: nowText()
   });
@@ -2220,18 +2418,16 @@ async function addFocusUser(body) {
 }
 
 async function removeFocusUser(body) {
-  const businessId = String(body.businessId || "");
   const userId = String(body.userId || "");
   const saved = await readFocusUsers();
-  return writeFocusUsers(saved.items.filter(item => !(String(item.businessId) === businessId && String(item.userId) === userId)));
+  return writeFocusUsers(saved.items.filter(item => String(item.userId) !== userId));
 }
 
 async function saveFocusUserNote(body) {
-  const businessId = String(body.businessId || "");
   const userId = String(body.userId || "");
-  if (!businessId || !userId) throw new Error("缺少业务ID或用户ID。");
+  if (!userId) throw new Error("缺少用户ID。");
   const saved = await readFocusUsers();
-  const index = saved.items.findIndex(item => String(item.businessId) === businessId && String(item.userId) === userId);
+  const index = saved.items.findIndex(item => String(item.userId) === userId);
   if (index < 0) throw new Error("重点用户不存在，请刷新后重试。");
   const previousNotes = Array.isArray(saved.items[index].notes)
     ? saved.items[index].notes
@@ -2251,11 +2447,10 @@ async function saveFocusUserNote(body) {
 }
 
 async function saveFocusUserPin(body) {
-  const businessId = String(body.businessId || "");
   const userId = String(body.userId || "");
-  if (!businessId || !userId) throw new Error("缺少业务ID或用户ID。");
+  if (!userId) throw new Error("缺少用户ID。");
   const saved = await readFocusUsers();
-  const index = saved.items.findIndex(item => String(item.businessId) === businessId && String(item.userId) === userId);
+  const index = saved.items.findIndex(item => String(item.userId) === userId);
   if (index < 0) throw new Error("重点用户不存在，请刷新后重试。");
   const pinned = Boolean(body.pinned);
   saved.items[index] = {
@@ -2550,14 +2745,13 @@ async function publishPublicFocusNotes() {
   return enqueuePublicPublish(async () => {
     const saved = await readFocusUsers();
     const notes = Object.fromEntries(saved.items.map(item => {
-      const key = `${item.businessId}:${item.userId}`;
       const lines = Array.isArray(item.notes)
         ? item.notes.map(value => String(value?.text || value || "").trim()).filter(Boolean)
         : String(item.note || "").split("\n").map(value => value.trim()).filter(Boolean);
-      return [key, lines];
+      return [String(item.userId), lines];
     }));
     const pins = Object.fromEntries(saved.items.map(item => [
-      `${item.businessId}:${item.userId}`,
+      String(item.userId),
       { pinned: Boolean(item.pinned), pinnedAt: item.pinnedAt || "" }
     ]));
     const encrypted = await encryptPublicPayload({ ok: true, updatedAt: saved.updatedAt, notes, pins }, { compression: "gzip" });
@@ -2690,8 +2884,9 @@ const server = createServer(async (req, res) => {
       const saved = await addFocusUser(body);
       const data = await buildFocusUsers({ preset: "7" });
       json(res, 200, { ok: true, saved, data, syncing: true });
-      const item = saved.items?.find(row => String(row.businessId) === String(body.businessId) && String(row.userId) === String(body.userId));
-      Promise.resolve(item ? refreshFocusUserToday(item) : false)
+      const item = saved.items?.find(row => String(row.userId) === String(body.userId));
+      const hintedBusiness = (await focusBusinessCatalog()).find(row => row.businessId === String(body.businessId || "") || row.catalogBusinessId === String(body.businessId || ""));
+      Promise.resolve(item && hintedBusiness ? refreshFocusUserToday({ ...item, ...hintedBusiness }) : false)
         .then(() => publishLatestCachedDashboard())
         .catch(error => console.error(`[${nowText()}] 重点用户后台补全或公网同步失败：${error.message}`));
       return;
