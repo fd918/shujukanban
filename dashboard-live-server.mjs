@@ -1892,7 +1892,8 @@ async function saveConfig(body) {
     refreshSeconds: Number(body.refreshSeconds || current.refreshSeconds || defaultConfig.refreshSeconds),
     snapshotMinutes: body.snapshotMinutes || current.snapshotMinutes,
     userRefreshTimes: body.userRefreshTimes || current.userRefreshTimes,
-    fastUserBusinessIds: body.fastUserBusinessIds || current.fastUserBusinessIds,
+    // 高频业务只允许由业务列表开关修改，避免设置中心的旧页面覆盖整组勾选。
+    fastUserBusinessIds: current.fastUserBusinessIds,
     notification: {
       ...current.notification,
       ...(body.notification || {}),
@@ -2505,9 +2506,16 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/business-refresh" && req.method === "POST") {
       const body = await readBody(req);
       const current = await readConfig();
-      const id = String(body.businessId || "");
+      const id = String(body.platformBusinessId || body.businessId || "");
+      const aliasId = String(body.businessId || "");
       const ids = new Set((current.fastUserBusinessIds || []).map(String));
-      if (body.enabled) ids.add(id); else ids.delete(id);
+      if (body.enabled) {
+        if (aliasId) ids.delete(aliasId);
+        if (id) ids.add(id);
+      } else {
+        if (id) ids.delete(id);
+        if (aliasId) ids.delete(aliasId);
+      }
       const config = await writeConfig({ ...current, fastUserBusinessIds: [...ids] });
       return json(res, 200, { ok: true, config });
     }

@@ -1325,6 +1325,8 @@
       }
       $("#businessBody").innerHTML = rows.length ? rows.map((row, index) => {
         const same = row.sameTime || {};
+        const fastUserRefresh = isFastUserBusiness(row);
+        const refreshBusinessId = row.platformBusinessId || row.businessId;
         return `<tr data-index="${index}">
           <td>${index + 1}</td>
           <td>${row.platform}</td>
@@ -1337,7 +1339,7 @@
           <td>${fmtValue(row.cmp.impact)}</td>
           <td>${tag(row.cmp.level, row.cmp.label)}</td>
           <td>${fmt(row.users || row.userIds?.length || 0)}</td>
-          <td><label class="refresh-switch"><input type="checkbox" data-fast-business="${row.businessId}" ${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${(state.config?.fastUserBusinessIds || []).map(String).includes(String(row.businessId)) ? "前100每10分钟" : "固定时段"}</span></label></td>
+          <td><label class="refresh-switch"><input type="checkbox" data-fast-business="${refreshBusinessId}" data-fast-business-alias="${row.businessId}" ${fastUserRefresh ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${fastUserRefresh ? "前100每10分钟" : "固定时段"}</span></label></td>
           <td><button class="link" data-index="${index}">查看用户</button></td>
         </tr>`;
       }).join("") : `<tr><td colspan="13" class="muted">当前筛选条件下没有业务。</td></tr>`;
@@ -2005,7 +2007,6 @@
         refreshSeconds: Number($("#refreshSeconds").value),
         snapshotMinutes: Number($("#snapshotMinutes").value),
         userRefreshTimes: $("#userRefreshTimes").value.split(/[,，\s]+/).map(item => item.trim()).filter(Boolean),
-        fastUserBusinessIds: state.config?.fastUserBusinessIds || [],
         notification: {
           mode: "immediate",
           criticalImmediate: true,
@@ -2803,7 +2804,11 @@
       const toggle = e.target.closest("[data-fast-business]");
       if (!toggle) return;
       try {
-        const data = await requestJson(apiUrl("/api/business-refresh"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId: toggle.dataset.fastBusiness, enabled: toggle.checked }) });
+        const data = await requestJson(apiUrl("/api/business-refresh"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+          platformBusinessId: toggle.dataset.fastBusiness,
+          businessId: toggle.dataset.fastBusinessAlias,
+          enabled: toggle.checked
+        }) });
         state.config = data.config;
         renderTable();
         toast(toggle.checked ? "已开启前100用户每10分钟更新" : "已改为固定时段更新");
