@@ -1344,6 +1344,16 @@ async function refreshFocusUserToday(item) {
   return true;
 }
 
+async function discoverFocusUserBusinesses(item) {
+  const catalog = await focusBusinessCatalog();
+  let refreshed = 0;
+  await mapLimit(catalog, 4, async business => {
+    if (await refreshFocusUserToday({ ...item, ...business })) refreshed += 1;
+  });
+  console.log(`[${nowText()}] 已完成重点用户全业务发现：${item.userId}，${refreshed}/${catalog.length} 个业务。`);
+  return { refreshed, total: catalog.length };
+}
+
 async function refreshFocusUsersToday() {
   const saved = await readFocusUsers();
   const items = saved.items || [];
@@ -2921,8 +2931,7 @@ const server = createServer(async (req, res) => {
       const data = await buildFocusUsers({ preset: "7" });
       json(res, 200, { ok: true, saved, data, syncing: true });
       const item = saved.items?.find(row => String(row.userId) === String(body.userId));
-      const hintedBusiness = (await focusBusinessCatalog()).find(row => row.businessId === String(body.businessId || "") || row.catalogBusinessId === String(body.businessId || ""));
-      Promise.resolve(item && hintedBusiness ? refreshFocusUserToday({ ...item, ...hintedBusiness }) : false)
+      Promise.resolve(item ? discoverFocusUserBusinesses(item) : false)
         .then(() => publishLatestCachedDashboard())
         .catch(error => console.error(`[${nowText()}] 重点用户后台补全或公网同步失败：${error.message}`));
       return;
