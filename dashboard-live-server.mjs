@@ -1082,14 +1082,20 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     if (historyRows.some(row => String(row.id || "") === String(currentRow.id || ""))) continue;
     todayRows.push({ ...currentRow, days: { [endDate]: number(currentRow.todayOrders) }, realtimeToday: true });
   }
-  const users = enrichBusinessUsersWithSnapshots(todayRows, snapshots, businessId, rangeFromQuery({ start_date: endDate, end_date: endDate }));
+  const historyLatestDataTime = history.savedAtText || "-";
+  const fullCurrentLatestDataTime = full?.savedAtText || "";
+  const currentLatestDataTime = fastIsNewer ? fast.savedAtText : (fullCurrentLatestDataTime || historyLatestDataTime);
+  const users = enrichBusinessUsersWithSnapshots(
+    todayRows,
+    snapshots,
+    businessId,
+    rangeFromQuery({ start_date: endDate, end_date: endDate }),
+    comparisonMinuteFromText(currentLatestDataTime)
+  );
   users.forEach(user => { user.phone = plainPhoneValue(user.id, user.phone); });
   historyRows.forEach(user => { user.phone = plainPhoneValue(user.id, user.phone); });
   const topState = userRefreshState.top100[String(businessId)] || {};
   users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
-  const historyLatestDataTime = history.savedAtText || "-";
-  const fullCurrentLatestDataTime = full?.savedAtText || "";
-  const currentLatestDataTime = fastIsNewer ? fast.savedAtText : (fullCurrentLatestDataTime || historyLatestDataTime);
   const failedStatus = [...statuses].reverse().find(item => !item.ok);
   return {
     ok: history.ok,
@@ -1469,19 +1475,23 @@ async function pruneSnapshots() {
   console.log(`[${nowText()}] 快照清理完成：保留 ${cutoff} 至 ${today}，共 ${kept} 条`);
 }
 
-function nearestSnapshot(snapshots, targetDay, targetMinute, maxDistanceMinutes = 20) {
-  const candidates = snapshots.filter(item => item.day === targetDay);
-  if (!candidates.length) return null;
-  const nearest = candidates.sort((a, b) => Math.abs(a.minuteOfDay - targetMinute) - Math.abs(b.minuteOfDay - targetMinute))[0];
-  return Math.abs(number(nearest.minuteOfDay) - number(targetMinute)) <= maxDistanceMinutes ? nearest : null;
+function comparisonMinuteFromText(value) {
+  const match = String(value || "").match(/\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()) {
+function exactSnapshot(snapshots, targetDay, targetMinute) {
+  if (!Number.isFinite(Number(targetMinute))) return null;
+  const candidates = snapshots.filter(item => item.day === targetDay && number(item.minuteOfDay) === number(targetMinute));
+  return candidates.at(-1) || null;
+}
+
+function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery(), comparisonMinute = minuteOfDay()) {
   const currentDate = dateFromDay(dateRange.endDate);
-  const minute = minuteOfDay();
-  const yesterday = nearestSnapshot(snapshots, dayKey(addDays(currentDate, -1)), minute);
-  const lastWeek = nearestSnapshot(snapshots, dayKey(addDays(currentDate, -7)), minute);
-  const recent = Array.from({ length: 7 }, (_, index) => nearestSnapshot(snapshots, dayKey(addDays(currentDate, -(index + 1))), minute)).filter(Boolean);
+  const yesterday = exactSnapshot(snapshots, dayKey(addDays(currentDate, -1)), comparisonMinute);
+  const lastWeek = exactSnapshot(snapshots, dayKey(addDays(currentDate, -7)), comparisonMinute);
+  const recent = Array.from({ length: 7 }, (_, index) => exactSnapshot(snapshots, dayKey(addDays(currentDate, -(index + 1))), comparisonMinute)).filter(Boolean);
 
   return rows.map(row => {
     const id = String(type === "business" ? row.businessId : row.id);
@@ -1501,7 +1511,7 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
         comparisonSlotLabel: yesterday?.snapshotSlotLabel || "",
-        yesterdaySource: snapshotYesterday ? "10分钟快照" : "",
+        yesterdaySource: snapshotYesterday ? "严格同分钟槽快照" : "",
         hasSnapshot: Boolean(snapshotYesterday || pick(lastWeek) || avg),
         hasApiBaseline: Boolean(row.yesterdayOrders)
       }
@@ -1509,14 +1519,13 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
   });
 }
 
-function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange = rangeFromQuery()) {
+function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange = rangeFromQuery(), comparisonMinute = minuteOfDay()) {
   const currentDate = dateFromDay(dateRange.endDate);
-  const minute = minuteOfDay();
   const businessKey = String(businessId || "");
   const usableSnapshots = snapshots.filter(snapshot => Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
-  const yesterday = nearestSnapshot(usableSnapshots, dayKey(addDays(currentDate, -1)), minute);
-  const lastWeek = nearestSnapshot(usableSnapshots, dayKey(addDays(currentDate, -7)), minute);
-  const recent = Array.from({ length: 7 }, (_, index) => nearestSnapshot(usableSnapshots, dayKey(addDays(currentDate, -(index + 1))), minute)).filter(Boolean);
+  const yesterday = exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -1)), comparisonMinute);
+  const lastWeek = exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -7)), comparisonMinute);
+  const recent = Array.from({ length: 7 }, (_, index) => exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -(index + 1))), comparisonMinute)).filter(Boolean);
 
   return rows.map(row => {
     const id = String(row.id || "");
@@ -2000,13 +2009,14 @@ async function buildFocusUsers(query = {}) {
     const periodRatio = previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null;
     const businessId = String(item.businessId);
     const userId = String(item.userId);
+    const topState = userRefreshState.top100[businessId] || {};
+    const userDataTime = current?.savedAtText || topState.updatedAtText || "";
     const comparableSnapshots = snapshots.filter(snapshot => Object.keys(snapshot?.businessUsers?.[businessId] || {}).length > 0);
-    const yesterday = nearestSnapshot(comparableSnapshots, shiftDay(dayKey(), -1), minuteOfDay());
+    const yesterday = exactSnapshot(comparableSnapshots, shiftDay(dayKey(), -1), comparisonMinuteFromText(userDataTime));
     const yesterdaySameTime = yesterday?.businessUsers?.[businessId]?.[userId]?.orders;
     const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
     const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
     const ratio = yesterdaySameTime ? diff / number(yesterdaySameTime) * 100 : null;
-    const topState = userRefreshState.top100[String(item.businessId)] || {};
     return {
       ...item,
       name: current?.name || cached.name || item.name,
@@ -2025,7 +2035,7 @@ async function buildFocusUsers(query = {}) {
       impact: diff === null ? null : Math.abs(diff),
       newTop100At: topState.entered?.[String(item.userId)] || "",
       realtimeToday: Boolean(current),
-      userDataTime: current?.savedAtText || topState.updatedAtText || userDetailCacheSavedAtText || "-"
+      userDataTime: userDataTime || userDetailCacheSavedAtText || "-"
     };
   });
   const currentTimes = rows.map(row => row.userDataTime).filter(Boolean).sort();
@@ -2198,7 +2208,7 @@ async function encryptedPublicUserDetails(dateRange) {
       if (previous && (rank[0] < previous[0] || (rank[0] === previous[0] && rank[1] <= previous[1]))) continue;
       detailRanks.set(id, rank);
       const realtimeToday = key.includePrevious === false && key.startDate === dayKey() && key.endDate === dayKey();
-      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange)
+      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange, comparisonMinuteFromText(payload.savedAtText))
         .map(row => ({ ...row, realtimeToday }));
       details[id] = {
         ...(details[id] || {}),
@@ -2245,9 +2255,10 @@ async function encryptedPublicUserDetails(dateRange) {
     for (const row of currentById.values()) {
       if (!historyIds.has(String(row.id || ""))) mergedRows.push({ ...row, days: { [dateRange.endDate]: number(row.todayOrders) }, realtimeToday: true });
     }
-    detail.rows = enrichBusinessUsersWithSnapshots(mergedRows, snapshots, businessId, dateRange);
+    const currentLatestDataTime = fastIsNewer ? fast.savedAtText : full.savedAtText;
+    detail.rows = enrichBusinessUsersWithSnapshots(mergedRows, snapshots, businessId, dateRange, comparisonMinuteFromText(currentLatestDataTime));
     detail.total = full.total || detail.rows.length;
-    detail.latestDataTime = fastIsNewer ? fast.savedAtText : full.savedAtText;
+    detail.latestDataTime = currentLatestDataTime;
     detail.currentLatestDataTime = detail.latestDataTime;
     detail.fullCurrentLatestDataTime = full.savedAtText || "-";
     detail.realtimeUserCount = fastIsNewer ? deduplicateBusinessUsers(fast.rows || []).length : 0;
@@ -2483,7 +2494,13 @@ const server = createServer(async (req, res) => {
         refresh: url.searchParams.get("refresh") === "1"
       }, statuses);
       const snapshots = await readSnapshots();
-      const users = enrichBusinessUsersWithSnapshots(result.rows, snapshots, url.searchParams.get("business_id") || "", rangeFromQuery({ start_date: startDate, end_date: endDate }));
+      const users = enrichBusinessUsersWithSnapshots(
+        result.rows,
+        snapshots,
+        url.searchParams.get("business_id") || "",
+        rangeFromQuery({ start_date: startDate, end_date: endDate }),
+        comparisonMinuteFromText(result.savedAtText)
+      );
       const topState = userRefreshState.top100[String(url.searchParams.get("business_id") || "")] || {};
       users.forEach(user => { user.newTop100At = topState.entered?.[String(user.id)] || ""; });
       return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: result.savedAtText || topState.updatedAtText || userDetailCacheSavedAtText || "-", users, total: result.total, userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0), page: result.page, pageSize: result.pageSize, source: { statuses } });
