@@ -1343,12 +1343,13 @@ async function refreshFocusUsersToday() {
   const items = saved.items || [];
   if (!items.length) return { users: 0 };
   const catalog = await focusBusinessCatalog();
+  const cacheIndex = focusUserCacheIndex(items.map(item => item.userId));
   const targets = [];
   const seen = new Set();
   for (const item of items) {
     const hinted = new Set((item.businessHints || []).flatMap(hint => [String(hint.businessId || ""), String(hint.catalogBusinessId || "")]).filter(Boolean));
     for (const business of catalog) {
-      const cached = cachedUserForBusiness(business.businessId, item.userId);
+      const cached = cacheIndex.get(`${business.businessId}:${item.userId}`);
       const recentOrders = cached ? Object.entries(cached.days || {}).some(([date, value]) => date >= shiftDay(dayKey(), -30) && number(value) > 0) : false;
       if (!recentOrders && !number(cached?.todayOrders) && !hinted.has(business.businessId) && !hinted.has(business.catalogBusinessId)) continue;
       const key = `${business.businessId}:${item.userId}`;
@@ -2189,6 +2190,33 @@ function cachedUserForBusiness(businessId, userId) {
   return found ? attachPlainPhone(found) : null;
 }
 
+function focusUserCacheIndex(userIds = []) {
+  const wanted = new Set([...userIds].map(String));
+  const index = new Map();
+  if (!wanted.size) return index;
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    let businessId = "";
+    try { businessId = String(JSON.parse(cacheKey).businessId || ""); } catch {}
+    if (!businessId || !Array.isArray(payload?.rows)) continue;
+    for (const row of payload.rows) {
+      const userId = String(row.id || row.userId || "");
+      if (!wanted.has(userId)) continue;
+      const key = `${businessId}:${userId}`;
+      const current = index.get(key) || {};
+      const incomingTime = Date.parse(String(payload.savedAtText || "").replaceAll("/", "-")) || 0;
+      const currentTime = Date.parse(String(current.cacheSavedAtText || "").replaceAll("/", "-")) || 0;
+      const incomingIsNewer = incomingTime >= currentTime;
+      const merged = incomingIsNewer ? { ...current, ...row } : { ...row, ...current };
+      merged.days = incomingIsNewer
+        ? { ...(current.days || {}), ...(row.days || {}) }
+        : { ...(row.days || {}), ...(current.days || {}) };
+      merged.cacheSavedAtText = incomingIsNewer ? (payload.savedAtText || current.cacheSavedAtText || "") : current.cacheSavedAtText;
+      index.set(key, attachPlainPhone(merged));
+    }
+  }
+  return index;
+}
+
 function cachedFocusCurrentUser(businessId, userId) {
   const key = JSON.stringify({ type: "focus-current", businessId: String(businessId), userId: String(userId), date: dayKey() });
   const payload = userDetailCache.get(key);
@@ -2244,8 +2272,8 @@ async function focusBusinessCatalog() {
   return [...byId.values()];
 }
 
-function focusBusinessRow(item, business, dates, previousDates, snapshots) {
-    const cached = cachedUserForBusiness(business.businessId, item.userId) || {};
+function focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex) {
+    const cached = cacheIndex.get(`${business.businessId}:${item.userId}`) || {};
     const current = cachedFocusCurrentUser(business.businessId, item.userId);
     const days = Object.fromEntries(dates.map(date => [date, number(cached.days?.[date])]));
     if (dates.includes(dayKey())) {
@@ -2271,7 +2299,7 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots) {
     const yesterdaySameTime = yesterdayMatch?.snapshot?.businessUsers?.[businessId]?.[userId]?.orders;
     const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
     const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
-    const ratio = yesterdaySameTime ? diff / number(yesterdaySameTime) * 100 : null;
+    const ratio = yesterdaySameTime === undefined ? null : (number(yesterdaySameTime) ? diff / number(yesterdaySameTime) * 100 : (todayOrders ? 100 : 0));
     const row = {
       ...item,
       platform: business.platform,
@@ -2313,6 +2341,7 @@ async function buildFocusUsers(query = {}) {
   const previousDates = dayList(range.comparisonStartDate, range.comparisonEndDate);
   const snapshots = await readSnapshots();
   const catalog = await focusBusinessCatalog();
+  const cacheIndex = focusUserCacheIndex(saved.items.map(item => item.userId));
   const businessRows = [];
   for (const item of saved.items) {
     const hintMap = new Map(catalog.map(row => [row.businessId, row]));
@@ -2321,7 +2350,7 @@ async function buildFocusUsers(query = {}) {
       if (businessId && !hintMap.has(businessId)) hintMap.set(businessId, { ...hint, businessId, businessName: hint.businessName || "未命名业务" });
     });
     for (const business of hintMap.values()) {
-      const row = focusBusinessRow(item, business, dates, previousDates, snapshots);
+      const row = focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex);
       if (row) businessRows.push(row);
     }
   }
@@ -2355,7 +2384,7 @@ async function buildFocusUsers(query = {}) {
       periodImpact: Math.abs(periodTotal - previousPeriodTotal),
       todayOrders,
       yesterdaySameTime,
-      ratio: yesterdaySameTime ? diff / yesterdaySameTime * 100 : null,
+      ratio: yesterdaySameTime === null ? null : (yesterdaySameTime ? diff / yesterdaySameTime * 100 : (todayOrders ? 100 : 0)),
       impact: diff === null ? null : Math.abs(diff),
       userDataTime: rows.map(row => row.userDataTime).filter(Boolean).sort().at(-1) || "-"
     };
