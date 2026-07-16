@@ -700,7 +700,7 @@
 
     function isFastUserBusiness(row = state.detailRow) {
       const ids = new Set((state.config?.fastUserBusinessIds || []).map(String));
-      return ids.has(String(row?.businessId || "")) || ids.has(String(row?.platformBusinessId || ""));
+      return ids.has(String(row?.platformBusinessId || row?.businessId || ""));
     }
 
     function detailFrequencyText() {

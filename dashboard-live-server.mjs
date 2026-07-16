@@ -1273,7 +1273,7 @@ async function saveUserRefreshState() {
 
 async function warmTopBusinessUsers(businesses, dateRange, config) {
   const enabled = new Set((config.fastUserBusinessIds || []).map(String));
-  const rows = (businesses || []).filter(row => enabled.has(String(row.businessId)) || enabled.has(String(row.platformBusinessId)));
+  const rows = (businesses || []).filter(row => enabled.has(String(row.platformBusinessId || row.businessId || "")));
   if (!rows.length) return { businesses: 0, users: 0, newTop100: 0 };
   let users = 0;
   let newTop100 = 0;
