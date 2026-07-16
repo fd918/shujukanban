@@ -424,7 +424,7 @@
 
   <main class="content">
     <button class="btn mobile-filter-toggle" id="filterToggle">展开筛选和提示</button>
-    <section class="filters">
+    <section class="filters" id="businessFilters">
       <select class="field" id="platformSelect"><option value="all">全部平台</option></select>
       <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
     </section>
@@ -433,7 +433,7 @@
       <strong>数据状态：</strong><span id="sourceText">等待接口返回。</span><span class="muted">｜业务指标与列表：每 10 分钟更新</span>
     </section>
 
-    <section class="kpis">
+    <section class="kpis" id="businessKpis">
       <article class="kpi"><label>全部业务</label><strong id="kpiTotalBusiness">0</strong><span>每 10 分钟更新</span></article>
       <article class="kpi"><label>全部订单数</label><strong id="kpiTotalOrders">0</strong><span>今日数据｜每 10 分钟更新</span></article>
       <article class="kpi"><label>全部GMV</label><strong id="kpiTotalGmv">0</strong><span>今日数据｜每 10 分钟更新</span></article>
@@ -464,7 +464,7 @@
           <h2 id="listTitle">业务列表</h2>
           <small id="listSubtitle">默认展示全部业务，可在列表内筛选异常类型和排序</small>
         </div>
-        <div class="toolbar">
+        <div class="toolbar" id="listToolbar">
           <div class="segmented" id="viewTabs">
             <button class="active" data-view="list">业务列表</button>
             <button data-view="daily">每日业务数据</button>
@@ -1832,6 +1832,13 @@
     }
 
     function render() {
+      const focusOnly = state.view === "focus";
+      $("#businessFilters").classList.toggle("hidden", focusOnly);
+      $("#businessKpis").classList.toggle("hidden", focusOnly);
+      $("#trendPanel").classList.toggle("hidden", focusOnly);
+      $("#listToolbar").classList.toggle("hidden", focusOnly);
+      $("#overviewToggle").classList.toggle("hidden", focusOnly);
+      $("#filterToggle").classList.toggle("hidden", focusOnly);
       renderPlatforms();
       renderKpis();
       renderSource();

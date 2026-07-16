@@ -1329,8 +1329,14 @@ async function refreshFocusUserToday(item) {
   }, 20000);
   if (!result.ok) return false;
   const matched = asList(result.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
-  if (!matched) return false;
-  const row = normalizeUser(matched, today);
+  const row = matched ? normalizeUser(matched, today) : {
+    id: String(item.userId),
+    name: item.name || `用户 ${item.userId}`,
+    phone: item.phone || "-",
+    version: item.version || "-",
+    todayOrders: 0,
+    days: { [today]: 0 }
+  };
   row.phone = plainPhoneValue(row.id, row.phone);
   const cacheKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: today });
   userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
@@ -2278,7 +2284,7 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
     const days = Object.fromEntries(dates.map(date => [date, number(cached.days?.[date])]));
     if (dates.includes(dayKey())) {
       const hasDailyToday = cached.days && Object.prototype.hasOwnProperty.call(cached.days, dayKey());
-      days[dayKey()] = current ? number(current.todayOrders) : (hasDailyToday ? number(cached.days[dayKey()]) : number(cached.todayOrders ?? days[dayKey()]));
+      days[dayKey()] = current ? number(current.todayOrders) : (hasDailyToday ? number(cached.days[dayKey()]) : 0);
     }
     const total = Object.values(days).reduce((sum, value) => sum + number(value), 0);
     const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(cached.days?.[date]), 0);
@@ -2297,7 +2303,7 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
     );
     const yesterdayReference = snapshotReference(yesterdayMatch, yesterdayMatch?.quality);
     const yesterdaySameTime = yesterdayMatch?.snapshot?.businessUsers?.[businessId]?.[userId]?.orders;
-    const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
+    const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()]);
     const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
     const ratio = yesterdaySameTime === undefined ? null : (number(yesterdaySameTime) ? diff / number(yesterdaySameTime) * 100 : (todayOrders ? 100 : 0));
     const row = {
