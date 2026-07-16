@@ -354,6 +354,10 @@
     .focus-custom-range { display:flex; align-items:center; gap:6px; }
     .focus-custom-range .field { flex:0 0 142px !important; min-width:142px !important; }
     .focus-summary { padding:10px 14px; border-bottom:1px solid var(--line); color:var(--muted); }
+    .focus-metrics { display:grid; grid-template-columns:repeat(4,minmax(130px,1fr)); gap:8px; padding:10px 14px; border-bottom:1px solid var(--line); background:#fbfcfe; }
+    .focus-metric { padding:10px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+    .focus-metric label { display:block; color:var(--muted); font-size:12px; }
+    .focus-metric strong { display:block; margin-top:4px; font-size:19px; }
     .focus-profile { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 14px; border-bottom:1px solid var(--line); background:#fbfcfe; }
     .focus-profile-main { min-width:0; }
     .focus-profile-main strong { display:flex; align-items:center; gap:4px; font-size:15px; }
@@ -403,6 +407,7 @@
       #focusView > .toolbar .field, #focusView > .toolbar #focusSearch { flex:1 1 100%; }
       .focus-profile { align-items:flex-start; flex-direction:column; }
       .focus-profile-stats { width:100%; overflow-x:auto; }
+      .focus-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .focus-custom-range { width:100%; flex-wrap:wrap; }
     }
   </style>
@@ -534,6 +539,7 @@
           <div class="focus-shell" id="focusShell">
             <div class="focus-main">
               <div class="focus-summary" id="focusSummary">正在读取重点用户...</div>
+              <div class="focus-metrics" id="focusMetrics"></div>
               <div class="focus-profile hidden" id="focusProfile"></div>
               <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody class="summary-body" id="focusSummaryBody"></tbody><tbody id="focusBody"></tbody></table></div>
             </div>
@@ -1545,6 +1551,7 @@
       const periodRatio = previousSum ? periodDiff / previousSum * 100 : null;
       const yesterdayComparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
       const yesterdaySum = yesterdayComparable.reduce((sum, row) => sum + Number(row.yesterdaySameTime || 0), 0);
+      const todayDiff = yesterdayComparable.length ? todaySum - yesterdaySum : null;
       const comparisonSlots = [...new Set(yesterdayComparable.map(row => row.comparisonSlotLabel).filter(Boolean))];
       const dailySums = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + Number(row.days?.[date] || 0), 0)]));
       const selectedBusinessName = businessMap.get(String(state.focusGroup))?.name || "当前业务";
@@ -1552,6 +1559,11 @@
       $("#focusSummary").textContent = state.focusMode === "business"
         ? `${selectedBusinessName}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜今日数据每10分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}｜昨日基准：${comparisonSlots.length === 1 ? comparisonSlots[0] : comparisonSlots.length ? "按各用户实际时刻匹配" : "-"}`
         : `${userDisplayName(selectedUser || {})}｜当前显示 ${rows.length} 个有单业务｜今日订单合计 ${fmt(todaySum)}｜各业务使用自己的用户数据时间匹配昨日同时刻｜数据时间：${data.latestDataTime || "-"}`;
+      const focusMetrics = $("#focusMetrics");
+      focusMetrics.classList.toggle("hidden", state.focusMode !== "business");
+      if (state.focusMode === "business") {
+        focusMetrics.innerHTML = `<div class="focus-metric"><label>当前业务重点用户</label><strong>${fmt(rows.length)}</strong></div><div class="focus-metric"><label>今日订单合计</label><strong>${fmt(todaySum)}</strong></div><div class="focus-metric"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</strong></div><div class="focus-metric"><label>净变化</label><strong class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${todayDiff === null ? "-" : `${todayDiff > 0 ? "+" : ""}${fmt(todayDiff)}`}</strong></div>`;
+      }
       const profile = $("#focusProfile");
       profile.classList.toggle("hidden", state.focusMode !== "user" || !selectedUser);
       if (state.focusMode === "user" && selectedUser) {
@@ -1584,7 +1596,6 @@
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
         </tr>`).join("") : `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">${state.focusMode === "business" ? "当前业务暂无有单重点用户。" : "该用户当前没有匹配到有单业务。"}</td></tr>`);
-      const todayDiff = yesterdayComparable.length ? todaySum - yesterdaySum : null;
       $("#focusSummaryBody").innerHTML = rows.length ? `<tr><td colspan="${baseColumns}">当前列表合计（${fmt(rows.length)}项）</td><td class="focus-order-col">${fmt(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${yesterdaySum ? pctValue(todayDiff / yesterdaySum * 100) : "-"}</td><td>${todayDiff === null ? "-" : fmt(Math.abs(todayDiff))}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
     }
 
