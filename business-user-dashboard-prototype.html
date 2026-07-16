@@ -1621,7 +1621,7 @@
       renderBusinessDailyModal();
     }
 
-    function renderFocusMobileCards(rows, dates, data, compareFocusRow, focusDataTimeLabel) {
+    function renderFocusMobileCards(rows, dates, data, compareFocusRow, focusDataTimeLabel, yesterdayMajority) {
       const container = $("#focusMobileCards");
       if (state.focusLoading && !rows.length) {
         container.innerHTML = `<div class="mobile-data-card"><div class="mobile-card-note muted">正在更新重点用户，原有数据会在加载完成后替换...</div></div>`;
@@ -1643,7 +1643,7 @@
           ${state.focusMode === "business" ? `<div class="mobile-card-note"><span class="muted">观察备注</span>${escapeHtml(note || "暂无备注")}${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${escapeHtml(row.newTop100At)}</span>` : ""}</div>` : ""}
           <div class="mobile-card-stats">
             <div class="mobile-card-stat"><label>今日订单</label><strong>${fmt(row.todayOrders)}</strong>${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</div>
-            <div class="mobile-card-stat"><label>昨日同时刻</label><strong>${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row)}</strong></div>
+            <div class="mobile-card-stat"><label>昨日同时刻</label><strong>${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, fmt, { dominantMinute: yesterdayMajority?.minute, compactMajority: true })}</strong></div>
             <div class="mobile-card-stat"><label>变化比例</label><strong class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</strong></div>
             <div class="mobile-card-stat"><label>影响订单</label><strong>${fmtValue(row.impact)}</strong></div>
             <div class="mobile-card-stat"><label>${escapeHtml(data.range?.label || "本期")}合计</label><strong>${fmt(row.periodTotal)}</strong></div>
@@ -1719,6 +1719,10 @@
       const yesterdayComparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
       const yesterdaySum = yesterdayComparable.reduce((sum, row) => sum + Number(row.yesterdaySameTime || 0), 0);
       const todayDiff = yesterdayComparable.length ? todaySum - yesterdaySum : null;
+      const currentMatched = rows.map(row => timeMinuteFromText(row.userDataTime)).filter(isFiniteMinute);
+      const currentMajority = majorityMinute(currentMatched);
+      const yesterdayMatched = rows.map(row => row.sameTime?.yesterdayReference || row.sameTime || row).filter(reference => isFiniteMinute(reference.comparisonMinute));
+      const yesterdayMajority = majorityMinute(yesterdayMatched.map(reference => reference.comparisonMinute));
       const dailySums = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + Number(row.days?.[date] || 0), 0)]));
       const selectedUser = usersById.get(String(state.focusSelectedUserId));
       const profile = $("#focusProfile");
@@ -1727,7 +1731,7 @@
         profile.innerHTML = `<div class="focus-profile-main"><strong>${escapeHtml(userDisplayName(selectedUser))}${aliasEditButton(selectedUser)}<button class="user-pin-icon ${selectedUser.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" data-pinned="${selectedUser.pinned ? "1" : "0"}" title="${selectedUser.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="从全部业务移除">−</button></strong><span>${copyUserIdButton(selectedUser)}｜${escapeHtml(selectedUser.phone || "-")}｜${escapeHtml(selectedUser.version || "-")}</span><div class="focus-profile-note"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="编辑观察备注">✎</button><span>${escapeHtml(focusNoteText(selectedUser) || "添加观察备注")}</span></div></div><div class="focus-profile-stats"><div class="focus-profile-stat"><label>有单业务</label><strong>${fmt(rows.length)}</strong></div><div class="focus-profile-stat"><label>今日总订单</label><strong>${fmt(todaySum)}</strong></div><div class="focus-profile-stat"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</strong></div><div class="focus-profile-stat"><label>净变化</label><strong class="${todaySum - yesterdaySum < 0 ? "down" : todaySum - yesterdaySum > 0 ? "up" : ""}">${yesterdayComparable.length ? `${todaySum - yesterdaySum > 0 ? "+" : ""}${fmt(todaySum - yesterdaySum)}` : "-"}</strong></div></div>`;
       }
       const firstColumns = state.focusMode === "business" ? `<th>序号</th><th class="focus-user-col">用户</th><th class="focus-note-col">观察备注</th>` : `<th>序号</th><th class="focus-business-col">业务</th>`;
-      $("#focusHead").innerHTML = `<tr>${firstColumns}<th class="focus-order-col">今日订单</th><th class="focus-order-col">昨日同时刻</th><th>变化比例</th><th>影响订单</th><th>状态</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
+      $("#focusHead").innerHTML = `<tr>${firstColumns}<th class="focus-order-col">今日订单${majorityHeader("多数数据", currentMajority, currentMatched.length)}</th><th class="focus-order-col">昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>变化比例</th><th>影响订单</th><th>状态</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
       const compareFocusRow = row => {
         if (row.yesterdaySameTime === null || row.yesterdaySameTime === undefined) return { level: "missing", label: "缺少基准" };
         const ratio = Number(row.ratio || 0);
@@ -1735,21 +1739,18 @@
         return ratio > 0 ? { level: "up", label: "增长" } : { level: "critical", label: "流失风险" };
       };
       const focusDataTimeLabel = row => {
-        const value = String(row.userDataTime || "");
-        const match = value.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}:\d{2})/);
-        if (!match) return value && value !== "-" ? value : "";
-        const date = `${pad(Number(match[2]))}/${pad(Number(match[3]))}`;
-        const currentDay = data.dates?.at(-1)?.slice(5).replace("-", "/");
-        return `${date === currentDay ? "" : `${date} `}${match[4]}`;
+        const minute = timeMinuteFromText(row.userDataTime);
+        if (!isFiniteMinute(minute) || !isFiniteMinute(currentMajority.minute) || minute === currentMajority.minute) return "";
+        return `${minuteText(minute)} · 较多数${minute < currentMajority.minute ? "早" : "晚"} ${Math.abs(minute - currentMajority.minute)} 分钟`;
       };
-      renderFocusMobileCards(rows, dates, data, compareFocusRow, focusDataTimeLabel);
+      renderFocusMobileCards(rows, dates, data, compareFocusRow, focusDataTimeLabel, yesterdayMajority);
       const baseColumns = state.focusMode === "business" ? 3 : 2;
       $("#focusBody").innerHTML = state.focusLoading && !rows.length
         ? `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">正在更新重点用户，原有数据会在加载完成后替换...</td></tr>`
         : (rows.length ? rows.map((row, index) => `<tr>
           <td>${index + 1}</td>
           ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从全部业务移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
-          <td class="focus-order-col">${fmt(row.todayOrders)}${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
+          <td class="focus-order-col">${fmt(row.todayOrders)}${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           <td>${tag(compareFocusRow(row).level, compareFocusRow(row).label)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
