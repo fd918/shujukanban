@@ -164,6 +164,8 @@
     .muted { color: var(--muted); font-size: 12px; }
     .down { color: var(--red); }
     .up { color: var(--green); }
+    .comparison-ref { display:block; margin-top:3px; color:#a15c00; font-size:11px; font-weight:650; line-height:1.25; white-space:nowrap; }
+    .comparison-ref.legacy { color:#8a5b12; }
 
     .tag { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; border-radius: 999px; padding: 0 9px; font-size: 12px; border: 1px solid transparent; }
     .tag.red { color: var(--red); background: #fff1f2; border-color: #fecdd3; }
@@ -552,7 +554,7 @@
         <strong>异常规则：</strong>业务和今日用户优先按同时刻基准判断，缺少同时刻基准则不纳入异常；波动在 10% 以内按正常处理。超过正常波动后，再按设置中心的比例和订单数阈值判断轻微、重点、严重或上升异常。
       </section>
       <section class="source warn">
-        <strong>昨日同时刻：</strong>业务列表、流失风险、增长用户、全部用户和重点用户只使用昨日完全相同分钟槽的历史快照，不允许用前后时间槽替代；订单与佣金使用同一份快照。用户列表按该批用户数据自己的更新时间匹配昨日分钟槽，快照必须同时包含该业务和该用户才可作为基准。升级前的用户快照无法证明每位用户都在对应分钟更新，因此不再作为基准；严格用户快照积累满一天后，同槽用户会逐步恢复对比。没有精确基准就显示“-”，不会用整点小时数据或昨日全天代替。
+        <strong>昨日同时刻：</strong>业务列表、流失风险、增长用户、全部用户和重点用户优先使用昨日完全相同分钟槽的历史快照。完全同分钟缺失时，允许使用前后 20 分钟内最近的一条，并在数值下明确显示实际参考时刻和相差分钟数，例如“09:50 参考 · 相差 10 分钟”；超过 20 分钟仍没有数据才显示“-”。用户列表按每位用户当前数据自己的更新时间匹配，且历史快照必须同时包含该业务和该用户。升级前无法证明逐用户更新时间的旧快照只作为“历史参考”明确标注，不会伪装成严格同时刻；订单与佣金使用同一份快照，不使用昨日全天代替。
       </section>
       <section class="source warn">
         <strong>口径差异：</strong>业务汇总接口、业务用户明细接口、推广用户数不是同一个口径。用户弹窗会显示“用户明细求和”和“求和差异”，用于判断是否和外层业务订单一致。
@@ -572,7 +574,7 @@
         <strong>用户数据时间：</strong>只显示当前业务用户缓存自身的保存时间，不再使用业务列表时间代替。公网和本地都选择结束日期最新、覆盖天数最长的同一份用户历史缓存；没有用户缓存时显示“-”。
       </section>
       <section class="source">
-        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。添加时立即保存，不再等待公网用户快照；姓名、手机号和订单随后按用户ID精确补全。同一台运行本地服务的电脑从公网添加时，会同时写入本地重点用户配置，本地页面最多约5秒自动发现变化。手机或其他电脑添加的数据仍先保存在该浏览器，因为静态公网没有可写数据库。观察备注支持在弹窗中按行保存多条；本地备注会同步到所有公网设备，公网直接修改只保存在当前浏览器。今日订单与用户列表共用昨日同时刻快照，缺少对应用户快照时显示“-”。
+        <strong>重点用户：</strong>按平台、业务和用户ID添加，默认展示近7天。添加时立即保存，不再等待公网用户快照；姓名、手机号和订单随后按用户ID精确补全。同一台运行本地服务的电脑从公网添加时，会同时写入本地重点用户配置，本地页面最多约5秒自动发现变化。手机或其他电脑添加的数据仍先保存在该浏览器，因为静态公网没有可写数据库。观察备注支持在弹窗中按行保存多条；本地备注会同步到所有公网设备，公网直接修改只保存在当前浏览器。今日订单与用户列表共用同时刻选择规则：完全同分钟优先，缺失时采用前后20分钟最近值并明确标注。
         <strong>用户备注名：</strong>本地用户名称旁可点击“修改”，备注按用户ID统一应用到用户列表、历史订单和重点用户，并同步进入公网加密快照；留空保存会删除备注并恢复接口原名。
       </section>
     </div>
@@ -673,6 +675,24 @@
     const fmtValue = n => n === null || n === undefined ? "-" : fmt(n);
     const pctValue = n => n === null || n === undefined ? "-" : pct(n);
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const minuteText = minute => Number.isFinite(Number(minute)) ? `${pad(Math.floor(Number(minute) / 60))}:${pad(Number(minute) % 60)}` : "";
+    function comparisonReferenceCell(value, reference = {}, formatter = fmt) {
+      if (value === null || value === undefined) return "-";
+      const formatted = formatter(value);
+      const quality = reference.comparisonQuality || "";
+      if (!quality || quality === "exact" || quality === "missing") return formatted;
+      const slotMatch = String(reference.comparisonSlotLabel || "").match(/(\d{1,2}:\d{2})(?::\d{2})?$/);
+      const actualTime = slotMatch?.[1] || minuteText(reference.comparisonMinute) || "邻近时刻";
+      const offset = Math.abs(Number(reference.comparisonOffsetMinutes || 0));
+      const kind = quality === "legacy" ? "历史参考" : "参考";
+      const detail = offset ? ` · 相差 ${offset} 分钟` : "";
+      return `${formatted}<small class="comparison-ref ${quality === "legacy" ? "legacy" : ""}" title="目标时刻 ${minuteText(reference.comparisonTargetMinute) || "-"}，实际使用 ${actualTime}">${actualTime} ${kind}${detail}</small>`;
+    }
+    function sevenDayReferenceCell(value, same = {}, formatter = fmt) {
+      if (value === null || value === undefined) return "-";
+      const formatted = formatter(value);
+      return same.sevenDayReferenceQuality === "nearby" ? `${formatted}<small class="comparison-ref">含邻近时刻参考</small>` : formatted;
+    }
     const userIdOf = user => String(user?.id || user?.userId || "");
     const userDisplayName = user => Object.prototype.hasOwnProperty.call(state.userAliases, userIdOf(user)) ? (state.userAliases[userIdOf(user)] || user?.name || "-") : (user?.name || "-");
     const userSearchText = user => `${userDisplayName(user)}${user?.name || ""}${userIdOf(user)}`.toLowerCase();
@@ -863,7 +883,8 @@
         const baseline = latest?.sameTime?.yesterday?.orders ?? latest?.yesterdaySameTime ?? item.yesterdaySameTime;
         const yesterdaySameTime = baseline === null || baseline === undefined ? null : Number(baseline);
         const todayDiff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
-        return { ...source, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), pendingProfile: !latest?.name && Boolean(item.pendingProfile), browserLocal: true };
+        const sameTime = latest?.sameTime || source.sameTime || {};
+        return { ...source, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, sameTime, comparisonSlotLabel: sameTime.comparisonSlotLabel || latest?.comparisonSlotLabel || item.comparisonSlotLabel || "", comparisonMinute: sameTime.comparisonMinute ?? latest?.comparisonMinute ?? item.comparisonMinute ?? null, comparisonTargetMinute: sameTime.comparisonTargetMinute ?? latest?.comparisonTargetMinute ?? item.comparisonTargetMinute ?? null, comparisonOffsetMinutes: sameTime.comparisonOffsetMinutes ?? latest?.comparisonOffsetMinutes ?? item.comparisonOffsetMinutes ?? null, comparisonExact: sameTime.comparisonExact ?? latest?.comparisonExact ?? item.comparisonExact ?? false, comparisonQuality: sameTime.comparisonQuality || latest?.comparisonQuality || item.comparisonQuality || "", ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), pendingProfile: !latest?.name && Boolean(item.pendingProfile), browserLocal: true };
       });
       const hidden = readPublicFocusHidden();
       const notes = readPublicFocusNotes();
@@ -906,7 +927,7 @@
       const existingPublished = Object.values(state.publicFocusUsers).some(data => (data?.rows || []).some(row => `${row.businessId}:${row.userId}` === key));
       if (existingPublished) return false;
       const items = readPublicFocusItems();
-      const saved = { platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || ""), userId: String(userId), name: user.name || `用户 ${userId}`, phone: user.phone || "-", version: user.version || "-", pendingProfile: !user.name, note: "", days: user.days || {}, todayOrders: user.todayOrders || 0, yesterdaySameTime: user.sameTime?.yesterday?.orders ?? null, addedAt: new Date().toISOString() };
+      const saved = { platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || ""), userId: String(userId), name: user.name || `用户 ${userId}`, phone: user.phone || "-", version: user.version || "-", pendingProfile: !user.name, note: "", days: user.days || {}, todayOrders: user.todayOrders || 0, yesterdaySameTime: user.sameTime?.yesterday?.orders ?? null, sameTime: user.sameTime || {}, comparisonSlotLabel: user.sameTime?.comparisonSlotLabel || "", comparisonMinute: user.sameTime?.comparisonMinute ?? null, comparisonTargetMinute: user.sameTime?.comparisonTargetMinute ?? null, comparisonOffsetMinutes: user.sameTime?.comparisonOffsetMinutes ?? null, comparisonExact: user.sameTime?.comparisonExact ?? false, comparisonQuality: user.sameTime?.comparisonQuality || "", addedAt: new Date().toISOString() };
       const index = items.findIndex(item => `${item.businessId}:${item.userId}` === key);
       if (index >= 0) items[index] = saved; else items.push(saved);
       writePublicFocusItems(items);
@@ -1312,7 +1333,7 @@
       const rows = filteredBusinesses();
       $("#currentHeader").textContent = currentMetricLabel();
       $("#baselineHeader").textContent = baselineLabel();
-      $("#baselineHeader").title = "只使用昨日完全相同分钟槽快照；缺失时显示-";
+      $("#baselineHeader").title = "优先使用昨日完全相同分钟槽；缺失时采用前后20分钟最近值并标注实际参考时间";
       $$(".sort-btn").forEach(btn => {
         const active = btn.dataset.sort === state.sort;
         btn.classList.toggle("active", active);
@@ -1332,9 +1353,9 @@
           <td>${row.platform}</td>
           <td><button class="business-history-link" data-business-daily-index="${index}" title="查看该业务每日数据">${row.name}</button></td>
           <td>${state.metric === "commission" ? money(row.cmp.today) : fmt(row.cmp.today)}</td>
-          <td>${same.yesterday ? fmt(state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : "-"}</td>
-          <td>${same.lastWeek ? fmt(state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : "-"}</td>
-          <td>${same.sevenDayAvg ? fmt(state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : "-"}</td>
+          <td>${comparisonReferenceCell(same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null, same.yesterdayReference || same, state.metric === "commission" ? money : fmt)}</td>
+          <td>${comparisonReferenceCell(same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null, same.lastWeekReference || {}, state.metric === "commission" ? money : fmt)}</td>
+          <td>${sevenDayReferenceCell(same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null, same, state.metric === "commission" ? money : fmt)}</td>
           <td class="${row.cmp.diff < 0 ? "down" : row.cmp.diff > 0 ? "up" : ""}">${pctValue(row.cmp.ratio)}</td>
           <td>${fmtValue(row.cmp.impact)}</td>
           <td>${tag(row.cmp.level, row.cmp.label)}</td>
@@ -1475,7 +1496,7 @@
           ${showBusinessColumn ? `<td class="focus-business-col"><strong>${row.businessName}</strong></td>` : ""}
           <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}" aria-label="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
           <td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-business-id="${escapeHtml(row.businessId)}" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注" aria-label="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>
-          <td class="focus-order-col">${fmt(row.todayOrders)}</td><td class="focus-order-col">${fmtValue(row.yesterdaySameTime)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
+          <td class="focus-order-col">${fmt(row.todayOrders)}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
         </tr>`).join("") : `<tr><td colspan="${dates.length + (showBusinessColumn ? 13 : 12)}" class="muted">还没有重点用户，点击“添加关注用户”开始关注。</td></tr>`);
@@ -2527,7 +2548,7 @@
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
-              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${fmtValue(user.cmp.base)}</td><td>${lastWeek !== null ? fmt(lastWeek) : "-"}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
+              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same)}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {})}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
             }).join("") : `<tr><td colspan="${dates.length + 8}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>
