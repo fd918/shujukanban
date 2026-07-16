@@ -372,8 +372,9 @@
     .focus-profile-stat strong { display:block; margin-top:3px; font-size:18px; }
     .focus-user { min-width:150px; }
     .focus-user strong, .focus-user span { display:block; }
-    .focus-table th, .focus-table td { white-space:nowrap; }
+    .focus-table th, .focus-table td { padding-top:8px; padding-bottom:8px; white-space:nowrap; }
     .focus-table .focus-user { white-space:normal; }
+    .focus-table .focus-user span { margin-top:1px; line-height:1.25; }
     .focus-table th:nth-child(1), .focus-table td:nth-child(1) { position:sticky; left:0; z-index:3; background:#fff; width:48px; }
     .focus-table .focus-business-col { position:sticky; left:48px; z-index:3; background:#fff; min-width:190px; }
     .focus-table .focus-user-col { position:sticky; left:48px; z-index:3; background:#fff; min-width:190px; box-shadow:5px 0 8px rgba(15,23,42,.04); }
@@ -590,8 +591,6 @@
           </div>
           <div class="focus-shell" id="focusShell">
             <div class="focus-main">
-              <div class="focus-summary" id="focusSummary">正在读取重点用户...</div>
-              <div class="focus-metrics" id="focusMetrics"></div>
               <div class="focus-profile hidden" id="focusProfile"></div>
               <div class="mobile-data-cards" id="focusMobileCards" aria-live="polite"></div>
               <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody class="summary-body" id="focusSummaryBody"></tbody><tbody id="focusBody"></tbody></table></div>
@@ -1720,18 +1719,8 @@
       const yesterdayComparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
       const yesterdaySum = yesterdayComparable.reduce((sum, row) => sum + Number(row.yesterdaySameTime || 0), 0);
       const todayDiff = yesterdayComparable.length ? todaySum - yesterdaySum : null;
-      const comparisonSlots = [...new Set(yesterdayComparable.map(row => row.comparisonSlotLabel).filter(Boolean))];
       const dailySums = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + Number(row.days?.[date] || 0), 0)]));
-      const selectedBusinessName = businessMap.get(String(state.focusGroup))?.name || "当前业务";
       const selectedUser = usersById.get(String(state.focusSelectedUserId));
-      $("#focusSummary").textContent = state.focusMode === "business"
-        ? `${selectedBusinessName}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜今日数据每10分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}｜昨日基准：${comparisonSlots.length === 1 ? comparisonSlots[0] : comparisonSlots.length ? "按各用户实际时刻匹配" : "-"}`
-        : `${userDisplayName(selectedUser || {})}｜当前显示 ${rows.length} 个有单业务｜今日订单合计 ${fmt(todaySum)}｜各业务使用自己的用户数据时间匹配昨日同时刻｜数据时间：${data.latestDataTime || "-"}`;
-      const focusMetrics = $("#focusMetrics");
-      focusMetrics.classList.toggle("hidden", state.focusMode !== "business");
-      if (state.focusMode === "business") {
-        focusMetrics.innerHTML = `<div class="focus-metric"><label>当前业务重点用户</label><strong>${fmt(rows.length)}</strong></div><div class="focus-metric"><label>今日订单合计</label><strong>${fmt(todaySum)}</strong></div><div class="focus-metric"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</strong></div><div class="focus-metric"><label>净变化</label><strong class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${todayDiff === null ? "-" : `${todayDiff > 0 ? "+" : ""}${fmt(todayDiff)}`}</strong></div>`;
-      }
       const profile = $("#focusProfile");
       profile.classList.toggle("hidden", state.focusMode !== "user" || !selectedUser);
       if (state.focusMode === "user" && selectedUser) {
