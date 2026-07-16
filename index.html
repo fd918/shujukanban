@@ -488,6 +488,7 @@
     const passwordInput = document.getElementById("passwordInput");
     const gateError = document.getElementById("gateError");
     let publicUnlocked = isLocalAccess;
+    let transientPublicPassword = "";
     let activeBoardKey = "activity";
     let loadingDelayTimer = null;
     let loadingHideTimer = null;
@@ -499,9 +500,8 @@
 
     function publicFrameUrl(url, { fresh = false } = {}) {
       if (isLocalAccess || url === "about:blank") return url;
-      if (!fresh) return url;
       const next = new URL(url, location.href);
-      next.searchParams.set("ts", String(Date.now()));
+      next.searchParams.set(fresh ? "ts" : "entry", String(Date.now()));
       return next.toString();
     }
 
@@ -570,11 +570,14 @@
 
     function applySidebarState(collapsed) {
       shell.classList.toggle("sidebar-collapsed", collapsed);
-      localStorage.setItem("dashboardSidebarCollapsed", collapsed ? "1" : "0");
+      try { localStorage.setItem("dashboardSidebarCollapsed", collapsed ? "1" : "0"); } catch {}
     }
 
     function base64ToBytes(value) {
-      return Uint8Array.from(atob(value), char => char.charCodeAt(0));
+      const binary = atob(value);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return bytes;
     }
 
     async function derivePublicKey(password, salt, iterations) {
@@ -583,6 +586,7 @@
     }
 
     function cachedPublicPassword() {
+      if (transientPublicPassword) return transientPublicPassword;
       try {
         const saved = JSON.parse(localStorage.getItem("businessDashboardPublicPassword") || "{}");
         if (saved.password && saved.expiresAt > Date.now()) return saved.password;
@@ -591,11 +595,21 @@
     }
 
     function savePublicPassword(password) {
-      localStorage.setItem("businessDashboardPublicPassword", JSON.stringify({
-        password,
-        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
-      }));
+      transientPublicPassword = password;
+      try {
+        localStorage.setItem("businessDashboardPublicPassword", JSON.stringify({
+          password,
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
+        }));
+      } catch {}
     }
+
+    function removePublicPassword() {
+      transientPublicPassword = "";
+      try { localStorage.removeItem("businessDashboardPublicPassword"); } catch {}
+    }
+
+    window.getDashboardPublicPassword = () => cachedPublicPassword();
 
     async function verifyPublicPassword(password) {
       let res = await fetch(`data/public-auth-check.enc.json?_=${Date.now()}`);
@@ -624,7 +638,7 @@
         setBoard(location.hash.replace("#", "") || "activity", false);
         return true;
       } catch (error) {
-        if (!error?.message?.startsWith("公网")) localStorage.removeItem("businessDashboardPublicPassword");
+        if (!error?.message?.startsWith("公网")) removePublicPassword();
         gateError.textContent = error?.message?.startsWith("公网") ? error.message : "密码错误或公网数据解密失败，请重新输入。";
         passwordInput.focus();
         passwordInput.select();
@@ -636,6 +650,7 @@
       if (isLocalAccess) return;
       const cached = cachedPublicPassword();
       if (cached) {
+        transientPublicPassword = cached;
         publicUnlocked = true;
         passwordGate.classList.remove("show");
         setBoard(location.hash.replace("#", "") || "activity", false);
@@ -684,7 +699,9 @@
       setBoard(location.hash.replace("#", ""), false);
     });
 
-    applySidebarState(localStorage.getItem("dashboardSidebarCollapsed") === "1");
+    let sidebarCollapsed = false;
+    try { sidebarCollapsed = localStorage.getItem("dashboardSidebarCollapsed") === "1"; } catch {}
+    applySidebarState(sidebarCollapsed);
     setBoard(location.hash.replace("#", "") || "activity", false);
     initPublicGate();
   </script>
