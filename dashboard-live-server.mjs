@@ -2837,7 +2837,11 @@ async function serveFile(req, res) {
   const path = join(ROOT, file);
   try {
     const content = await readFile(path);
-    res.writeHead(200, { "content-type": mime[extname(path)] || "application/octet-stream" });
+    const extension = extname(path);
+    res.writeHead(200, {
+      "content-type": mime[extension] || "application/octet-stream",
+      ...(extension === ".html" ? { "cache-control": "no-cache, no-store, must-revalidate" } : {})
+    });
     res.end(content);
   } catch {
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
