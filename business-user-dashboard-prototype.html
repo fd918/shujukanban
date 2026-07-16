@@ -409,7 +409,7 @@
       #focusView > .toolbar .field, #focusView > .toolbar #focusSearch { flex:1 1 100%; }
       .focus-profile { align-items:flex-start; flex-direction:column; }
       .focus-profile-stats { width:100%; overflow-x:auto; }
-      .focus-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .focus-metrics { grid-template-columns:repeat(4,minmax(0,1fr)); }
       .focus-custom-range { width:100%; flex-wrap:wrap; }
       .panel > .table-wrap { max-height:none; min-height:0; overflow:visible; }
       #businessTable { display:none !important; }
@@ -442,10 +442,11 @@
       .mobile-card-actions { width:100%; }
       .mobile-card-action-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; padding-bottom:2px; }
       .mobile-card-action-list .btn { min-height:44px; padding:0 8px; }
-      .focus-summary { padding:10px 12px; line-height:1.55; }
+      #focusSummary { display:none; }
       .focus-metrics { padding:10px; gap:7px; }
-      .focus-metric { padding:9px 10px; }
-      .focus-metric strong { font-size:18px; }
+      .focus-metric { padding:8px 7px; }
+      .focus-metric label { min-height:28px; font-size:10px; line-height:1.35; }
+      .focus-metric strong { font-size:16px; }
     }
   </style>
 </head>
@@ -733,7 +734,8 @@
     const fmtValue = n => n === null || n === undefined ? "-" : fmt(n);
     const pctValue = n => n === null || n === undefined ? "-" : pct(n);
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-    const minuteText = minute => Number.isFinite(Number(minute)) ? `${pad(Math.floor(Number(minute) / 60))}:${pad(Number(minute) % 60)}` : "";
+    const isFiniteMinute = minute => minute !== null && minute !== undefined && minute !== "" && Number.isFinite(Number(minute));
+    const minuteText = minute => isFiniteMinute(minute) ? `${pad(Math.floor(Number(minute) / 60))}:${pad(Number(minute) % 60)}` : "";
     function timeMinuteFromText(value) {
       const match = String(value || "").match(/\s(\d{1,2}):(\d{2})(?::\d{2})?$/);
       return match ? Number(match[1]) * 60 + Number(match[2]) : null;
@@ -741,15 +743,15 @@
     function majorityMinute(values = []) {
       const counts = new Map();
       values.forEach(value => {
+        if (!isFiniteMinute(value)) return;
         const minute = Number(value);
-        if (!Number.isFinite(minute)) return;
         counts.set(minute, (counts.get(minute) || 0) + 1);
       });
       const winner = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
       return winner ? { minute: winner[0], count: winner[1] } : { minute: null, count: 0 };
     }
     function majorityHeader(label, majority, matchedCount) {
-      if (!Number.isFinite(Number(majority?.minute))) return "";
+      if (!isFiniteMinute(majority?.minute)) return "";
       const countText = matchedCount ? `${majority.count}/${matchedCount} 人` : `${majority.count} 人`;
       return `<small class="comparison-majority" title="当前列表中 ${countText} 使用该时刻">${label} ${minuteText(majority.minute)}</small>`;
     }
@@ -758,9 +760,9 @@
       const formatted = formatter(value);
       const quality = reference.comparisonQuality || "";
       const slotMatch = String(reference.comparisonSlotLabel || "").match(/(\d{1,2}:\d{2})(?::\d{2})?$/);
-      const actualMinute = Number.isFinite(Number(reference.comparisonMinute)) ? Number(reference.comparisonMinute) : null;
+      const actualMinute = isFiniteMinute(reference.comparisonMinute) ? Number(reference.comparisonMinute) : null;
       const actualTime = slotMatch?.[1] || minuteText(actualMinute) || "邻近时刻";
-      const dominantMinute = Number.isFinite(Number(options.dominantMinute)) ? Number(options.dominantMinute) : null;
+      const dominantMinute = isFiniteMinute(options.dominantMinute) ? Number(options.dominantMinute) : null;
       const differsFromMajority = dominantMinute !== null && actualMinute !== null && actualMinute !== dominantMinute;
       if (options.compactMajority && dominantMinute !== null && !differsFromMajority) return formatted;
       if (!quality || quality === "missing" || (quality === "exact" && !differsFromMajority)) return formatted;
@@ -2781,9 +2783,9 @@
       const impactTotal = users.reduce((sum, user) => sum + Number(user.cmp?.impact || 0), 0);
       const dailySums = Object.fromEntries(dates.map(date => [date, users.reduce((sum, user) => sum + Number(user.days?.[date] || 0), 0)]));
       const currentMajority = majorityMinute(users.map(user => timeMinuteFromText(user.currentDataTime || user.userDataTime)));
-      const yesterdayMatched = users.map(user => user.sameTime?.yesterdayReference || user.sameTime || {}).filter(reference => Number.isFinite(Number(reference.comparisonMinute)));
+      const yesterdayMatched = users.map(user => user.sameTime?.yesterdayReference || user.sameTime || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
       const yesterdayMajority = majorityMinute(yesterdayMatched.map(reference => reference.comparisonMinute));
-      const lastWeekMatched = users.map(user => user.sameTime?.lastWeekReference || {}).filter(reference => Number.isFinite(Number(reference.comparisonMinute)));
+      const lastWeekMatched = users.map(user => user.sameTime?.lastWeekReference || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
       const lastWeekMajority = majorityMinute(lastWeekMatched.map(reference => reference.comparisonMinute));
       return `
         <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；“增长用户”显示所有同一时刻订单净增长大于 0 的用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。<br><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人${diff === null ? "。" : `，当前订单口径差异 ${fmt(diff)}。`}</section>
@@ -2795,7 +2797,7 @@
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
               const userMinute = timeMinuteFromText(user.currentDataTime || user.userDataTime);
-              const userTimeNote = Number.isFinite(Number(userMinute)) && Number.isFinite(Number(currentMajority.minute)) && userMinute !== currentMajority.minute
+              const userTimeNote = isFiniteMinute(userMinute) && isFiniteMinute(currentMajority.minute) && userMinute !== currentMajority.minute
                 ? `<small class="comparison-ref">数据 ${minuteText(userMinute)} · 较多数${userMinute < currentMajority.minute ? "早" : "晚"} ${Math.abs(userMinute - currentMajority.minute)} 分钟</small>`
                 : "";
               return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}${userTimeNote}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {}, fmt, { dominantMinute: lastWeekMajority.minute, compactMajority: true })}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
