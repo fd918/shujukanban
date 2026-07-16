@@ -343,18 +343,26 @@
     .hidden { display: none !important; }
     .refresh-switch { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
     .refresh-switch input { width:34px; height:18px; accent-color:var(--orange); cursor:pointer; }
-    .focus-shell { display:grid; grid-template-columns:210px minmax(0,1fr); min-height:520px; }
-    .focus-shell.focus-groups-collapsed { grid-template-columns:1fr; }
-    .focus-shell.focus-groups-collapsed .focus-groups { display:none; }
-    .focus-groups { border-right:1px solid var(--line); padding:12px; background:#fbfcfe; }
-    .focus-group { display:flex; justify-content:space-between; width:100%; padding:9px 10px; margin-bottom:4px; border:1px solid transparent; background:transparent; color:var(--text); text-align:left; cursor:pointer; border-radius:6px; }
-    .focus-group.active { color:var(--orange); background:#fff7ed; border-color:#fed7aa; }
+    .focus-shell { min-height:520px; }
     .focus-main { min-width:0; }
-    #focusView > .toolbar { flex-wrap:nowrap; }
+    #focusView > .toolbar { flex-wrap:wrap; }
     #focusView > .toolbar .field { width:auto; min-width:140px; flex:1 1 180px; }
     #focusView > .toolbar #focusSearch { flex-basis:220px; }
     #focusView > .toolbar .segmented, #focusView > .toolbar .btn { flex:0 0 auto; }
+    .focus-entity-select { min-width:280px !important; max-width:440px; }
+    .focus-range-toolbar { padding-top:0 !important; }
+    .focus-custom-range { display:flex; align-items:center; gap:6px; }
+    .focus-custom-range .field { flex:0 0 142px !important; min-width:142px !important; }
     .focus-summary { padding:10px 14px; border-bottom:1px solid var(--line); color:var(--muted); }
+    .focus-profile { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 14px; border-bottom:1px solid var(--line); background:#fbfcfe; }
+    .focus-profile-main { min-width:0; }
+    .focus-profile-main strong { display:flex; align-items:center; gap:4px; font-size:15px; }
+    .focus-profile-main span { display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+    .focus-profile-note { display:flex; align-items:center; gap:6px; max-width:520px; margin-top:7px; color:var(--text); }
+    .focus-profile-stats { display:flex; gap:18px; flex:0 0 auto; }
+    .focus-profile-stat { min-width:90px; }
+    .focus-profile-stat label { display:block; color:var(--muted); font-size:11px; }
+    .focus-profile-stat strong { display:block; margin-top:3px; font-size:18px; }
     .focus-user { min-width:150px; }
     .focus-user strong, .focus-user span { display:block; }
     .focus-table th, .focus-table td { white-space:nowrap; }
@@ -390,12 +398,12 @@
       .kpi { padding: 11px; }
       .kpi strong { font-size: 20px; }
       .chart-stage { height: 240px; }
-      .focus-shell { grid-template-columns:1fr; }
-      .focus-groups { border-right:0; border-bottom:1px solid var(--line); display:flex; gap:6px; overflow:auto; }
-      .focus-group { width:auto; flex:0 0 auto; margin:0; }
       .focus-add-grid { grid-template-columns:1fr; }
       #focusView > .toolbar { flex-wrap:wrap; }
       #focusView > .toolbar .field, #focusView > .toolbar #focusSearch { flex:1 1 100%; }
+      .focus-profile { align-items:flex-start; flex-direction:column; }
+      .focus-profile-stats { width:100%; overflow-x:auto; }
+      .focus-custom-range { width:100%; flex-wrap:wrap; }
     }
   </style>
 </head>
@@ -511,15 +519,22 @@
         </table>
         <section id="focusView" class="hidden">
           <div class="toolbar" style="padding:12px 14px;border-bottom:1px solid var(--line);">
-            <div class="segmented" id="focusRangeTabs"><button class="active" data-focus-range="7">近7天</button><button data-focus-range="month">本月</button><button data-focus-range="30">近30天</button></div>
-            <button class="btn" id="focusGroupToggle">收起业务筛选</button>
+            <div class="segmented" id="focusModeTabs"><button class="active" data-focus-mode="business">按业务看</button><button data-focus-mode="user">按用户看</button></div>
+            <select class="field focus-entity-select" id="focusEntitySelect"></select>
             <div class="search-with-clear"><input class="field" id="focusSearch" placeholder="搜索用户名称或ID"><button class="search-clear" id="focusSearchClear" title="清空搜索">×</button></div>
+            <button class="btn" id="refreshFocusBtn">刷新重点用户</button>
             <button class="btn primary" id="addFocusBtn">添加关注用户</button>
           </div>
+          <div class="toolbar focus-range-toolbar" style="padding:0 14px 12px;border-bottom:1px solid var(--line);">
+            <span class="muted">每日订单范围</span>
+            <div class="segmented" id="focusRangeTabs"><button class="active" data-focus-range="7">近7天</button><button data-focus-range="month">本月</button><button data-focus-range="30">近30天</button><button data-focus-range="custom">自定义</button></div>
+            <div class="focus-custom-range hidden" id="focusCustomRange"><input class="field" id="focusStart" type="date"><span class="muted">至</span><input class="field" id="focusEnd" type="date"><button class="btn" id="applyFocusRange">应用日期</button></div>
+            <span class="muted">日期只改变右侧每日订单列和区间合计。</span>
+          </div>
           <div class="focus-shell" id="focusShell">
-            <aside class="focus-groups" id="focusGroups"></aside>
             <div class="focus-main">
               <div class="focus-summary" id="focusSummary">正在读取重点用户...</div>
+              <div class="focus-profile hidden" id="focusProfile"></div>
               <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody class="summary-body" id="focusSummaryBody"></tbody><tbody id="focusBody"></tbody></table></div>
             </div>
           </div>
@@ -635,12 +650,10 @@
   </section>
 
   <section class="modal" id="focusModal">
-    <div class="modal-head"><div><h2>添加关注用户</h2><small>先选择平台和业务，再输入用户ID</small></div><button class="icon-btn" id="closeFocusModal">×</button></div>
+    <div class="modal-head"><div><h2>添加关注用户</h2><small>添加一次，即可在全部业务中持续关注</small></div><button class="icon-btn" id="closeFocusModal">×</button></div>
     <div class="modal-body"><div class="focus-add-grid">
-      <div><label>平台</label><select class="field" id="focusAddPlatform"></select></div>
-      <div><label>业务</label><select class="field" id="focusAddBusiness"></select></div>
       <div style="grid-column:1/-1"><label>用户ID</label><input class="field" id="focusAddUserId" placeholder="请输入用户ID"></div>
-    </div><section class="source" style="margin-top:14px;">填写后立即加入重点用户列表，不等待用户快照；姓名、手机号和订单会在后台按用户ID精确补全。</section></div>
+    </div><section class="source" style="margin-top:14px;">系统会按用户ID跨全部业务匹配。用户会立即加入列表，已缓存的姓名、手机号和有单业务立即展示，其余资料由后台继续补全。</section></div>
     <div class="modal-foot"><span class="muted" id="focusAddResult"></span><button class="btn" id="cancelFocusAdd">取消</button><button class="btn primary" id="confirmFocusAdd">确认添加</button></div>
   </section>
 
@@ -659,7 +672,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusSearch: "", focusGroup: "all", focusGroupsCollapsed: true, focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -829,9 +842,9 @@
       return focusNoteLines(row).join("\n");
     }
 
-    function latestPublicFocusUser(item) {
-      const business = state.businesses.find(row => String(row.platformBusinessId || row.businessId) === String(item.businessId) || String(row.businessId) === String(item.businessId));
-      const detail = state.publicUserDetails[String(item.businessId)] || state.publicUserDetails[String(business?.businessId || "")] || {};
+    function latestPublicFocusUser(item, businessId = item.businessId) {
+      const business = state.businesses.find(row => String(row.platformBusinessId || row.businessId) === String(businessId) || String(row.businessId) === String(businessId));
+      const detail = state.publicUserDetails[String(businessId)] || state.publicUserDetails[String(business?.businessId || "")] || {};
       return [...(detail.history?.rows || []), ...(detail.rows || [])].find(row => String(row.id || "") === String(item.userId)) || null;
     }
 
@@ -852,6 +865,13 @@
     }
 
     function publicFocusRange(preset, endDate) {
+      if (preset === "custom") {
+        const startDate = state.focusStart || shiftDayText(endDate, -6);
+        const selectedEnd = state.focusEnd || endDate;
+        const days = dateTextList(startDate, selectedEnd).length;
+        const comparisonEndDate = shiftDayText(startDate, -1);
+        return { preset, label: `${startDate} 至 ${selectedEnd}`, startDate, endDate: selectedEnd, comparisonStartDate: shiftDayText(comparisonEndDate, -(days - 1)), comparisonEndDate };
+      }
       if (preset === "month") {
         const current = new Date(`${endDate}T12:00:00`);
         const startDate = dayText(new Date(current.getFullYear(), current.getMonth(), 1));
@@ -865,15 +885,27 @@
     }
 
     function mergedPublicFocusData(preset) {
-      const base = state.publicFocusUsers[preset] || state.publicFocusUsers["7"] || { rows: [], dates: [] };
-      const localItems = readPublicFocusItems();
+      const base = state.publicFocusUsers[preset === "custom" ? "65" : preset] || state.publicFocusUsers["7"] || { rows: [], users: [], dates: [] };
+      const rawLocalItems = readPublicFocusItems();
+      const localByUser = new Map();
+      rawLocalItems.forEach(item => {
+        const userId = String(item.userId || "");
+        if (!userId) return;
+        const current = localByUser.get(userId) || { ...item, userId, businessHints: [] };
+        const hints = [...(current.businessHints || []), ...(item.businessHints || [])];
+        if (item.businessId) hints.push({ platform: item.platform, businessName: item.businessName, businessId: String(item.businessId), catalogBusinessId: String(item.catalogBusinessId || "") });
+        current.businessHints = [...new Map(hints.map(hint => [String(hint.businessId || hint.catalogBusinessId || ""), hint])).values()].filter(hint => hint.businessId || hint.catalogBusinessId);
+        localByUser.set(userId, { ...current, ...item, businessHints: current.businessHints });
+      });
+      const localItems = [...localByUser.values()];
       const endDate = base.dates?.at(-1) || state.dateRange?.endDate || localItems.flatMap(item => Object.keys(item.days || {})).sort().at(-1) || dayText(new Date());
       const range = publicFocusRange(preset, endDate);
       const dates = dateTextList(range.startDate, range.endDate);
       const previousDates = dateTextList(range.comparisonStartDate, range.comparisonEndDate);
-      const localRows = localItems.map(item => {
-        const latest = latestPublicFocusUser(item);
-        const source = latest ? { ...item, ...latest, userId: item.userId, businessId: item.businessId, businessName: item.businessName, platform: item.platform } : item;
+      const localRows = localItems.flatMap(item => (item.businessHints || []).map(hint => {
+        const businessId = String(hint.businessId || hint.catalogBusinessId || "");
+        const latest = latestPublicFocusUser(item, businessId);
+        const source = latest ? { ...item, ...latest, userId: item.userId, businessId, businessName: hint.businessName, platform: hint.platform } : { ...item, ...hint, businessId };
         const allDays = { ...(item.days || {}), ...(latest?.days || {}) };
         const days = Object.fromEntries(dates.map(date => [date, Number(allDays[date] || 0)]));
         const periodTotal = Object.values(days).reduce((sum, value) => sum + value, 0);
@@ -885,50 +917,56 @@
         const todayDiff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
         const sameTime = latest?.sameTime || source.sameTime || {};
         return { ...source, days, periodTotal, previousPeriodTotal, periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null, periodImpact: Math.abs(periodDiff), todayOrders, yesterdaySameTime, sameTime, comparisonSlotLabel: sameTime.comparisonSlotLabel || latest?.comparisonSlotLabel || item.comparisonSlotLabel || "", comparisonMinute: sameTime.comparisonMinute ?? latest?.comparisonMinute ?? item.comparisonMinute ?? null, comparisonTargetMinute: sameTime.comparisonTargetMinute ?? latest?.comparisonTargetMinute ?? item.comparisonTargetMinute ?? null, comparisonOffsetMinutes: sameTime.comparisonOffsetMinutes ?? latest?.comparisonOffsetMinutes ?? item.comparisonOffsetMinutes ?? null, comparisonExact: sameTime.comparisonExact ?? latest?.comparisonExact ?? item.comparisonExact ?? false, comparisonQuality: sameTime.comparisonQuality || latest?.comparisonQuality || item.comparisonQuality || "", ratio: yesterdaySameTime ? todayDiff / yesterdaySameTime * 100 : null, impact: todayDiff === null ? null : Math.abs(todayDiff), pendingProfile: !latest?.name && Boolean(item.pendingProfile), browserLocal: true };
-      });
+      }).filter(row => row.todayOrders > 0 || row.periodTotal > 0 || row.previousPeriodTotal > 0 || row.yesterdaySameTime > 0));
       const hidden = readPublicFocusHidden();
       const notes = readPublicFocusNotes();
       const pins = readPublicFocusPins();
       const publishedNotes = state.publicPublishedFocusNotes || {};
       const publishedPins = state.publicPublishedFocusPins || {};
       const applyFocusOverrides = row => {
-        const key = `${row.businessId}:${row.userId}`;
+        const key = String(row.userId || "");
+        const legacyKey = `${row.businessId}:${row.userId}`;
         let next = row;
-        if (Object.prototype.hasOwnProperty.call(publishedNotes, key)) {
-          const lines = Array.isArray(publishedNotes[key]) ? publishedNotes[key] : String(publishedNotes[key] || "").split("\n").filter(Boolean);
+        const publishedNote = Object.prototype.hasOwnProperty.call(publishedNotes, key) ? publishedNotes[key] : publishedNotes[legacyKey];
+        if (publishedNote !== undefined) {
+          const lines = Array.isArray(publishedNote) ? publishedNote : String(publishedNote || "").split("\n").filter(Boolean);
           next = { ...next, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
         }
-        if (Object.prototype.hasOwnProperty.call(notes, key)) {
-          const lines = Array.isArray(notes[key]) ? notes[key] : String(notes[key] || "").split("\n").filter(Boolean);
+        const localNote = Object.prototype.hasOwnProperty.call(notes, key) ? notes[key] : notes[legacyKey];
+        if (localNote !== undefined) {
+          const lines = Array.isArray(localNote) ? localNote : String(localNote || "").split("\n").filter(Boolean);
           next = { ...next, note: lines.join("\n"), notes: lines.map(text => ({ text })) };
         }
-        if (Object.prototype.hasOwnProperty.call(publishedPins, key)) next = { ...next, ...publishedPins[key] };
-        if (Object.prototype.hasOwnProperty.call(pins, key)) next = { ...next, ...pins[key] };
+        if (Object.prototype.hasOwnProperty.call(publishedPins, key) || Object.prototype.hasOwnProperty.call(publishedPins, legacyKey)) next = { ...next, ...(publishedPins[key] || publishedPins[legacyKey]) };
+        if (Object.prototype.hasOwnProperty.call(pins, key) || Object.prototype.hasOwnProperty.call(pins, legacyKey)) next = { ...next, ...(pins[key] || pins[legacyKey]) };
         return next;
       };
-      const rowsByKey = new Map((base.rows || []).filter(row => !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyFocusOverrides(row)]));
+      const baseRows = base.businessRows || base.rows || [];
+      const rowsByKey = new Map(baseRows.filter(row => !hidden.has(String(row.userId)) && !hidden.has(`${row.businessId}:${row.userId}`)).map(row => [`${row.businessId}:${row.userId}`, applyFocusOverrides(row)]));
       localRows.forEach(row => {
         const key = `${row.businessId}:${row.userId}`;
         const published = rowsByKey.get(key);
         rowsByKey.set(key, applyFocusOverrides(published ? { ...row, ...published, browserLocal: true } : row));
       });
-      return { ...base, ok: true, range, dates, rows: [...rowsByKey.values()], total: rowsByKey.size, latestDataTime: base.latestDataTime || state.source.latestDataTime || "-" };
+      const usersById = new Map((base.users || []).filter(user => !hidden.has(String(user.userId))).map(user => [String(user.userId), applyFocusOverrides(user)]));
+      if (!base.users?.length) [...rowsByKey.values()].forEach(row => { if (!usersById.has(String(row.userId))) usersById.set(String(row.userId), applyFocusOverrides(row)); });
+      localItems.filter(item => !hidden.has(String(item.userId))).forEach(item => usersById.set(String(item.userId), applyFocusOverrides({ ...(usersById.get(String(item.userId)) || {}), ...item })));
+      const rows = [...rowsByKey.values()].map(row => ({ ...row, ...(usersById.get(String(row.userId)) || {}), businessId: row.businessId, businessName: row.businessName, platform: row.platform, days: row.days, periodTotal: row.periodTotal, previousPeriodTotal: row.previousPeriodTotal, periodRatio: row.periodRatio, periodImpact: row.periodImpact, todayOrders: row.todayOrders, yesterdaySameTime: row.yesterdaySameTime, sameTime: row.sameTime, ratio: row.ratio, impact: row.impact, userDataTime: row.userDataTime }));
+      return { ...base, ok: true, schemaVersion: 2, range, dates, users: [...usersById.values()], businessRows: rows, rows, total: usersById.size, latestDataTime: base.latestDataTime || state.source.latestDataTime || "-" };
     }
 
     function savePublicFocusUser(businessId, userId) {
       const business = state.businesses.find(row => String(row.platformBusinessId || row.businessId) === String(businessId) || String(row.businessId) === String(businessId));
-      if (!business) throw new Error("没有找到该业务。");
-      const detail = state.publicUserDetails[String(businessId)] || state.publicUserDetails[String(business.businessId)] || {};
+      const detail = state.publicUserDetails[String(businessId)] || state.publicUserDetails[String(business?.businessId || "")] || {};
       const users = [...(detail.history?.rows || []), ...(detail.rows || [])];
       const user = users.find(item => String(item.id || "") === String(userId)) || {};
-      const key = `${businessId}:${userId}`;
       const hidden = readPublicFocusHidden();
-      if (hidden.delete(key)) localStorage.setItem(PUBLIC_FOCUS_HIDDEN_KEY, JSON.stringify([...hidden]));
-      const existingPublished = Object.values(state.publicFocusUsers).some(data => (data?.rows || []).some(row => `${row.businessId}:${row.userId}` === key));
+      if (hidden.delete(String(userId))) localStorage.setItem(PUBLIC_FOCUS_HIDDEN_KEY, JSON.stringify([...hidden]));
+      const existingPublished = Object.values(state.publicFocusUsers).some(data => (data?.users || data?.rows || []).some(row => String(row.userId) === String(userId)));
       if (existingPublished) return false;
       const items = readPublicFocusItems();
-      const saved = { platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || ""), userId: String(userId), name: user.name || `用户 ${userId}`, phone: user.phone || "-", version: user.version || "-", pendingProfile: !user.name, note: "", days: user.days || {}, todayOrders: user.todayOrders || 0, yesterdaySameTime: user.sameTime?.yesterday?.orders ?? null, sameTime: user.sameTime || {}, comparisonSlotLabel: user.sameTime?.comparisonSlotLabel || "", comparisonMinute: user.sameTime?.comparisonMinute ?? null, comparisonTargetMinute: user.sameTime?.comparisonTargetMinute ?? null, comparisonOffsetMinutes: user.sameTime?.comparisonOffsetMinutes ?? null, comparisonExact: user.sameTime?.comparisonExact ?? false, comparisonQuality: user.sameTime?.comparisonQuality || "", addedAt: new Date().toISOString() };
-      const index = items.findIndex(item => `${item.businessId}:${item.userId}` === key);
+      const saved = { userId: String(userId), name: user.name || `用户 ${userId}`, phone: user.phone || "-", version: user.version || "-", pendingProfile: !user.name, note: "", businessHints: business ? [{ platform: business.platform, businessName: business.name, businessId: String(businessId), catalogBusinessId: String(business.businessId || "") }] : [], addedAt: new Date().toISOString() };
+      const index = items.findIndex(item => String(item.userId) === String(userId));
       if (index >= 0) items[index] = saved; else items.push(saved);
       writePublicFocusItems(items);
       return index < 0;
@@ -1447,32 +1485,56 @@
     }
 
     function renderFocusUsers() {
-      const data = state.focusData || { dates: [], rows: [], range: { label: "本月" } };
-      const businessMap = new Map();
-      (data.rows || []).forEach(row => {
-        const key = String(row.businessId || row.businessName || "");
+      const data = state.focusData || { dates: [], rows: [], users: [], range: { label: "近7天" } };
+      const businessRows = data.businessRows || data.rows || [];
+      const usersById = new Map((data.users || []).map(user => [String(user.userId), user]));
+      businessRows.forEach(row => { if (!usersById.has(String(row.userId))) usersById.set(String(row.userId), row); });
+      const users = [...usersById.values()].sort((a, b) => {
+        if (Boolean(a.pinned) !== Boolean(b.pinned)) return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+        if (a.pinned && b.pinned && a.pinnedAt !== b.pinnedAt) return String(b.pinnedAt || "").localeCompare(String(a.pinnedAt || ""));
+        return userDisplayName(a).localeCompare(userDisplayName(b), "zh-CN");
+      });
+      const businessMap = new Map((data.businesses || []).map(business => [String(business.businessId), { key: String(business.businessId), name: business.businessName, count: business.count || 0, platform: business.platform }]));
+      businessRows.forEach(row => {
+        const key = String(row.businessId || "");
         if (!key) return;
-        const current = businessMap.get(key) || { key, name: row.businessName || "未命名业务", count: 0 };
-        current.count += 1;
+        const current = businessMap.get(key) || { key, name: row.businessName || "未命名业务", count: 0, platform: row.platform || "-" };
+        if (!data.businesses?.length) current.count += 1;
         businessMap.set(key, current);
       });
       const businesses = [...businessMap.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
       if (!state.focusDefaultApplied && businesses.length) {
         state.focusGroup = businesses.find(item => item.name.includes("美团外卖节"))?.key || businesses[0].key;
+        state.focusSelectedUserId = users[0]?.userId || "";
         state.focusDefaultApplied = true;
       }
-      if (state.focusGroup !== "all" && !businessMap.has(state.focusGroup)) state.focusGroup = "all";
-      $("#focusShell").classList.toggle("focus-groups-collapsed", state.focusGroupsCollapsed);
-      $("#focusGroupToggle").textContent = state.focusGroupsCollapsed ? "展开业务筛选" : "收起业务筛选";
-      $("#focusGroups").innerHTML = `<button class="focus-group ${state.focusGroup === "all" ? "active" : ""}" data-focus-group="all"><span>全部关注</span><strong>${fmt(data.total || 0)}</strong></button>` + businesses.map(business => {
-        return `<button class="focus-group ${state.focusGroup === business.key ? "active" : ""}" data-focus-group="${escapeHtml(business.key)}"><span>${escapeHtml(business.name)}</span><strong>${fmt(business.count)}</strong></button>`;
-      }).join("");
+      if (!businessMap.has(String(state.focusGroup)) && businesses.length) state.focusGroup = businesses[0].key;
+      if (!usersById.has(String(state.focusSelectedUserId)) && users.length) state.focusSelectedUserId = String(users[0].userId);
+      $$("#focusModeTabs button").forEach(button => button.classList.toggle("active", button.dataset.focusMode === state.focusMode));
+      $$("#focusRangeTabs button").forEach(button => button.classList.toggle("active", button.dataset.focusRange === state.focusRange));
+      $("#focusCustomRange").classList.toggle("hidden", state.focusRange !== "custom");
+      if (!state.focusStart) state.focusStart = data.dates?.[0] || "";
+      if (!state.focusEnd) state.focusEnd = data.dates?.at(-1) || "";
+      $("#focusStart").value = state.focusStart;
+      $("#focusEnd").value = state.focusEnd;
+      const entity = $("#focusEntitySelect");
+      if (state.focusMode === "business") {
+        entity.innerHTML = businesses.map(business => `<option value="${escapeHtml(business.key)}">${escapeHtml(business.name)}（${fmt(business.count)}人）</option>`).join("") || '<option value="">暂无有单业务</option>';
+        entity.value = state.focusGroup;
+        $("#focusSearch").placeholder = "搜索用户名称或ID";
+      } else {
+        entity.innerHTML = users.map(user => `<option value="${escapeHtml(user.userId)}">${escapeHtml(userDisplayName(user))}｜ID ${escapeHtml(user.userId)}</option>`).join("") || '<option value="">暂无重点用户</option>';
+        entity.value = state.focusSelectedUserId;
+        $("#focusSearch").placeholder = "搜索该用户的业务名称";
+      }
       const keyword = state.focusSearch.toLowerCase();
-      let rows = (data.rows || []).filter(row => state.focusGroup === "all" || String(row.businessId || row.businessName || "") === state.focusGroup);
-      if (keyword) rows = rows.filter(row => `${userSearchText(row)}${row.platform}${row.businessName}`.toLowerCase().includes(keyword));
+      let rows = state.focusMode === "business"
+        ? businessRows.filter(row => String(row.businessId) === String(state.focusGroup))
+        : businessRows.filter(row => String(row.userId) === String(state.focusSelectedUserId));
+      if (keyword) rows = rows.filter(row => state.focusMode === "business" ? userSearchText(row).includes(keyword) : `${row.platform || ""}${row.businessName || ""}`.toLowerCase().includes(keyword));
       rows = rows.slice().sort((a, b) => {
-        if (Boolean(a.pinned) !== Boolean(b.pinned)) return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
-        if (a.pinned && b.pinned && a.pinnedAt !== b.pinnedAt) return String(b.pinnedAt || "").localeCompare(String(a.pinnedAt || ""));
+        if (state.focusMode === "business" && Boolean(a.pinned) !== Boolean(b.pinned)) return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+        if (state.focusMode === "business" && a.pinned && b.pinned && a.pinnedAt !== b.pinnedAt) return String(b.pinnedAt || "").localeCompare(String(a.pinnedAt || ""));
         return Number(b.periodTotal || 0) - Number(a.periodTotal || 0);
       });
       const dates = data.dates || [];
@@ -1485,22 +1547,37 @@
       const yesterdaySum = yesterdayComparable.reduce((sum, row) => sum + Number(row.yesterdaySameTime || 0), 0);
       const comparisonSlots = [...new Set(yesterdayComparable.map(row => row.comparisonSlotLabel).filter(Boolean))];
       const dailySums = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + Number(row.days?.[date] || 0), 0)]));
-      const showBusinessColumn = state.focusGroup === "all";
-      const selectedBusinessName = state.focusGroup === "all" ? "全部关注" : (businessMap.get(state.focusGroup)?.name || "当前业务");
-      $("#focusSummary").textContent = `${selectedBusinessName}｜${data.range?.label || "近7天"}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜${data.range?.label || "本期"}合计 ${fmt(periodSum)}｜今日每 10 分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}｜昨日基准槽：${comparisonSlots.length === 1 ? comparisonSlots[0] : comparisonSlots.length ? "多个历史槽" : "-"}`;
-      $("#focusHead").innerHTML = `<tr><th>序号</th>${showBusinessColumn ? "<th class=\"focus-business-col\">业务</th>" : ""}<th class="focus-user-col ${showBusinessColumn ? "with-business" : ""}">用户</th><th class="focus-note-col">观察备注</th><th class="focus-order-col">今日订单</th><th class="focus-order-col">昨日同时刻</th><th>今日变化比例</th><th>今日影响订单</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
+      const selectedBusinessName = businessMap.get(String(state.focusGroup))?.name || "当前业务";
+      const selectedUser = usersById.get(String(state.focusSelectedUserId));
+      $("#focusSummary").textContent = state.focusMode === "business"
+        ? `${selectedBusinessName}｜当前显示 ${rows.length} 位重点用户｜今日订单合计 ${fmt(todaySum)}｜今日数据每10分钟同步，历史日期 ${userRefreshTimesText()} 更新｜数据时间：${data.latestDataTime || "-"}｜昨日基准：${comparisonSlots.length === 1 ? comparisonSlots[0] : comparisonSlots.length ? "按各用户实际时刻匹配" : "-"}`
+        : `${userDisplayName(selectedUser || {})}｜当前显示 ${rows.length} 个有单业务｜今日订单合计 ${fmt(todaySum)}｜各业务使用自己的用户数据时间匹配昨日同时刻｜数据时间：${data.latestDataTime || "-"}`;
+      const profile = $("#focusProfile");
+      profile.classList.toggle("hidden", state.focusMode !== "user" || !selectedUser);
+      if (state.focusMode === "user" && selectedUser) {
+        profile.innerHTML = `<div class="focus-profile-main"><strong>${escapeHtml(userDisplayName(selectedUser))}${aliasEditButton(selectedUser)}<button class="user-pin-icon ${selectedUser.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" data-pinned="${selectedUser.pinned ? "1" : "0"}" title="${selectedUser.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="从全部业务移除">−</button></strong><span>${copyUserIdButton(selectedUser)}｜${escapeHtml(selectedUser.phone || "-")}｜${escapeHtml(selectedUser.version || "-")}</span><div class="focus-profile-note"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="编辑观察备注">✎</button><span>${escapeHtml(focusNoteText(selectedUser) || "添加观察备注")}</span></div></div><div class="focus-profile-stats"><div class="focus-profile-stat"><label>有单业务</label><strong>${fmt(rows.length)}</strong></div><div class="focus-profile-stat"><label>今日总订单</label><strong>${fmt(todaySum)}</strong></div><div class="focus-profile-stat"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</strong></div><div class="focus-profile-stat"><label>净变化</label><strong class="${todaySum - yesterdaySum < 0 ? "down" : todaySum - yesterdaySum > 0 ? "up" : ""}">${yesterdayComparable.length ? `${todaySum - yesterdaySum > 0 ? "+" : ""}${fmt(todaySum - yesterdaySum)}` : "-"}</strong></div></div>`;
+      }
+      const firstColumns = state.focusMode === "business" ? `<th>序号</th><th class="focus-user-col">用户</th><th class="focus-note-col">观察备注</th>` : `<th>序号</th><th class="focus-business-col">业务</th>`;
+      $("#focusHead").innerHTML = `<tr>${firstColumns}<th class="focus-order-col">今日订单</th><th class="focus-order-col">昨日同时刻</th><th>变化比例</th><th>影响订单</th><th>状态</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
+      const compareFocusRow = row => {
+        if (row.yesterdaySameTime === null || row.yesterdaySameTime === undefined) return { level: "missing", label: "缺少基准" };
+        const ratio = Number(row.ratio || 0);
+        if (Math.abs(ratio) <= 10) return { level: "normal", label: "正常" };
+        return ratio > 0 ? { level: "up", label: "增长" } : { level: "critical", label: "流失风险" };
+      };
+      const baseColumns = state.focusMode === "business" ? 3 : 2;
       $("#focusBody").innerHTML = state.focusLoading && !rows.length
-        ? `<tr><td colspan="${dates.length + (showBusinessColumn ? 13 : 12)}" class="muted">重点用户加载中...</td></tr>`
+        ? `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">正在更新重点用户，原有数据会在加载完成后替换...</td></tr>`
         : (rows.length ? rows.map((row, index) => `<tr>
           <td>${index + 1}</td>
-          ${showBusinessColumn ? `<td class="focus-business-col"><strong>${row.businessName}</strong></td>` : ""}
-          <td class="focus-user focus-user-col ${showBusinessColumn ? "with-business" : ""}"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}" aria-label="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-business-id="${row.businessId}" data-user-id="${row.userId}" title="移除重点用户" aria-label="移除重点用户">−</button></div><span class="muted">${copyUserIdButton(row)}｜${row.phone || "-"}</span><span class="muted">版本：${row.version || "-"}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td>
-          <td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-business-id="${escapeHtml(row.businessId)}" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注" aria-label="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>
+          ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从全部业务移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
           <td class="focus-order-col">${fmt(row.todayOrders)}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row)}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
+          <td>${tag(compareFocusRow(row).level, compareFocusRow(row).label)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
           <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
-        </tr>`).join("") : `<tr><td colspan="${dates.length + (showBusinessColumn ? 13 : 12)}" class="muted">还没有重点用户，点击“添加关注用户”开始关注。</td></tr>`);
-      $("#focusSummaryBody").innerHTML = rows.length ? `<tr><td colspan="${showBusinessColumn ? 4 : 3}">当前列表合计</td><td class="focus-order-col">${fmt(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td>-</td><td>${fmt(rows.reduce((sum, row) => sum + Number(row.impact || 0), 0))}</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
+        </tr>`).join("") : `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">${state.focusMode === "business" ? "当前业务暂无有单重点用户。" : "该用户当前没有匹配到有单业务。"}</td></tr>`);
+      const todayDiff = yesterdayComparable.length ? todaySum - yesterdaySum : null;
+      $("#focusSummaryBody").innerHTML = rows.length ? `<tr><td colspan="${baseColumns}">当前列表合计（${fmt(rows.length)}项）</td><td class="focus-order-col">${fmt(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${yesterdaySum ? pctValue(todayDiff / yesterdaySum * 100) : "-"}</td><td>${todayDiff === null ? "-" : fmt(Math.abs(todayDiff))}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
     }
 
     async function loadFocusUsers() {
@@ -1512,7 +1589,12 @@
       state.focusLoading = true;
       renderFocusUsers();
       try {
-        state.focusData = await requestJson(apiUrl(`/api/focus-users?preset=${state.focusRange}&_=${Date.now()}`));
+        const params = new URLSearchParams({ preset: state.focusRange, _: Date.now() });
+        if (state.focusRange === "custom") {
+          params.set("start_date", state.focusStart);
+          params.set("end_date", state.focusEnd);
+        }
+        state.focusData = await requestJson(apiUrl(`/api/focus-users?${params}`));
         state.focusUpdatedAt = state.focusData.focusUpdatedAt || state.focusUpdatedAt;
       } finally {
         state.focusLoading = false;
@@ -1520,24 +1602,13 @@
       }
     }
 
-    function fillFocusAddOptions() {
-      const platforms = Array.from(new Set(state.businesses.map(row => row.platform).filter(Boolean))).sort();
-      $("#focusAddPlatform").innerHTML = `<option value="">请选择平台</option>${platforms.map(item => `<option value="${item}">${item}</option>`).join("")}`;
-      $("#focusAddBusiness").innerHTML = `<option value="">请先选择平台</option>`;
-      $("#focusAddUserId").value = "";
+    function openFocusModal(userId = "", businessHint = "") {
+      state.focusAddBusinessHint = String(businessHint || (state.focusMode === "business" ? state.focusGroup : ""));
+      $("#focusAddUserId").value = userId;
       $("#focusAddResult").textContent = "";
-    }
-
-    function updateFocusAddBusinesses() {
-      const platform = $("#focusAddPlatform").value;
-      const rows = state.businesses.filter(row => row.platform === platform && (row.platformBusinessId || row.businessId));
-      $("#focusAddBusiness").innerHTML = `<option value="">请选择业务</option>${rows.map(row => `<option value="${row.platformBusinessId || row.businessId}">${row.name}</option>`).join("")}`;
-    }
-
-    function openFocusModal() {
-      fillFocusAddOptions();
       $("#modalMask").classList.add("open");
       $("#focusModal").classList.add("open");
+      setTimeout(() => $("#focusAddUserId").focus(), 0);
     }
 
     function closeFocusModal() {
@@ -1546,9 +1617,9 @@
     }
 
     async function addFocusUser() {
-      const businessId = $("#focusAddBusiness").value;
+      const businessId = state.focusAddBusinessHint;
       const userId = $("#focusAddUserId").value.trim();
-      if (!businessId || !userId) throw new Error("请选择业务并填写用户ID。");
+      if (!userId) throw new Error("请填写用户ID。");
       $("#focusAddResult").textContent = "正在添加...";
       if (state.publicMode) {
         const added = savePublicFocusUser(businessId, userId);
@@ -1562,6 +1633,7 @@
       }
       const result = await requestJson(apiUrl("/api/focus-users"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId, userId }) });
       state.focusData = result.data;
+      state.focusSelectedUserId = userId;
       closeFocusModal();
       renderFocusUsers();
       toast("重点用户已添加");
@@ -1587,39 +1659,40 @@
       toast("已加入重点用户看板");
     }
 
-    async function removeFocusUser(businessId, userId) {
-      if (!window.confirm("确认将该用户从重点用户看板移除吗？")) return;
+    async function removeFocusUser(userId) {
+      if (!window.confirm("确认将该用户从全部业务的重点关注中移除吗？备注、置顶和关注记录都会一起删除。")) return;
       if (state.publicMode) {
-        writePublicFocusItems(readPublicFocusItems().filter(item => !(String(item.businessId) === String(businessId) && String(item.userId) === String(userId))));
+        writePublicFocusItems(readPublicFocusItems().filter(item => String(item.userId) !== String(userId)));
         const hidden = readPublicFocusHidden();
-        hidden.add(`${businessId}:${userId}`);
+        hidden.add(String(userId));
         localStorage.setItem(PUBLIC_FOCUS_HIDDEN_KEY, JSON.stringify([...hidden]));
         await loadFocusUsers();
         toast("已从当前浏览器的重点用户中移除");
         return;
       }
-      const result = await requestJson(apiUrl("/api/focus-users/remove"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId, userId }) });
+      const result = await requestJson(apiUrl("/api/focus-users/remove"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId }) });
       state.focusData = result.data;
       renderFocusUsers();
       toast("已移除重点用户");
     }
 
-    function applyFocusPinToData(data, businessId, userId, pinned, pinnedAt) {
-      if (!data?.rows) return data;
+    function applyFocusPinToData(data, userId, pinned, pinnedAt) {
+      if (!data) return data;
+      const update = row => String(row.userId) === String(userId) ? { ...row, pinned, pinnedAt } : row;
       return {
         ...data,
-        rows: data.rows.map(row => String(row.businessId) === String(businessId) && String(row.userId) === String(userId)
-          ? { ...row, pinned, pinnedAt }
-          : row)
+        users: (data.users || []).map(update),
+        businessRows: (data.businessRows || data.rows || []).map(update),
+        rows: (data.businessRows || data.rows || []).map(update)
       };
     }
 
-    async function toggleFocusPin(businessId, userId, pinned) {
+    async function toggleFocusPin(userId, pinned) {
       const nextPinned = !pinned;
       const pinnedAt = nextPinned ? new Date().toISOString() : "";
       if (state.publicMode && !isLocalSettings) {
         const pins = readPublicFocusPins();
-        pins[`${businessId}:${userId}`] = { pinned: nextPinned, pinnedAt };
+        pins[String(userId)] = { pinned: nextPinned, pinnedAt };
         writePublicFocusPins(pins);
         state.focusData = mergedPublicFocusData(state.focusRange);
         renderFocusUsers();
@@ -1628,11 +1701,11 @@
           method: "POST",
           mode: "cors",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ businessId, userId, pinned: nextPinned })
+          body: JSON.stringify({ userId, pinned: nextPinned })
         }).then(response => {
           if (!response.ok) return;
           const syncedPins = readPublicFocusPins();
-          delete syncedPins[`${businessId}:${userId}`];
+          delete syncedPins[String(userId)];
           writePublicFocusPins(syncedPins);
         }).catch(() => {});
         return;
@@ -1640,22 +1713,22 @@
       const result = await requestJson(apiUrl("/api/focus-users/pin"), {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ businessId, userId, pinned: nextPinned })
+        body: JSON.stringify({ userId, pinned: nextPinned })
       });
       state.focusUpdatedAt = result.saved?.updatedAt || state.focusUpdatedAt;
-      state.focusData = applyFocusPinToData(state.focusData, businessId, userId, nextPinned, pinnedAt);
+      state.focusData = applyFocusPinToData(state.focusData, userId, nextPinned, pinnedAt);
       Object.keys(state.publicFocusUsers).forEach(key => {
-        state.publicFocusUsers[key] = applyFocusPinToData(state.publicFocusUsers[key], businessId, userId, nextPinned, pinnedAt);
+        state.publicFocusUsers[key] = applyFocusPinToData(state.publicFocusUsers[key], userId, nextPinned, pinnedAt);
       });
       renderFocusUsers();
       toast(nextPinned ? "已置顶用户，正在同步公网" : "已取消置顶，正在同步公网");
     }
 
-    function openFocusNote(businessId, userId) {
-      const row = (state.focusData?.rows || []).find(item => String(item.businessId) === String(businessId) && String(item.userId) === String(userId));
+    function openFocusNote(userId) {
+      const row = (state.focusData?.users || state.focusData?.rows || []).find(item => String(item.userId) === String(userId));
       if (!row) return;
-      state.focusNoteTarget = { businessId: String(businessId), userId: String(userId) };
-      $("#focusNoteUser").textContent = `${userDisplayName(row)}｜${row.businessName || "当前业务"}`;
+      state.focusNoteTarget = { userId: String(userId) };
+      $("#focusNoteUser").textContent = `${userDisplayName(row)}｜全部业务共用`;
       $("#focusNoteEditor").value = focusNoteText(row);
       $("#focusNoteResult").textContent = "";
       $("#focusNoteStorageHint").textContent = state.publicMode && !isLocalSettings
@@ -1673,12 +1746,13 @@
     }
 
     function applyFocusNoteToData(data, target, notes) {
-      if (!data?.rows) return data;
+      if (!data) return data;
+      const update = row => String(row.userId) === target.userId ? { ...row, note: notes.join("\n"), notes: notes.map(text => ({ text })) } : row;
       return {
         ...data,
-        rows: data.rows.map(row => String(row.businessId) === target.businessId && String(row.userId) === target.userId
-          ? { ...row, note: notes.join("\n"), notes: notes.map(text => ({ text })) }
-          : row)
+        users: (data.users || []).map(update),
+        businessRows: (data.businessRows || data.rows || []).map(update),
+        rows: (data.businessRows || data.rows || []).map(update)
       };
     }
 
@@ -1692,7 +1766,7 @@
       $("#focusNoteResult").textContent = "正在写入本机...";
       if (state.publicMode && !isLocalSettings) {
         const savedNotes = readPublicFocusNotes();
-        savedNotes[`${target.businessId}:${target.userId}`] = notes;
+        savedNotes[target.userId] = notes;
         writePublicFocusNotes(savedNotes);
         state.focusData = mergedPublicFocusData(state.focusRange);
         renderFocusUsers();
@@ -2843,25 +2917,43 @@
       if (!btn) return;
       state.focusRange = btn.dataset.focusRange;
       $$("#focusRangeTabs button").forEach(item => item.classList.toggle("active", item === btn));
+      if (state.focusRange === "custom") {
+        $("#focusCustomRange").classList.remove("hidden");
+        return;
+      }
       loadFocusUsers().catch(error => toast(error.message || "重点用户加载失败"));
     });
-    $("#focusGroupToggle").addEventListener("click", () => {
-      state.focusGroupsCollapsed = !state.focusGroupsCollapsed;
-      localStorage.setItem("businessDashboardFocusGroupsCollapsed", state.focusGroupsCollapsed ? "1" : "0");
+    $("#focusModeTabs").addEventListener("click", e => {
+      const btn = e.target.closest("[data-focus-mode]");
+      if (!btn) return;
+      state.focusMode = btn.dataset.focusMode;
+      state.focusSearch = "";
+      $("#focusSearch").value = "";
       renderFocusUsers();
     });
+    $("#focusEntitySelect").addEventListener("change", e => {
+      if (state.focusMode === "business") state.focusGroup = e.target.value;
+      else state.focusSelectedUserId = e.target.value;
+      renderFocusUsers();
+    });
+    $("#applyFocusRange").addEventListener("click", () => {
+      state.focusStart = $("#focusStart").value;
+      state.focusEnd = $("#focusEnd").value;
+      if (!state.focusStart || !state.focusEnd || state.focusStart > state.focusEnd) return toast("请选择正确的开始和结束日期");
+      loadFocusUsers().catch(error => toast(error.message || "重点用户日期加载失败"));
+    });
+    $("#refreshFocusBtn").addEventListener("click", () => loadFocusUsers().then(() => toast("重点用户已更新到最新缓存")).catch(error => toast(error.message || "重点用户刷新失败")));
     $("#focusSearch").addEventListener("input", e => { state.focusSearch = e.target.value.trim(); renderFocusUsers(); });
     $("#focusSearchClear").addEventListener("click", () => { state.focusSearch = ""; $("#focusSearch").value = ""; renderFocusUsers(); $("#focusSearch").focus(); });
-    $("#focusGroups").addEventListener("click", e => { const btn = e.target.closest("[data-focus-group]"); if (btn) { state.focusGroup = btn.dataset.focusGroup; renderFocusUsers(); } });
-    $("#focusBody").addEventListener("click", e => {
+    $("#focusView").addEventListener("click", e => {
       const pin = e.target.closest("[data-pin-focus]");
       if (pin) {
-        toggleFocusPin(pin.dataset.businessId, pin.dataset.userId, pin.dataset.pinned === "1").catch(error => toast(error.message || "置顶失败"));
+        toggleFocusPin(pin.dataset.userId, pin.dataset.pinned === "1").catch(error => toast(error.message || "置顶失败"));
         return;
       }
       const note = e.target.closest("[data-edit-focus-note]");
       if (note) {
-        openFocusNote(note.dataset.businessId, note.dataset.userId);
+        openFocusNote(note.dataset.userId);
         return;
       }
       const copyId = e.target.closest("[data-copy-user-id]");
@@ -2875,10 +2967,9 @@
         return;
       }
       const btn = e.target.closest("[data-remove-focus]");
-      if (btn) removeFocusUser(btn.dataset.businessId, btn.dataset.userId).catch(error => toast(error.message || "移除失败"));
+      if (btn) removeFocusUser(btn.dataset.userId).catch(error => toast(error.message || "移除失败"));
     });
-    $("#addFocusBtn").addEventListener("click", openFocusModal);
-    $("#focusAddPlatform").addEventListener("change", updateFocusAddBusinesses);
+    $("#addFocusBtn").addEventListener("click", () => openFocusModal());
     $("#closeFocusModal").addEventListener("click", closeFocusModal);
     $("#cancelFocusAdd").addEventListener("click", closeFocusModal);
     $("#confirmFocusAdd").addEventListener("click", () => addFocusUser().catch(error => { $("#focusAddResult").textContent = error.message; toast(error.message); }));

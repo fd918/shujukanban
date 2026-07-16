@@ -2653,7 +2653,8 @@ async function sanitizePublicDashboard(data) {
     focusUsersByRange: {
       7: await buildFocusUsers({ preset: "7" }),
       month: await buildFocusUsers({ preset: "month" }),
-      30: await buildFocusUsers({ preset: "30" })
+      30: await buildFocusUsers({ preset: "30" }),
+      65: await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -64), end_date: dayKey() })
     }
   };
 }
