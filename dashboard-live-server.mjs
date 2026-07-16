@@ -1488,11 +1488,77 @@ function exactSnapshot(snapshots, targetDay, targetMinute) {
   return candidates.at(-1) || null;
 }
 
+function nearbySnapshotCandidates(snapshots, targetDay, targetMinute, maxOffsetMinutes = 20) {
+  if (!Number.isFinite(Number(targetMinute))) return [];
+  const minute = Number(targetMinute);
+  return snapshots
+    .map((snapshot, index) => ({
+      snapshot,
+      index,
+      actualMinute: number(snapshot.minuteOfDay),
+      offsetMinutes: number(snapshot.minuteOfDay) - minute
+    }))
+    .filter(item => item.snapshot.day === targetDay && Math.abs(item.offsetMinutes) <= maxOffsetMinutes)
+    .sort((a, b) => Math.abs(a.offsetMinutes) - Math.abs(b.offsetMinutes) || b.index - a.index)
+    .map(item => ({
+      ...item,
+      targetMinute: minute,
+      exact: item.offsetMinutes === 0,
+      quality: item.offsetMinutes === 0 ? "exact" : "nearby"
+    }));
+}
+
+function nearestSnapshotMatch(snapshots, targetDay, targetMinute, maxOffsetMinutes = 20) {
+  return nearbySnapshotCandidates(snapshots, targetDay, targetMinute, maxOffsetMinutes)[0] || null;
+}
+
+function snapshotReference(match, quality = match?.quality) {
+  if (!match) return {
+    comparisonSlotLabel: "",
+    comparisonTargetMinute: null,
+    comparisonMinute: null,
+    comparisonOffsetMinutes: null,
+    comparisonExact: false,
+    comparisonQuality: "missing"
+  };
+  return {
+    comparisonSlotLabel: match.snapshot?.snapshotSlotLabel || "",
+    comparisonTargetMinute: match.targetMinute,
+    comparisonMinute: match.actualMinute,
+    comparisonOffsetMinutes: match.offsetMinutes,
+    comparisonExact: match.offsetMinutes === 0 && quality !== "legacy",
+    comparisonQuality: quality || (match.offsetMinutes === 0 ? "exact" : "nearby")
+  };
+}
+
+function businessUserSnapshotMatch(snapshots, targetDay, targetMinute, businessId, userId, maxOffsetMinutes = 20) {
+  const businessKey = String(businessId || "");
+  const userKey = String(userId || "");
+  const containsUser = match => Boolean(match.snapshot?.businessUsers?.[businessKey]?.[userKey]);
+  const strict = nearbySnapshotCandidates(
+    snapshots.filter(snapshot => snapshot.userDataStrict === true),
+    targetDay,
+    targetMinute,
+    maxOffsetMinutes
+  ).find(containsUser);
+  if (strict) return strict;
+  const legacy = nearbySnapshotCandidates(
+    snapshots.filter(snapshot => snapshot.userDataStrict !== true),
+    targetDay,
+    targetMinute,
+    maxOffsetMinutes
+  ).find(containsUser);
+  return legacy ? { ...legacy, quality: "legacy" } : null;
+}
+
 function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery(), comparisonMinute = minuteOfDay()) {
   const currentDate = dateFromDay(dateRange.endDate);
-  const yesterday = exactSnapshot(snapshots, dayKey(addDays(currentDate, -1)), comparisonMinute);
-  const lastWeek = exactSnapshot(snapshots, dayKey(addDays(currentDate, -7)), comparisonMinute);
-  const recent = Array.from({ length: 7 }, (_, index) => exactSnapshot(snapshots, dayKey(addDays(currentDate, -(index + 1))), comparisonMinute)).filter(Boolean);
+  const yesterdayMatch = nearestSnapshotMatch(snapshots, dayKey(addDays(currentDate, -1)), comparisonMinute);
+  const lastWeekMatch = nearestSnapshotMatch(snapshots, dayKey(addDays(currentDate, -7)), comparisonMinute);
+  const recentMatches = Array.from({ length: 7 }, (_, index) => nearestSnapshotMatch(snapshots, dayKey(addDays(currentDate, -(index + 1))), comparisonMinute)).filter(Boolean);
+  const yesterday = yesterdayMatch?.snapshot || null;
+  const lastWeek = lastWeekMatch?.snapshot || null;
+  const recent = recentMatches.map(match => match.snapshot);
 
   return rows.map(row => {
     const id = String(type === "business" ? row.businessId : row.id);
@@ -1511,8 +1577,11 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
         yesterday: snapshotYesterday,
         lastWeek: pick(lastWeek),
         sevenDayAvg: avg,
-        comparisonSlotLabel: yesterday?.snapshotSlotLabel || "",
-        yesterdaySource: snapshotYesterday ? "严格同分钟槽快照" : "",
+        ...snapshotReference(yesterdayMatch),
+        yesterdayReference: snapshotReference(yesterdayMatch),
+        lastWeekReference: snapshotReference(lastWeekMatch),
+        sevenDayReferenceQuality: recentMatches.some(match => !match.exact) ? "nearby" : recentMatches.length ? "exact" : "missing",
+        yesterdaySource: snapshotYesterday ? (yesterdayMatch?.exact ? "严格同分钟槽快照" : "邻近分钟槽参考") : "",
         hasSnapshot: Boolean(snapshotYesterday || pick(lastWeek) || avg),
         hasApiBaseline: Boolean(row.yesterdayOrders)
       }
@@ -1523,27 +1592,43 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
 function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange = rangeFromQuery(), comparisonMinute = minuteOfDay()) {
   const currentDate = dateFromDay(dateRange.endDate);
   const businessKey = String(businessId || "");
-  const usableSnapshots = snapshots.filter(snapshot => snapshot.userDataStrict === true && Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
+  const strictSnapshots = snapshots.filter(snapshot => snapshot.userDataStrict === true && Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
+  const legacySnapshots = snapshots.filter(snapshot => snapshot.userDataStrict !== true && Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
   const baselinesByMinute = new Map();
   const baselinesFor = targetMinute => {
     if (!Number.isFinite(Number(targetMinute))) return { yesterday: null, lastWeek: null, recent: [] };
     const key = Number(targetMinute);
     if (!baselinesByMinute.has(key)) {
+      const candidatesFor = targetDay => ({
+        strict: nearbySnapshotCandidates(strictSnapshots, targetDay, key),
+        legacy: nearbySnapshotCandidates(legacySnapshots, targetDay, key)
+      });
       baselinesByMinute.set(key, {
-        yesterday: exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -1)), key),
-        lastWeek: exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -7)), key),
-        recent: Array.from({ length: 7 }, (_, index) => exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -(index + 1))), key)).filter(Boolean)
+        yesterday: candidatesFor(dayKey(addDays(currentDate, -1))),
+        lastWeek: candidatesFor(dayKey(addDays(currentDate, -7))),
+        recent: Array.from({ length: 7 }, (_, index) => candidatesFor(dayKey(addDays(currentDate, -(index + 1)))))
       });
     }
     return baselinesByMinute.get(key);
   };
 
+  const findUserMatch = (candidateSet, userId) => {
+    const containsUser = match => Boolean(match.snapshot?.businessUsers?.[businessKey]?.[userId]);
+    const strict = candidateSet?.strict?.find(containsUser);
+    if (strict) return strict;
+    const legacy = candidateSet?.legacy?.find(containsUser);
+    return legacy ? { ...legacy, quality: "legacy" } : null;
+  };
+
   return rows.map(row => {
     const rowMinute = comparisonMinuteFromText(row.currentDataTime || row.userDataTime) ?? comparisonMinute;
-    const { yesterday, lastWeek, recent } = baselinesFor(rowMinute);
     const id = String(row.id || "");
-    const pick = snap => snap?.businessUsers?.[businessKey]?.[id] || null;
-    const sevenValues = recent.map(pick).filter(Boolean);
+    const baselineCandidates = baselinesFor(rowMinute);
+    const yesterdayMatch = findUserMatch(baselineCandidates.yesterday, id);
+    const lastWeekMatch = findUserMatch(baselineCandidates.lastWeek, id);
+    const recentMatches = baselineCandidates.recent.map(candidateSet => findUserMatch(candidateSet, id)).filter(Boolean);
+    const pick = match => match?.snapshot?.businessUsers?.[businessKey]?.[id] || null;
+    const sevenValues = recentMatches.map(pick).filter(Boolean);
     const avg = sevenValues.length
       ? {
           orders: Math.round(sevenValues.reduce((sum, item) => sum + number(item.orders), 0) / sevenValues.length),
@@ -1553,11 +1638,14 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
     return {
       ...row,
       sameTime: {
-        yesterday: pick(yesterday),
-        lastWeek: pick(lastWeek),
+        yesterday: pick(yesterdayMatch),
+        lastWeek: pick(lastWeekMatch),
         sevenDayAvg: avg,
-        comparisonSlotLabel: yesterday?.snapshotSlotLabel || "",
-        hasSnapshot: Boolean(pick(yesterday) || pick(lastWeek) || avg),
+        ...snapshotReference(yesterdayMatch, yesterdayMatch?.quality),
+        yesterdayReference: snapshotReference(yesterdayMatch, yesterdayMatch?.quality),
+        lastWeekReference: snapshotReference(lastWeekMatch, lastWeekMatch?.quality),
+        sevenDayReferenceQuality: recentMatches.some(match => match.quality !== "exact") ? "nearby" : recentMatches.length ? "exact" : "missing",
+        hasSnapshot: Boolean(pick(yesterdayMatch) || pick(lastWeekMatch) || avg),
         hasApiBaseline: Boolean(row.yesterdayOrders || row.yesterdayCommission)
       }
     };
@@ -2050,9 +2138,15 @@ async function buildFocusUsers(query = {}) {
     const userId = String(item.userId);
     const topState = userRefreshState.top100[businessId] || {};
     const userDataTime = current?.savedAtText || topState.updatedAtText || "";
-    const comparableSnapshots = snapshots.filter(snapshot => Object.keys(snapshot?.businessUsers?.[businessId] || {}).length > 0);
-    const yesterday = exactSnapshot(comparableSnapshots, shiftDay(dayKey(), -1), comparisonMinuteFromText(userDataTime));
-    const yesterdaySameTime = yesterday?.businessUsers?.[businessId]?.[userId]?.orders;
+    const yesterdayMatch = businessUserSnapshotMatch(
+      snapshots,
+      shiftDay(dayKey(), -1),
+      comparisonMinuteFromText(userDataTime),
+      businessId,
+      userId
+    );
+    const yesterdayReference = snapshotReference(yesterdayMatch, yesterdayMatch?.quality);
+    const yesterdaySameTime = yesterdayMatch?.snapshot?.businessUsers?.[businessId]?.[userId]?.orders;
     const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()] ?? cached.todayOrders);
     const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
     const ratio = yesterdaySameTime ? diff / number(yesterdaySameTime) * 100 : null;
@@ -2069,7 +2163,12 @@ async function buildFocusUsers(query = {}) {
       periodImpact: Math.abs(periodDiff),
       todayOrders,
       yesterdaySameTime: yesterdaySameTime === undefined ? null : number(yesterdaySameTime),
-      comparisonSlotLabel: yesterday?.snapshotSlotLabel || "",
+      sameTime: {
+        yesterday: yesterdaySameTime === undefined ? null : { orders: number(yesterdaySameTime) },
+        ...yesterdayReference,
+        yesterdayReference
+      },
+      ...yesterdayReference,
       ratio,
       impact: diff === null ? null : Math.abs(diff),
       newTop100At: topState.entered?.[String(item.userId)] || "",
