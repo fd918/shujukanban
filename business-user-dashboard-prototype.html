@@ -552,7 +552,7 @@
         <strong>异常规则：</strong>业务和今日用户优先按同时刻基准判断，缺少同时刻基准则不纳入异常；波动在 10% 以内按正常处理。超过正常波动后，再按设置中心的比例和订单数阈值判断轻微、重点、严重或上升异常。
       </section>
       <section class="source warn">
-        <strong>昨日同时刻：</strong>业务列表、流失风险、增长用户、全部用户和重点用户统一使用昨日相同 10 分钟时间槽的历史快照，允许最多相差 20 分钟；订单与佣金使用同一份快照。用户快照必须同时包含该业务和该用户才可作为基准，没有对应基准就显示“-”，不会用整点小时数据或昨日全天代替。
+        <strong>昨日同时刻：</strong>业务列表、流失风险、增长用户、全部用户和重点用户只使用昨日完全相同分钟槽的历史快照，不允许用前后时间槽替代；订单与佣金使用同一份快照。用户列表按该批用户数据自己的更新时间匹配昨日分钟槽，快照必须同时包含该业务和该用户才可作为基准。没有精确基准就显示“-”，不会用整点小时数据或昨日全天代替。
       </section>
       <section class="source warn">
         <strong>口径差异：</strong>业务汇总接口、业务用户明细接口、推广用户数不是同一个口径。用户弹窗会显示“用户明细求和”和“求和差异”，用于判断是否和外层业务订单一致。
@@ -1312,7 +1312,7 @@
       const rows = filteredBusinesses();
       $("#currentHeader").textContent = currentMetricLabel();
       $("#baselineHeader").textContent = baselineLabel();
-      $("#baselineHeader").title = "优先使用昨日相同10分钟时间槽快照；缺失时显示-";
+      $("#baselineHeader").title = "只使用昨日完全相同分钟槽快照；缺失时显示-";
       $$(".sort-btn").forEach(btn => {
         const active = btn.dataset.sort === state.sort;
         btn.classList.toggle("active", active);

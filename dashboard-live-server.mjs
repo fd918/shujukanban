@@ -1045,7 +1045,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     enrichPhones: true
   }, statuses);
   const snapshots = await readSnapshots();
-  const historyRows = deduplicateBusinessUsers(history.rows || []);
+  const historyRows = deduplicateBusinessUsers(history.rows || []).map(row => ({ ...row, currentDataTime: history.savedAtText || "" }));
   const refreshedFull = refresh && endDate === dayKey() ? await fetchBusinessUsers({
     businessId,
     startDate: endDate,
@@ -1060,10 +1060,10 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   const full = refreshedFull || (endDate === dayKey() ? latestFullBusinessUsers(businessId, endDate) : null);
   const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
   const timeValue = value => Date.parse(String(value || "").replace(/\//g, "-")) || 0;
-  const fullRows = deduplicateBusinessUsers(full?.rows || []);
+  const fullRows = deduplicateBusinessUsers(full?.rows || []).map(row => ({ ...row, currentDataTime: full?.savedAtText || "" }));
   const fullById = new Map(fullRows.map(row => [String(row.id || ""), row]));
   const fastIsNewer = timeValue(fast?.savedAtText) > timeValue(full?.savedAtText);
-  const fastRows = deduplicateBusinessUsers(fastIsNewer ? fast?.rows || [] : []);
+  const fastRows = deduplicateBusinessUsers(fastIsNewer ? fast?.rows || [] : []).map(row => ({ ...row, currentDataTime: fast?.savedAtText || "" }));
   const fastById = new Map(fastRows.map(row => [String(row.id || ""), row]));
   const currentById = new Map(fullById);
   fastById.forEach((row, id) => currentById.set(id, row));
@@ -1438,6 +1438,7 @@ function compactSnapshot(snapshot) {
     snapshotSlotKey: snapshot.snapshotSlotKey,
     snapshotSlotLabel: snapshot.snapshotSlotLabel,
     actualMinuteOfDay: number(snapshot.actualMinuteOfDay),
+    userDataStrict: Boolean(snapshot.userDataStrict),
     business: Object.fromEntries(Object.entries(snapshot.business || {}).map(([id, value]) => [id, {
       name: value?.name || "",
       platform: value?.platform || "",
@@ -1522,12 +1523,24 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
 function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange = rangeFromQuery(), comparisonMinute = minuteOfDay()) {
   const currentDate = dateFromDay(dateRange.endDate);
   const businessKey = String(businessId || "");
-  const usableSnapshots = snapshots.filter(snapshot => Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
-  const yesterday = exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -1)), comparisonMinute);
-  const lastWeek = exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -7)), comparisonMinute);
-  const recent = Array.from({ length: 7 }, (_, index) => exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -(index + 1))), comparisonMinute)).filter(Boolean);
+  const usableSnapshots = snapshots.filter(snapshot => snapshot.userDataStrict === true && Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
+  const baselinesByMinute = new Map();
+  const baselinesFor = targetMinute => {
+    if (!Number.isFinite(Number(targetMinute))) return { yesterday: null, lastWeek: null, recent: [] };
+    const key = Number(targetMinute);
+    if (!baselinesByMinute.has(key)) {
+      baselinesByMinute.set(key, {
+        yesterday: exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -1)), key),
+        lastWeek: exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -7)), key),
+        recent: Array.from({ length: 7 }, (_, index) => exactSnapshot(usableSnapshots, dayKey(addDays(currentDate, -(index + 1))), key)).filter(Boolean)
+      });
+    }
+    return baselinesByMinute.get(key);
+  };
 
   return rows.map(row => {
+    const rowMinute = comparisonMinuteFromText(row.currentDataTime || row.userDataTime) ?? comparisonMinute;
+    const { yesterday, lastWeek, recent } = baselinesFor(rowMinute);
     const id = String(row.id || "");
     const pick = snap => snap?.businessUsers?.[businessKey]?.[id] || null;
     const sevenValues = recent.map(pick).filter(Boolean);
@@ -1551,14 +1564,24 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
   });
 }
 
-function cachedBusinessUsersSnapshot(dateRange) {
+function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
   const targetDate = dateRange.endDate;
   const candidates = new Map();
+  const focusCurrent = new Map();
   for (const [cacheKey, payload] of userDetailCache.entries()) {
     try {
       const key = JSON.parse(cacheKey);
       const businessId = String(key.businessId);
       if (!businessId || !Array.isArray(payload.rows)) continue;
+      const payloadMinute = comparisonMinuteFromText(payload.savedAtText);
+      if (key.type === "focus-current") {
+        if (key.date === targetDate && payloadMinute === Number(targetMinute)) {
+          const rows = focusCurrent.get(businessId) || [];
+          rows.push(...payload.rows);
+          focusCurrent.set(businessId, rows);
+        }
+        continue;
+      }
       const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
       const group = candidates.get(businessId) || { history: null, exact: null };
       if (key.type === "history" && key.startDate <= targetDate && key.endDate >= targetDate) {
@@ -1580,14 +1603,14 @@ function cachedBusinessUsersSnapshot(dateRange) {
   for (const [businessId, group] of candidates.entries()) {
     const full = latestFullBusinessUsers(businessId, targetDate);
     if (full) {
-      const fullSavedAt = Date.parse(String(full.savedAtText || "").replace(/\//g, "-")) || 0;
       const fast = latestFastBusinessUsers(businessId, targetDate);
-      const fastSavedAt = Date.parse(String(fast?.savedAtText || "").replace(/\//g, "-")) || 0;
-      const currentById = new Map(deduplicateBusinessUsers(full.rows || []).map(row => [String(row.id || ""), row]));
-      if (fastSavedAt > fullSavedAt) {
+      const fullMatchesSlot = comparisonMinuteFromText(full.savedAtText) === Number(targetMinute);
+      const fastMatchesSlot = comparisonMinuteFromText(fast?.savedAtText) === Number(targetMinute);
+      const currentById = new Map((fullMatchesSlot ? deduplicateBusinessUsers(full.rows || []) : []).map(row => [String(row.id || ""), row]));
+      if (fastMatchesSlot) {
         for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), row);
       }
-      details[businessId] = Object.fromEntries([...currentById.entries()].map(([userId, row]) => [userId, {
+      if (currentById.size) details[businessId] = Object.fromEntries([...currentById.entries()].map(([userId, row]) => [userId, {
         name: row.name,
         phone: plainPhoneValue(userId, row.phone),
         version: row.version,
@@ -1596,7 +1619,7 @@ function cachedBusinessUsersSnapshot(dateRange) {
       }]));
       continue;
     }
-    const historyRows = (group.history?.payload.rows || []).map(row => ({
+    const historyRows = (comparisonMinuteFromText(group.history?.payload.savedAtText) === Number(targetMinute) ? group.history?.payload.rows || [] : []).map(row => ({
       ...row,
       todayOrders: number(row.days?.[targetDate]),
       todayCommission: 0
@@ -1607,12 +1630,27 @@ function cachedBusinessUsersSnapshot(dateRange) {
       if (!userId) continue;
       byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
     }
-    if (!group.history || group.exact?.savedAt > group.history.savedAt) {
+    if (comparisonMinuteFromText(group.exact?.payload.savedAtText) === Number(targetMinute)) {
       for (const row of deduplicateBusinessUsers(group.exact?.payload.rows || [])) {
         const userId = String(row.id || "");
         if (!userId) continue;
         byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
       }
+    }
+    if (Object.keys(byUser).length) details[businessId] = byUser;
+  }
+  for (const [businessId, rows] of focusCurrent.entries()) {
+    const byUser = details[businessId] || {};
+    for (const row of deduplicateBusinessUsers(rows)) {
+      const userId = String(row.id || "");
+      if (!userId) continue;
+      byUser[userId] = {
+        name: row.name,
+        phone: plainPhoneValue(userId, row.phone),
+        version: row.version,
+        orders: number(row.todayOrders),
+        commission: number(row.todayCommission)
+      };
     }
     if (Object.keys(byUser).length) details[businessId] = byUser;
   }
@@ -1740,9 +1778,10 @@ async function recordSnapshot(businesses, users, force = false, businessDaily = 
     snapshotSlotKey: slot.key,
     snapshotSlotLabel: slot.label,
     actualMinuteOfDay: minuteOfDay(),
+    userDataStrict: true,
     business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: row.todayCommission }])),
     users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission }])),
-    businessUsers: cachedBusinessUsersSnapshot(dateRange)
+    businessUsers: cachedBusinessUsersSnapshot(dateRange, slot.minuteOfDay)
   };
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
@@ -2208,7 +2247,13 @@ async function encryptedPublicUserDetails(dateRange) {
       if (previous && (rank[0] < previous[0] || (rank[0] === previous[0] && rank[1] <= previous[1]))) continue;
       detailRanks.set(id, rank);
       const realtimeToday = key.includePrevious === false && key.startDate === dayKey() && key.endDate === dayKey();
-      const rows = enrichBusinessUsersWithSnapshots(payload.rows || [], snapshots, id, dateRange, comparisonMinuteFromText(payload.savedAtText))
+      const rows = enrichBusinessUsersWithSnapshots(
+        (payload.rows || []).map(row => ({ ...row, currentDataTime: payload.savedAtText || "" })),
+        snapshots,
+        id,
+        dateRange,
+        comparisonMinuteFromText(payload.savedAtText)
+      )
         .map(row => ({ ...row, realtimeToday }));
       details[id] = {
         ...(details[id] || {}),
@@ -2236,9 +2281,9 @@ async function encryptedPublicUserDetails(dateRange) {
     const fast = latestFastBusinessUsers(businessId, dateRange.endDate);
     const fullTime = timeValue(full.savedAtText);
     const fastIsNewer = timeValue(fast?.savedAtText) > fullTime;
-    const currentById = new Map(deduplicateBusinessUsers(full.rows || []).map(row => [String(row.id || ""), row]));
+    const currentById = new Map(deduplicateBusinessUsers(full.rows || []).map(row => [String(row.id || ""), { ...row, currentDataTime: full.savedAtText || "" }]));
     if (fastIsNewer) {
-      for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), row);
+      for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), { ...row, currentDataTime: fast.savedAtText || "" });
     }
     const historyRows = detail.history?.rows || [];
     const mergedRows = historyRows.map(row => {
@@ -2495,7 +2540,7 @@ const server = createServer(async (req, res) => {
       }, statuses);
       const snapshots = await readSnapshots();
       const users = enrichBusinessUsersWithSnapshots(
-        result.rows,
+        result.rows.map(row => ({ ...row, currentDataTime: result.savedAtText || "" })),
         snapshots,
         url.searchParams.get("business_id") || "",
         rangeFromQuery({ start_date: startDate, end_date: endDate }),
