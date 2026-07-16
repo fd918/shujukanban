@@ -397,6 +397,36 @@
     .mobile-data-cards { display:none; }
     .mobile-daily-matrix, .mobile-detail-back { display:none; }
 
+    @media (min-width: 961px) {
+      .panel > .table-wrap.focus-table-active {
+        height: calc(100dvh - 262px);
+        min-height: 520px;
+        max-height: none;
+        background: #fff;
+      }
+      .focus-table-active #focusView:not(.hidden) {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      .focus-table-active .focus-shell {
+        flex: 1 1 auto;
+        display: flex;
+        min-height: 520px;
+        background: #fff;
+      }
+      .focus-table-active .focus-main {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      .focus-table-active .focus-main > .table-wrap {
+        height: 100%;
+        min-height: 100%;
+        max-height: none;
+        background: #fff;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .modal, .modal-mask, .toast { transition:none; }
     }
@@ -1587,6 +1617,7 @@
       $("#dailyMobileMatrix").classList.toggle("hidden", state.view !== "daily");
       $("#dailyTable").classList.toggle("hidden", state.view !== "daily");
       $("#focusView").classList.toggle("hidden", state.view !== "focus");
+      $("#focusView").closest(".table-wrap").classList.toggle("focus-table-active", state.view === "focus");
       if (state.view === "focus") {
         renderFocusUsers();
         return;
