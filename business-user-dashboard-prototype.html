@@ -395,6 +395,7 @@
     .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
     .mobile-data-cards { display:none; }
+    .mobile-daily-matrix, .mobile-detail-back { display:none; }
 
     @media (max-width: 960px) {
       .filters, .kpis, .settings-grid, .detail-grid, .history-analysis, .notification-list { grid-template-columns: 1fr; }
@@ -426,7 +427,80 @@
       .focus-custom-range { width:100%; flex-wrap:wrap; }
       .panel > .table-wrap { max-height:none; min-height:0; overflow:visible; }
       #businessTable { display:none !important; }
+      #dailyTable { display:none !important; }
       .focus-main > .table-wrap { display:none; }
+      .mobile-daily-matrix:not(.hidden) { display:block; width:100%; background:#fff; }
+      .mobile-matrix-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; border-bottom:1px solid var(--line); background:#fff; }
+      .mobile-matrix-toolbar .segmented { flex:1; }
+      .mobile-matrix-toolbar .segmented button { flex:1; min-height:44px; padding:0 8px; touch-action:manipulation; }
+      .mobile-matrix-status { padding:8px 10px; border-bottom:1px solid var(--line); background:#f8fafc; color:var(--muted); font-size:11px; line-height:1.45; }
+      .mobile-matrix-scroll { width:100%; overflow-x:auto; overflow-y:visible; overscroll-behavior-x:contain; scrollbar-gutter:stable; background:#fff; }
+      .mobile-matrix-scroll::-webkit-scrollbar { height:8px; }
+      .mobile-matrix-scroll::-webkit-scrollbar-track { background:#eef2f6; }
+      .mobile-matrix-scroll::-webkit-scrollbar-thumb { background:#98a2b3; border:2px solid #eef2f6; border-radius:6px; }
+      .mobile-matrix-table { width:max-content; min-width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+      .mobile-matrix-table th, .mobile-matrix-table td { height:48px; min-width:92px; padding:8px 9px; border-right:1px solid #edf1f6; border-bottom:1px solid #edf1f6; background:#fff; font-size:13px; text-align:right; }
+      .mobile-matrix-table th { top:0; z-index:3; height:54px; background:#f8fafc; color:var(--muted); font-size:11px; line-height:1.35; text-align:center; }
+      .mobile-matrix-table .mobile-identity-col { position:sticky; left:0; z-index:4; width:148px; min-width:148px; max-width:148px; text-align:left; white-space:normal; box-shadow:5px 0 8px rgba(15,23,42,.06); }
+      .mobile-matrix-table thead .mobile-identity-col { z-index:6; background:#f8fafc; text-align:center; }
+      .mobile-matrix-table .mobile-today-col { background:#fffaf0; color:var(--text); font-weight:700; }
+      .mobile-matrix-table thead .mobile-today-col { color:var(--brand); }
+      .mobile-matrix-table .mobile-total-row td { background:#fff7ed; font-weight:700; border-bottom:2px solid #fed7aa; }
+      .mobile-matrix-table .mobile-total-row .mobile-identity-col { background:#fff7ed; }
+      .mobile-business-name { display:block; max-height:38px; overflow:hidden; color:var(--text); font-size:13px; font-weight:700; line-height:1.45; }
+      .mobile-business-platform { display:block; margin-top:2px; color:var(--muted); font-size:10px; }
+      .mobile-business-daily-list { background:#fff; }
+      .mobile-business-daily-row { border-bottom:1px solid var(--line); }
+      .mobile-business-daily-row summary { min-height:58px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; padding:8px 12px; list-style:none; cursor:pointer; touch-action:manipulation; }
+      .mobile-business-daily-row summary::-webkit-details-marker { display:none; }
+      .mobile-business-daily-value { text-align:right; }
+      .mobile-business-daily-value strong { display:block; font-size:15px; }
+      .mobile-business-daily-value span { color:var(--muted); font-size:10px; }
+      .mobile-business-daily-days { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; padding:1px 12px 12px; background:#edf1f6; }
+      .mobile-business-daily-day { min-height:48px; padding:7px 9px; background:#fff; }
+      .mobile-business-daily-day span { display:block; color:var(--muted); font-size:10px; }
+      .mobile-business-daily-day strong { display:block; margin-top:4px; font-size:13px; }
+      .mobile-detail-back { min-width:72px; min-height:44px; align-items:center; justify-content:center; border:0; background:transparent; color:var(--text); padding:0 10px; font-weight:700; touch-action:manipulation; }
+      .detail-modal { left:0; top:0; width:100%; max-width:none; height:100dvh; max-height:none; border-radius:0; transform:none; grid-template-rows:auto 1fr; }
+      .detail-modal.open { transform:none; }
+      .detail-modal .modal-head { min-height:60px; display:grid; grid-template-columns:72px minmax(0,1fr) 72px; align-items:center; padding:8px 8px; }
+      .detail-modal .modal-head > div { grid-column:2; min-width:0; text-align:center; }
+      .detail-modal .modal-head h2 { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:17px; }
+      .detail-modal .modal-head small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .detail-modal .mobile-detail-back { display:flex; grid-column:1; grid-row:1; }
+      .detail-modal #closeDetail { display:none; }
+      .detail-modal .modal-body { padding:0; overscroll-behavior:contain; background:#fff; }
+      .detail-modal .modal-foot { display:none; }
+      .detail-modal .detail-grid { position:sticky; top:0; z-index:8; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; margin:0; border-bottom:1px solid var(--line); background:#fff; }
+      .detail-modal .detail { min-width:0; padding:9px 5px; border:0; border-right:1px solid #edf1f6; border-radius:0; background:#fff; text-align:center; }
+      .detail-modal .detail:last-child { border-right:0; }
+      .detail-modal .detail label { display:block; min-height:29px; font-size:10px; line-height:1.35; }
+      .detail-modal .detail strong { margin-top:2px; font-size:16px; line-height:1.25; overflow-wrap:anywhere; }
+      .detail-controls { display:grid !important; grid-template-columns:1fr 1fr; gap:8px !important; margin:0 !important; padding:10px; border-bottom:1px solid var(--line); background:#fff; }
+      .detail-controls > .segmented:first-child { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .detail-controls > .segmented:nth-child(2) { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .detail-controls .segmented button { min-width:0; min-height:44px; padding:4px 6px; white-space:normal; line-height:1.25; touch-action:manipulation; }
+      .detail-controls > .field { width:100% !important; min-width:0 !important; flex:initial !important; min-height:44px; }
+      .detail-controls .search-with-clear { grid-column:1/-1; width:100%; max-width:none; min-height:44px; }
+      .detail-controls [data-detail-refresh] { min-height:44px; }
+      .detail-controls > .muted { align-self:center; font-size:10px; line-height:1.4; }
+      .detail-controls [data-detail-info] { min-height:44px; }
+      .mobile-detail-matrix { background:#fff; }
+      .mobile-detail-matrix .mobile-matrix-status { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+      .mobile-detail-table .mobile-identity-col { width:148px; min-width:148px; max-width:148px; }
+      .mobile-detail-table .mobile-identity-col button { width:100%; min-height:44px; border:0; background:transparent; color:var(--text); padding:0; text-align:left; touch-action:manipulation; }
+      .mobile-user-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
+      .mobile-user-id { display:block; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:10px; }
+      .mobile-detail-table td { min-width:96px; }
+      .mobile-detail-table .mobile-status-col { min-width:110px; text-align:center; }
+      .mobile-detail-table .mobile-expanded-spacer { position:sticky; left:0; z-index:4; width:148px; min-width:148px; background:#f8fafc; box-shadow:5px 0 8px rgba(15,23,42,.06); }
+      .mobile-detail-table .mobile-expanded-cell { padding:10px; background:#f8fafc; text-align:left; }
+      .mobile-expanded-meta { display:flex; flex-wrap:wrap; gap:5px 14px; margin-bottom:9px; color:var(--muted); font-size:11px; }
+      .mobile-expanded-days { display:flex; gap:6px; min-width:max-content; }
+      .mobile-expanded-day { min-width:82px; padding:7px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+      .mobile-expanded-day span { display:block; color:var(--muted); font-size:10px; }
+      .mobile-expanded-day strong { display:block; margin-top:4px; color:var(--text); font-size:13px; }
+      .mobile-load-more { width:calc(100% - 20px); min-height:46px; margin:10px; touch-action:manipulation; }
       .mobile-data-cards:not(.hidden) { display:grid; gap:10px; padding:10px; background:#f4f6f8; }
       .mobile-data-card { min-width:0; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 8px rgba(15,23,42,.05); }
       .mobile-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:12px 12px 10px; border-bottom:1px solid #edf1f6; }
@@ -571,6 +645,7 @@
           </thead>
           <tbody id="businessBody"></tbody>
         </table>
+        <div class="mobile-daily-matrix hidden" id="dailyMobileMatrix" aria-live="polite"></div>
         <table id="dailyTable" class="hidden">
           <thead id="dailyHead"></thead>
           <tbody id="dailyBody"></tbody>
@@ -605,6 +680,7 @@
   <section class="modal detail-modal" id="detailModal">
     <div class="modal-head">
       <div><h2 id="detailTitle">业务详情</h2><small id="detailSub">异常客户和趋势判断</small></div>
+      <button class="mobile-detail-back" id="mobileCloseDetail" type="button">返回</button>
       <button class="icon-btn" id="closeDetail">×</button>
     </div>
     <div class="modal-body" id="detailBody"></div>
@@ -739,7 +815,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -749,6 +825,7 @@
     const PUBLIC_USER_ALIASES_KEY = "businessDashboardPublicUserAliases";
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
+    const isMobileViewport = () => window.matchMedia("(max-width: 960px)").matches;
     const readLocalValue = (key, fallback = "") => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } };
     const writeLocalValue = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { return false; } };
     const removeLocalValue = key => { try { localStorage.removeItem(key); } catch {} };
@@ -1494,6 +1571,7 @@
           : "默认展示全部业务，可在列表内筛选异常类型和排序｜每 10 分钟更新";
       $("#businessTable").classList.toggle("hidden", state.view !== "list");
       $("#businessMobileCards").classList.toggle("hidden", state.view !== "list");
+      $("#dailyMobileMatrix").classList.toggle("hidden", state.view !== "daily");
       $("#dailyTable").classList.toggle("hidden", state.view !== "daily");
       $("#focusView").classList.toggle("hidden", state.view !== "focus");
       if (state.view === "focus") {
@@ -1541,6 +1619,39 @@
       }).join("") : `<tr><td colspan="13" class="muted">当前筛选条件下没有业务。</td></tr>`;
     }
 
+    function renderDailyMobileMatrix(rows, dates) {
+      const container = $("#dailyMobileMatrix");
+      const valueOf = (row, date) => Number(row.days?.[date]?.[state.metric === "commission" ? "commission" : "orders"] || 0);
+      const valueText = value => state.metric === "commission" ? money(value) : fmt(value);
+      const today = dayText(new Date());
+      const modeToolbar = `<div class="mobile-matrix-toolbar"><div class="segmented"><button class="${state.mobileDailyMode === "date" ? "active" : ""}" data-mobile-daily-mode="date">按日期看</button><button class="${state.mobileDailyMode === "business" ? "active" : ""}" data-mobile-daily-mode="business">按业务看</button></div></div>`;
+      const status = `<div class="mobile-matrix-status"><span>日期 ${dates[0] || "-"} 至 ${dates.at(-1) || "-"}｜${state.metric === "commission" ? "佣金" : "订单"}</span><span>${state.mobileDailyMode === "date" ? "业务列固定，日期区域可左右滑动" : "展开业务查看每日准确值"}</span></div>`;
+      if (state.loading && !rows.length) {
+        container.innerHTML = `${modeToolbar}${status}<div class="mobile-matrix-status">每日业务数据加载中，请稍等...</div>`;
+        return;
+      }
+      if (!rows.length || !dates.length) {
+        container.innerHTML = `${modeToolbar}${status}<div class="mobile-matrix-status">当前筛选条件下没有每日业务数据。</div>`;
+        return;
+      }
+      if (state.mobileDailyMode === "business") {
+        container.innerHTML = `${modeToolbar}${status}<div class="mobile-business-daily-list">${rows.map((row, index) => {
+          const rangeTotal = dates.reduce((sum, date) => sum + valueOf(row, date), 0);
+          return `<details class="mobile-business-daily-row" ${index === 0 ? "open" : ""} data-mobile-daily-business="${escapeHtml(row.platformBusinessId || row.businessId || index)}">
+            <summary><span><span class="mobile-business-name">${escapeHtml(row.name || "-")}</span><span class="mobile-business-platform">${escapeHtml(row.platform || "-")}</span></span><span class="mobile-business-daily-value"><strong>${valueText(valueOf(row, dates.at(-1)))}</strong><span>末日值｜合计 ${valueText(rangeTotal)}</span></span></summary>
+            <div class="mobile-business-daily-days">${dates.map(date => `<div class="mobile-business-daily-day ${date === today ? "mobile-today-col" : ""}" data-business-id="${escapeHtml(row.platformBusinessId || row.businessId || "")}" data-date="${date}" data-value="${valueOf(row, date)}"><span>${date.slice(5)}${date === today ? "｜今天" : ""}</span><strong>${valueText(valueOf(row, date))}</strong></div>`).join("")}</div>
+          </details>`;
+        }).join("")}</div>`;
+        return;
+      }
+      const dailyTotals = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + valueOf(row, date), 0)]));
+      container.innerHTML = `${modeToolbar}${status}<div class="mobile-matrix-scroll" data-mobile-matrix-scroll="daily"><table class="mobile-matrix-table"><thead><tr><th class="mobile-identity-col">业务名称<br><small>左列固定</small></th>${dates.map(date => `<th class="${date === today ? "mobile-today-col" : ""}">${date.slice(5)}<br>${date === today ? "今天" : ""}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr><td class="mobile-identity-col"><span class="mobile-business-name">${escapeHtml(row.name || "-")}</span><span class="mobile-business-platform">${escapeHtml(row.platform || "-")}</span></td>${dates.map(date => `<td class="${date === today ? "mobile-today-col" : ""}" data-business-id="${escapeHtml(row.platformBusinessId || row.businessId || "")}" data-date="${date}" data-value="${valueOf(row, date)}">${valueText(valueOf(row, date))}</td>`).join("")}</tr>`).join("")}<tr class="mobile-total-row"><td class="mobile-identity-col">当前列表合计</td>${dates.map(date => `<td class="${date === today ? "mobile-today-col" : ""}" data-date="${date}" data-total-value="${dailyTotals[date]}">${valueText(dailyTotals[date])}</td>`).join("")}</tr></tbody></table></div>`;
+      requestAnimationFrame(() => {
+        const scroller = container.querySelector("[data-mobile-matrix-scroll='daily']");
+        if (scroller) scroller.scrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      });
+    }
+
     function renderDailyTable() {
       const daily = state.businessDaily || {};
       const dates = daily.dates || [];
@@ -1549,6 +1660,7 @@
       if (state.dailyBusinessId) rows = rows.filter(row => String(row.businessId) === state.dailyBusinessId || String(row.platformBusinessId) === state.dailyBusinessId);
       if (state.platform !== "all") rows = rows.filter(row => row.platform === state.platform);
       if (searchKey) rows = rows.filter(row => `${row.platform}${row.name}${row.businessId}${row.platformBusinessId || ""}`.toLowerCase().includes(searchKey));
+      renderDailyMobileMatrix(rows, dates);
       $("#dailyTable").classList.toggle("wide-date-table", dates.length > 7);
       $("#dailyHead").innerHTML = `<tr><th>序号</th><th>平台</th><th>业务名称</th>${dates.map(date => `<th>${date}</th>`).join("")}</tr>`;
       if (state.loading && !rows.length) {
@@ -2755,7 +2867,7 @@
           <div class="detail"><label>下降影响合计</label><strong class="${declineImpact ? "down" : ""}">${fmt(declineImpact)}</strong></div>
           <div class="detail"><label>${periodScope ? "净变化订单" : "未定位差额"}</label><strong class="${periodScope ? (netDiff < 0 ? "down" : netDiff > 0 ? "up" : "") : (unattributed ? "down" : "")}">${periodScope ? fmt(netDiff) : fmtValue(unattributed)}</strong></div>
         </div>
-        <div class="toolbar" style="margin-bottom:10px;">
+        <div class="toolbar detail-controls" style="margin-bottom:10px;">
           <div class="segmented">
             <button class="${state.detailMode === "abnormal" ? "active" : ""}" data-detail-mode="abnormal">流失风险 ${fmt(downUsers.length)}</button>
             <button class="${state.detailMode === "up" ? "active" : ""}" data-detail-mode="up">增长用户 ${fmt(upUsers.length)}</button>
@@ -2827,6 +2939,28 @@
       return tag(cmp.level, cmp.label);
     }
 
+    function renderMobileDetailResult(users, dates) {
+      const visibleUsers = users.slice(0, state.detailMobileLimit);
+      const selectedDate = dates.at(-1) || "";
+      const todaySum = users.reduce((sum, user) => sum + Number(user.cmp?.today || 0), 0);
+      const baseUsers = users.filter(user => user.cmp?.base !== null && user.cmp?.base !== undefined);
+      const baseSum = baseUsers.reduce((sum, user) => sum + Number(user.cmp?.base || 0), 0);
+      const impactTotal = users.reduce((sum, user) => sum + Number(user.cmp?.impact || 0), 0);
+      const selectedDateSum = selectedDate ? users.reduce((sum, user) => sum + Number(user.days?.[selectedDate] || 0), 0) : null;
+      const emptyText = state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。";
+      return `<div class="mobile-detail-matrix">
+        <div class="mobile-matrix-status"><span>共 ${fmt(users.length)} 人，已显示 ${fmt(visibleUsers.length)} 人</span><span>用户列固定，右侧可滑动</span></div>
+        <div class="mobile-matrix-scroll" data-mobile-matrix-scroll="users"><table class="mobile-matrix-table mobile-detail-table"><thead><tr><th class="mobile-identity-col">用户信息<br><small>点击展开明细</small></th><th class="mobile-today-col">今日订单</th><th>昨日同时刻</th><th>变化率</th><th>下降影响</th><th class="mobile-status-col">状态</th>${selectedDate ? `<th>${selectedDate.slice(5)}<br>选中日期</th>` : ""}</tr></thead>
+        ${users.length ? `<tbody class="mobile-total-row"><tr><td class="mobile-identity-col">当前列表合计</td><td class="mobile-today-col" data-mobile-total="today" data-value="${todaySum}">${fmt(todaySum)}</td><td data-mobile-total="base" data-value="${baseSum}">${baseUsers.length ? fmt(baseSum) : "-"}</td><td>-</td><td data-mobile-total="impact" data-value="${impactTotal}">${fmt(impactTotal)}</td><td>-</td>${selectedDate ? `<td data-mobile-total-date="${selectedDate}" data-value="${selectedDateSum}">${fmt(selectedDateSum)}</td>` : ""}</tr></tbody>` : ""}
+        <tbody>${visibleUsers.length ? visibleUsers.map(user => {
+          const id = String(user.id || "");
+          const expanded = state.detailExpandedUserId === id;
+          return `<tr data-mobile-user-id="${escapeHtml(id)}"><td class="mobile-identity-col"><button data-detail-user-toggle="${escapeHtml(id)}" aria-expanded="${expanded}"><span class="mobile-user-name">${escapeHtml(userDisplayName(user))}</span><span class="mobile-user-id">ID：${escapeHtml(id || "-")}｜${expanded ? "收起" : "展开"}</span></button></td><td class="mobile-today-col" data-field="today" data-value="${Number(user.cmp?.today || 0)}">${fmt(user.cmp?.today)}</td><td data-field="base" data-value="${user.cmp?.base ?? ""}">${fmtValue(user.cmp?.base)}</td><td data-field="ratio" data-value="${user.cmp?.ratio ?? ""}" class="${user.cmp?.diff < 0 ? "down" : user.cmp?.diff > 0 ? "up" : ""}">${pctValue(user.cmp?.ratio)}</td><td data-field="impact" data-value="${user.cmp?.impact ?? ""}" class="${user.cmp?.diff < 0 ? "down" : ""}">${fmtValue(user.cmp?.impact)}</td><td class="mobile-status-col">${detailUserStatusTag(user)}</td>${selectedDate ? `<td data-field="date" data-date="${selectedDate}" data-value="${Number(user.days?.[selectedDate] || 0)}">${fmt(user.days?.[selectedDate])}</td>` : ""}</tr>${expanded ? `<tr class="mobile-expanded-row"><td class="mobile-expanded-spacer"></td><td class="mobile-expanded-cell" colspan="${selectedDate ? 6 : 5}"><div class="mobile-expanded-meta"><span>手机号：${escapeHtml(user.phone || "-")}</span><span>版本：${escapeHtml(user.version || "-")}</span><span>${copyUserIdButton(user)}</span>${aliasEditButton(user)}${addFocusButton(user)}</div><div class="mobile-expanded-days">${dates.map(date => `<div class="mobile-expanded-day" data-date="${date}" data-value="${Number(user.days?.[date] || 0)}"><span>${date.slice(5)}</span><strong>${fmt(user.days?.[date])}</strong></div>`).join("")}</div></td></tr>` : ""}`;
+        }).join("") : `<tr><td class="mobile-identity-col">暂无数据</td><td colspan="${selectedDate ? 6 : 5}" class="muted">${emptyText}</td></tr>`}</tbody></table></div>
+        ${visibleUsers.length < users.length ? `<button class="btn mobile-load-more" data-detail-load-more="1">继续加载（剩余 ${fmt(users.length - visibleUsers.length)} 人）</button>` : `<div class="mobile-matrix-status">已显示当前筛选下的全部 ${fmt(users.length)} 人</div>`}
+      </div>`;
+    }
+
     function renderDetailResult() {
       const row = state.detailRow;
       const allUsers = state.detailUsers || [];
@@ -2860,6 +2994,7 @@
       const yesterdayMajority = majorityMinute(yesterdayMatched.map(reference => reference.comparisonMinute));
       const lastWeekMatched = users.map(user => user.sameTime?.lastWeekReference || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
       const lastWeekMajority = majorityMinute(lastWeekMatched.map(reference => reference.comparisonMinute));
+      if (isMobileViewport()) return renderMobileDetailResult(users, dates);
       return `
         <div class="detail-table-wrap">
           <table class="compact wide-date-table user-data-table">
