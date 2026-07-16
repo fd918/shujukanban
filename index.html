@@ -339,6 +339,17 @@
     @media (max-width: 760px) {
       body { overflow: auto; }
 
+      body.business-detail-open { overflow:hidden; }
+
+      body.business-detail-open .shell,
+      body.business-detail-open .shell.sidebar-collapsed {
+        min-height:0;
+        height:100dvh;
+        grid-template-rows:minmax(0,1fr);
+      }
+
+      body.business-detail-open .sidebar { display:none; }
+
       .shell,
       .shell.sidebar-collapsed {
         min-height: 100%;
@@ -480,6 +491,12 @@
       business: document.getElementById("businessFrame"),
       focus: document.getElementById("focusFrame")
     };
+
+    window.addEventListener("message", event => {
+      if (event.source !== frames.business.contentWindow) return;
+      if (event.data?.type !== "business-dashboard-detail") return;
+      document.body.classList.toggle("business-detail-open", Boolean(event.data.open));
+    });
     const frameLoading = document.getElementById("frameLoading");
     const navButtons = Array.from(document.querySelectorAll(".nav-btn"));
     const collapseBtn = document.getElementById("collapseBtn");

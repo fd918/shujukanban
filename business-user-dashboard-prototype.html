@@ -447,9 +447,9 @@
       .mobile-matrix-scroll::-webkit-scrollbar-track { background:#eef2f6; }
       .mobile-matrix-scroll::-webkit-scrollbar-thumb { background:#98a2b3; border:2px solid #eef2f6; border-radius:6px; }
       .mobile-matrix-table { width:max-content; min-width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
-      .mobile-matrix-table th, .mobile-matrix-table td { height:48px; min-width:92px; padding:8px 9px; border-right:1px solid #edf1f6; border-bottom:1px solid #edf1f6; background:#fff; font-size:13px; text-align:right; }
+      .mobile-matrix-table th, .mobile-matrix-table td { height:48px; min-width:110px; padding:8px 9px; border-right:1px solid #edf1f6; border-bottom:1px solid #edf1f6; background:#fff; font-size:13px; text-align:right; }
       .mobile-matrix-table th { top:0; z-index:3; height:54px; background:#f8fafc; color:var(--muted); font-size:11px; line-height:1.35; text-align:center; }
-      .mobile-matrix-table .mobile-identity-col { position:sticky; left:0; z-index:4; width:148px; min-width:148px; max-width:148px; text-align:left; white-space:normal; box-shadow:5px 0 8px rgba(15,23,42,.06); }
+      .mobile-matrix-table .mobile-identity-col { position:sticky; left:0; z-index:4; width:142px; min-width:142px; max-width:142px; text-align:left; white-space:normal; box-shadow:5px 0 8px rgba(15,23,42,.06); }
       .mobile-matrix-table thead .mobile-identity-col { z-index:6; background:#f8fafc; text-align:center; }
       .mobile-matrix-table .mobile-today-col { background:#fffaf0; color:var(--text); font-weight:700; }
       .mobile-matrix-table thead .mobile-today-col { color:var(--brand); }
@@ -495,13 +495,13 @@
       .detail-controls [data-detail-info] { min-height:44px; }
       .mobile-detail-matrix { background:#fff; }
       .mobile-detail-matrix .mobile-matrix-status { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-      .mobile-detail-table .mobile-identity-col { width:148px; min-width:148px; max-width:148px; }
+      .mobile-detail-table .mobile-identity-col { width:142px; min-width:142px; max-width:142px; }
       .mobile-detail-table .mobile-identity-col button { width:100%; min-height:44px; border:0; background:transparent; color:var(--text); padding:0; text-align:left; touch-action:manipulation; }
       .mobile-user-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
       .mobile-user-id { display:block; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:10px; }
-      .mobile-detail-table td { min-width:96px; }
+      .mobile-detail-table td { min-width:110px; }
       .mobile-detail-table .mobile-status-col { min-width:110px; text-align:center; }
-      .mobile-detail-table .mobile-expanded-spacer { position:sticky; left:0; z-index:4; width:148px; min-width:148px; background:#f8fafc; box-shadow:5px 0 8px rgba(15,23,42,.06); }
+      .mobile-detail-table .mobile-expanded-spacer { position:sticky; left:0; z-index:4; width:142px; min-width:142px; background:#f8fafc; box-shadow:5px 0 8px rgba(15,23,42,.06); }
       .mobile-detail-table .mobile-expanded-cell { padding:10px; background:#f8fafc; text-align:left; }
       .mobile-expanded-meta { display:flex; flex-wrap:wrap; gap:5px 14px; margin-bottom:9px; color:var(--muted); font-size:11px; }
       .mobile-expanded-days { display:flex; gap:6px; min-width:max-content; }
@@ -837,6 +837,7 @@
     const readLocalValue = (key, fallback = "") => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } };
     const writeLocalValue = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { return false; } };
     const removeLocalValue = key => { try { localStorage.removeItem(key); } catch {} };
+    const notifyParentDetail = open => { try { if (window.parent !== window) window.parent.postMessage({ type: "business-dashboard-detail", open: Boolean(open) }, "*"); } catch {} };
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
     const money = n => Number(n || 0).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
     const pct = n => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}%`;
@@ -1738,6 +1739,7 @@
       $("#detailSub").textContent = `${row.platform || "-"}｜按日查看订单量`;
       $("#modalMask").classList.add("open");
       $("#detailModal").classList.add("open");
+      notifyParentDetail(true);
       renderBusinessDailyModal();
     }
 
@@ -2513,6 +2515,7 @@
       $("#detailSub").textContent = `${row.platform}｜${row.cmp.label}`;
       $("#modalMask").classList.add("open");
       $("#detailModal").classList.add("open");
+      notifyParentDetail(true);
       if (initialMode === "history") {
         setDetailHistoryRange("7", false);
         await loadBusinessUserHistory(false);
@@ -3206,6 +3209,7 @@
       $("#focusModal").classList.remove("open");
     }
     function closeDetail() {
+      notifyParentDetail(false);
       $("#modalMask").classList.remove("open");
       $("#detailModal").classList.remove("open");
       $("#settingsModal").classList.remove("open");
