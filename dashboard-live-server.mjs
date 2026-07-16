@@ -1068,17 +1068,22 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   const fastById = new Map(fastRows.map(row => [String(row.id || ""), row]));
   const currentById = new Map(fullById);
   fastById.forEach((row, id) => currentById.set(id, row));
-  const todayRows = historyRows.map(row => ({
-    ...row,
-    ...(currentById.get(String(row.id || "")) || {}),
-    days: {
-      ...(row.days || {}),
-      ...(full ? { [endDate]: number(currentById.get(String(row.id || ""))?.todayOrders) } : {})
-    },
-    todayOrders: full ? number(currentById.get(String(row.id || ""))?.todayOrders) : number(fastById.get(String(row.id || ""))?.todayOrders ?? row.days?.[endDate]),
-    yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)]),
-    realtimeToday: currentById.has(String(row.id || ""))
-  }));
+  const todayRows = historyRows.map(row => {
+    const current = currentById.get(String(row.id || ""));
+    return {
+      ...row,
+      ...(current || {}),
+      currentDataTime: current?.currentDataTime || (full ? full.savedAtText : row.currentDataTime),
+      days: {
+        ...(row.days || {}),
+        ...(full ? { [endDate]: number(current?.todayOrders) } : {})
+      },
+      todayOrders: full ? number(current?.todayOrders) : number(fastById.get(String(row.id || ""))?.todayOrders ?? row.days?.[endDate]),
+      yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)]),
+      // A complete current-day response also proves that omitted historical users have zero orders at this batch time.
+      realtimeToday: Boolean(full || current)
+    };
+  });
   for (const currentRow of currentById.values()) {
     if (historyRows.some(row => String(row.id || "") === String(currentRow.id || ""))) continue;
     todayRows.push({ ...currentRow, days: { [endDate]: number(currentRow.todayOrders) }, realtimeToday: true });
@@ -2630,9 +2635,10 @@ async function encryptedPublicUserDetails(dateRange) {
       return {
         ...row,
         ...(current || {}),
+        currentDataTime: current?.currentDataTime || full.savedAtText || "",
         days: { ...(row.days || {}), [dateRange.endDate]: number(current?.todayOrders) },
         todayOrders: number(current?.todayOrders),
-        realtimeToday: Boolean(current)
+        realtimeToday: true
       };
     });
     const historyIds = new Set(historyRows.map(row => String(row.id || "")));

@@ -166,6 +166,7 @@
     .up { color: var(--green); }
     .comparison-ref { display:block; margin-top:3px; color:#a15c00; font-size:11px; font-weight:650; line-height:1.25; white-space:nowrap; }
     .comparison-ref.legacy { color:#8a5b12; }
+    .comparison-majority { display:block; margin-top:3px; color:#667085; font-size:10px; font-weight:600; line-height:1.2; white-space:nowrap; }
 
     .tag { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; border-radius: 999px; padding: 0 9px; font-size: 12px; border: 1px solid transparent; }
     .tag.red { color: var(--red); background: #fff1f2; border-color: #fecdd3; }
@@ -390,6 +391,7 @@
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
     .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
+    .mobile-data-cards { display:none; }
 
     @media (max-width: 960px) {
       .filters, .kpis, .settings-grid, .detail-grid, .history-analysis, .notification-list { grid-template-columns: 1fr; }
@@ -409,6 +411,41 @@
       .focus-profile-stats { width:100%; overflow-x:auto; }
       .focus-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .focus-custom-range { width:100%; flex-wrap:wrap; }
+      .panel > .table-wrap { max-height:none; min-height:0; overflow:visible; }
+      #businessTable { display:none !important; }
+      .focus-main > .table-wrap { display:none; }
+      .mobile-data-cards:not(.hidden) { display:grid; gap:10px; padding:10px; background:#f4f6f8; }
+      .mobile-data-card { min-width:0; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 8px rgba(15,23,42,.05); }
+      .mobile-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:12px 12px 10px; border-bottom:1px solid #edf1f6; }
+      .mobile-card-title { min-width:0; }
+      .mobile-card-title strong { display:block; font-size:15px; line-height:1.4; word-break:break-word; }
+      .mobile-card-title span { display:block; margin-top:3px; color:var(--muted); font-size:11px; line-height:1.45; word-break:break-word; }
+      .mobile-card-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .mobile-card-stat { min-width:0; padding:10px 9px; border-right:1px solid #edf1f6; border-bottom:1px solid #edf1f6; }
+      .mobile-card-stat:nth-child(3n) { border-right:0; }
+      .mobile-card-stat label { display:block; min-height:30px; color:var(--muted); font-size:10px; line-height:1.4; }
+      .mobile-card-stat strong { display:block; margin-top:4px; font-size:16px; line-height:1.3; overflow-wrap:anywhere; }
+      .mobile-card-stat .comparison-ref { white-space:normal; }
+      .mobile-card-note { padding:9px 12px; border-bottom:1px solid #edf1f6; color:var(--text); font-size:12px; line-height:1.55; }
+      .mobile-card-note .muted { margin-right:5px; }
+      .mobile-card-daily { padding:10px 12px; border-bottom:1px solid #edf1f6; }
+      .mobile-card-daily summary, .mobile-card-actions summary { min-height:44px; display:flex; align-items:center; color:var(--blue); font-weight:700; cursor:pointer; list-style:none; }
+      .mobile-card-daily summary::-webkit-details-marker, .mobile-card-actions summary::-webkit-details-marker { display:none; }
+      .mobile-daily-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding-bottom:4px; }
+      .mobile-daily-item { min-width:0; padding:8px; border:1px solid var(--line); border-radius:6px; background:#f8fafc; }
+      .mobile-daily-item label { display:block; color:var(--muted); font-size:10px; }
+      .mobile-daily-item strong { display:block; margin-top:3px; font-size:13px; }
+      .mobile-card-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:10px 12px; }
+      .mobile-card-foot .refresh-switch { min-height:44px; }
+      .mobile-card-buttons { display:flex; gap:6px; margin-left:auto; }
+      .mobile-card-buttons .btn { min-height:44px; }
+      .mobile-card-actions { width:100%; }
+      .mobile-card-action-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; padding-bottom:2px; }
+      .mobile-card-action-list .btn { min-height:44px; padding:0 8px; }
+      .focus-summary { padding:10px 12px; line-height:1.55; }
+      .focus-metrics { padding:10px; gap:7px; }
+      .focus-metric { padding:9px 10px; }
+      .focus-metric strong { font-size:18px; }
     }
   </style>
 </head>
@@ -498,6 +535,7 @@
         </div>
       </div>
       <div class="table-wrap">
+        <div class="mobile-data-cards hidden" id="businessMobileCards" aria-live="polite"></div>
         <table id="businessTable">
           <thead>
             <tr>
@@ -541,6 +579,7 @@
               <div class="focus-summary" id="focusSummary">正在读取重点用户...</div>
               <div class="focus-metrics" id="focusMetrics"></div>
               <div class="focus-profile hidden" id="focusProfile"></div>
+              <div class="mobile-data-cards" id="focusMobileCards" aria-live="polite"></div>
               <div class="table-wrap"><table class="focus-table"><thead id="focusHead"></thead><tbody class="summary-body" id="focusSummaryBody"></tbody><tbody id="focusBody"></tbody></table></div>
             </div>
           </div>
@@ -695,16 +734,42 @@
     const pctValue = n => n === null || n === undefined ? "-" : pct(n);
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     const minuteText = minute => Number.isFinite(Number(minute)) ? `${pad(Math.floor(Number(minute) / 60))}:${pad(Number(minute) % 60)}` : "";
-    function comparisonReferenceCell(value, reference = {}, formatter = fmt) {
+    function timeMinuteFromText(value) {
+      const match = String(value || "").match(/\s(\d{1,2}):(\d{2})(?::\d{2})?$/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+    }
+    function majorityMinute(values = []) {
+      const counts = new Map();
+      values.forEach(value => {
+        const minute = Number(value);
+        if (!Number.isFinite(minute)) return;
+        counts.set(minute, (counts.get(minute) || 0) + 1);
+      });
+      const winner = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
+      return winner ? { minute: winner[0], count: winner[1] } : { minute: null, count: 0 };
+    }
+    function majorityHeader(label, majority, matchedCount) {
+      if (!Number.isFinite(Number(majority?.minute))) return "";
+      const countText = matchedCount ? `${majority.count}/${matchedCount} 人` : `${majority.count} 人`;
+      return `<small class="comparison-majority" title="当前列表中 ${countText} 使用该时刻">${label} ${minuteText(majority.minute)}</small>`;
+    }
+    function comparisonReferenceCell(value, reference = {}, formatter = fmt, options = {}) {
       if (value === null || value === undefined) return "-";
       const formatted = formatter(value);
       const quality = reference.comparisonQuality || "";
-      if (!quality || quality === "exact" || quality === "missing") return formatted;
       const slotMatch = String(reference.comparisonSlotLabel || "").match(/(\d{1,2}:\d{2})(?::\d{2})?$/);
-      const actualTime = slotMatch?.[1] || minuteText(reference.comparisonMinute) || "邻近时刻";
+      const actualMinute = Number.isFinite(Number(reference.comparisonMinute)) ? Number(reference.comparisonMinute) : null;
+      const actualTime = slotMatch?.[1] || minuteText(actualMinute) || "邻近时刻";
+      const dominantMinute = Number.isFinite(Number(options.dominantMinute)) ? Number(options.dominantMinute) : null;
+      const differsFromMajority = dominantMinute !== null && actualMinute !== null && actualMinute !== dominantMinute;
+      if (options.compactMajority && dominantMinute !== null && !differsFromMajority) return formatted;
+      if (!quality || quality === "missing" || (quality === "exact" && !differsFromMajority)) return formatted;
       const offset = Math.abs(Number(reference.comparisonOffsetMinutes || 0));
       const kind = quality === "legacy" ? "历史参考" : "参考";
-      const detail = offset ? ` · 相差 ${offset} 分钟` : "";
+      const majorityOffset = differsFromMajority ? actualMinute - dominantMinute : 0;
+      const detail = differsFromMajority
+        ? ` · 较多数${majorityOffset < 0 ? "早" : "晚"} ${Math.abs(majorityOffset)} 分钟`
+        : (offset ? ` · 相差 ${offset} 分钟` : "");
       return `${formatted}<small class="comparison-ref ${quality === "legacy" ? "legacy" : ""}" title="目标时刻 ${minuteText(reference.comparisonTargetMinute) || "-"}，实际使用 ${actualTime}">${actualTime} ${kind}${detail}</small>`;
     }
     function sevenDayReferenceCell(value, same = {}, formatter = fmt) {
@@ -1356,6 +1421,43 @@
           : (state.publicMode ? "当前为公网加密快照，已解密展示业务和用户明细。" : "已接入中台业务数据总览接口；当前固定展示今日数据，今天看前一日同时刻。"))));
     }
 
+    function renderBusinessMobileCards(rows) {
+      const container = $("#businessMobileCards");
+      if (state.loading && !rows.length) {
+        container.innerHTML = `<div class="mobile-data-card"><div class="mobile-card-note muted">数据加载中，请稍等...</div></div>`;
+        return;
+      }
+      container.innerHTML = rows.length ? rows.map((row, index) => {
+        const same = row.sameTime || {};
+        const fastUserRefresh = isFastUserBusiness(row);
+        const refreshBusinessId = row.platformBusinessId || row.businessId;
+        const currentValue = state.metric === "commission" ? money(row.cmp.today) : fmt(row.cmp.today);
+        const yesterdayValue = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null;
+        const lastWeekValue = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
+        const sevenDayValue = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
+        const valueFormatter = state.metric === "commission" ? money : fmt;
+        return `<article class="mobile-data-card" data-mobile-business-card="${index}">
+          <div class="mobile-card-head">
+            <div class="mobile-card-title"><strong>${escapeHtml(row.name || "-")}</strong><span>${escapeHtml(row.platform || "-")}｜${escapeHtml(refreshBusinessId || "-")}</span></div>
+            ${tag(row.cmp.level, row.cmp.label)}
+          </div>
+          <div class="mobile-card-stats">
+            <div class="mobile-card-stat"><label>${escapeHtml(currentMetricLabel())}</label><strong>${currentValue}</strong></div>
+            <div class="mobile-card-stat"><label>${escapeHtml(baselineLabel())}</label><strong>${comparisonReferenceCell(yesterdayValue, same.yesterdayReference || same, valueFormatter)}</strong></div>
+            <div class="mobile-card-stat"><label>上周同时刻</label><strong>${comparisonReferenceCell(lastWeekValue, same.lastWeekReference || {}, valueFormatter)}</strong></div>
+            <div class="mobile-card-stat"><label>近7日同期均值</label><strong>${sevenDayReferenceCell(sevenDayValue, same, valueFormatter)}</strong></div>
+            <div class="mobile-card-stat"><label>变化比例</label><strong class="${row.cmp.diff < 0 ? "down" : row.cmp.diff > 0 ? "up" : ""}">${pctValue(row.cmp.ratio)}</strong></div>
+            <div class="mobile-card-stat"><label>影响量</label><strong>${fmtValue(row.cmp.impact)}</strong></div>
+          </div>
+          <div class="mobile-card-foot">
+            <span class="muted">相关用户：<strong>${fmt(row.users || row.userIds?.length || 0)}</strong></span>
+            <label class="refresh-switch"><input type="checkbox" data-fast-business="${escapeHtml(refreshBusinessId)}" data-fast-business-alias="${escapeHtml(row.businessId || "")}" ${fastUserRefresh ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${fastUserRefresh ? "前100每10分钟" : "固定时段"}</span></label>
+            <div class="mobile-card-buttons"><button class="btn" data-business-daily-index="${index}">历史订单</button><button class="btn primary" data-index="${index}">查看用户</button></div>
+          </div>
+        </article>`;
+      }).join("") : `<div class="mobile-data-card"><div class="mobile-card-note muted">当前筛选条件下没有业务。</div></div>`;
+    }
+
     function renderTable() {
       $("#listTitle").textContent = state.view === "focus" ? "重点用户" : state.view === "daily" ? "每日业务数据" : "业务列表";
       $("#listSubtitle").textContent = state.view === "focus"
@@ -1364,6 +1466,7 @@
           ? `按日期查看各业务订单或佣金｜每 10 分钟随业务缓存更新`
           : "默认展示全部业务，可在列表内筛选异常类型和排序｜每 10 分钟更新";
       $("#businessTable").classList.toggle("hidden", state.view !== "list");
+      $("#businessMobileCards").classList.toggle("hidden", state.view !== "list");
       $("#dailyTable").classList.toggle("hidden", state.view !== "daily");
       $("#focusView").classList.toggle("hidden", state.view !== "focus");
       if (state.view === "focus") {
@@ -1384,6 +1487,7 @@
         const baseText = btn.textContent.replace(/[↑↓]$/, "");
         btn.textContent = active ? `${baseText}${state.sortDir === "asc" ? "↑" : "↓"}` : baseText;
       });
+      renderBusinessMobileCards(rows);
       if (state.loading && !rows.length) {
         $("#businessBody").innerHTML = `<tr><td colspan="13" class="muted">数据加载中，请稍等...</td></tr>`;
         return;
@@ -1490,6 +1594,42 @@
       renderBusinessDailyModal();
     }
 
+    function renderFocusMobileCards(rows, dates, data, compareFocusRow, focusDataTimeLabel) {
+      const container = $("#focusMobileCards");
+      if (state.focusLoading && !rows.length) {
+        container.innerHTML = `<div class="mobile-data-card"><div class="mobile-card-note muted">正在更新重点用户，原有数据会在加载完成后替换...</div></div>`;
+        return;
+      }
+      container.innerHTML = rows.length ? rows.map((row, index) => {
+        const comparison = compareFocusRow(row);
+        const title = state.focusMode === "business" ? userDisplayName(row) : (row.businessName || "-");
+        const subtitle = state.focusMode === "business"
+          ? `ID ${row.userId || "-"}｜${row.phone || "-"}｜${row.version || "-"}`
+          : `${row.platform || "-"}｜${row.businessId || "-"}`;
+        const note = state.focusMode === "business" ? focusNoteText(row) : "";
+        const dailyItems = dates.map(date => `<div class="mobile-daily-item"><label>${escapeHtml(date.slice(5).replace("-", "/"))}</label><strong>${fmt(row.days?.[date])}</strong></div>`).join("");
+        return `<article class="mobile-data-card" data-mobile-focus-card="${index}">
+          <div class="mobile-card-head">
+            <div class="mobile-card-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span></div>
+            ${tag(comparison.level, comparison.label)}
+          </div>
+          ${state.focusMode === "business" ? `<div class="mobile-card-note"><span class="muted">观察备注</span>${escapeHtml(note || "暂无备注")}${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${escapeHtml(row.newTop100At)}</span>` : ""}</div>` : ""}
+          <div class="mobile-card-stats">
+            <div class="mobile-card-stat"><label>今日订单</label><strong>${fmt(row.todayOrders)}</strong>${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</div>
+            <div class="mobile-card-stat"><label>昨日同时刻</label><strong>${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row)}</strong></div>
+            <div class="mobile-card-stat"><label>变化比例</label><strong class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</strong></div>
+            <div class="mobile-card-stat"><label>影响订单</label><strong>${fmtValue(row.impact)}</strong></div>
+            <div class="mobile-card-stat"><label>${escapeHtml(data.range?.label || "本期")}合计</label><strong>${fmt(row.periodTotal)}</strong></div>
+            <div class="mobile-card-stat"><label>上一同期</label><strong>${fmt(row.previousPeriodTotal)}</strong></div>
+            <div class="mobile-card-stat"><label>合计变化比例</label><strong class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</strong></div>
+            <div class="mobile-card-stat"><label>合计影响订单</label><strong>${fmt(row.periodImpact)}</strong></div>
+          </div>
+          <details class="mobile-card-daily"><summary>查看每日订单（${dates.length}天）</summary><div class="mobile-daily-grid">${dailyItems || '<span class="muted">当前日期范围暂无每日数据。</span>'}</div></details>
+          ${state.focusMode === "business" ? `<div class="mobile-card-foot"><details class="mobile-card-actions"><summary>用户操作</summary><div class="mobile-card-action-list"><button class="btn" data-copy-user-id="${escapeHtml(row.userId)}">复制用户ID</button><button class="btn" data-edit-user-alias="${escapeHtml(row.userId)}">修改名称</button><button class="btn" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}">编辑备注</button><button class="btn" data-pin-focus="1" data-user-id="${escapeHtml(row.userId)}" data-pinned="${row.pinned ? "1" : "0"}">${row.pinned ? "取消置顶" : "置顶用户"}</button><button class="btn danger" data-remove-focus="1" data-user-id="${escapeHtml(row.userId)}">移除关注</button></div></details></div>` : ""}
+        </article>`;
+      }).join("") : `<div class="mobile-data-card"><div class="mobile-card-note muted">${state.focusMode === "business" ? "当前业务暂无有单重点用户。" : "该用户当前没有匹配到有单业务。"}</div></div>`;
+    }
+
     function renderFocusUsers() {
       const data = state.focusData || { dates: [], rows: [], users: [], range: { label: "近7天" } };
       const businessRows = data.businessRows || data.rows || [];
@@ -1585,6 +1725,7 @@
         const currentDay = data.dates?.at(-1)?.slice(5).replace("-", "/");
         return `${date === currentDay ? "" : `${date} `}${match[4]}`;
       };
+      renderFocusMobileCards(rows, dates, data, compareFocusRow, focusDataTimeLabel);
       const baseColumns = state.focusMode === "business" ? 3 : 2;
       $("#focusBody").innerHTML = state.focusLoading && !rows.length
         ? `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">正在更新重点用户，原有数据会在加载完成后替换...</td></tr>`
@@ -2639,16 +2780,25 @@
       const lastWeekSum = lastWeekUsers.reduce((sum, user) => sum + Number(user.sameTime.lastWeek.orders || 0), 0);
       const impactTotal = users.reduce((sum, user) => sum + Number(user.cmp?.impact || 0), 0);
       const dailySums = Object.fromEntries(dates.map(date => [date, users.reduce((sum, user) => sum + Number(user.days?.[date] || 0), 0)]));
+      const currentMajority = majorityMinute(users.map(user => timeMinuteFromText(user.currentDataTime || user.userDataTime)));
+      const yesterdayMatched = users.map(user => user.sameTime?.yesterdayReference || user.sameTime || {}).filter(reference => Number.isFinite(Number(reference.comparisonMinute)));
+      const yesterdayMajority = majorityMinute(yesterdayMatched.map(reference => reference.comparisonMinute));
+      const lastWeekMatched = users.map(user => user.sameTime?.lastWeekReference || {}).filter(reference => Number.isFinite(Number(reference.comparisonMinute)));
+      const lastWeekMajority = majorityMinute(lastWeekMatched.map(reference => reference.comparisonMinute));
       return `
         <section class="source ${diff === null || diff === 0 ? "" : "warn"}"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；“增长用户”显示所有同一时刻订单净增长大于 0 的用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。<br><strong>数据校验：</strong>${detailScopeLabel()}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人${diff === null ? "。" : `，当前订单口径差异 ${fmt(diff)}。`}</section>
         <div class="detail-table-wrap">
           <table class="compact wide-date-table user-data-table">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "今日订单")}</th><th>昨日同时刻</th><th>上周同时刻</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "今日订单")}${majorityHeader("多数数据", currentMajority, users.length)}</th><th>昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>上周同时刻${majorityHeader("多数参考", lastWeekMajority, lastWeekMatched.length)}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
             ${users.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(todaySum)}</td><td>${baseUsers.length ? fmt(baseSum) : "-"}</td><td>${lastWeekUsers.length ? fmt(lastWeekSum) : "-"}</td><td>-</td><td>${fmt(impactTotal)}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}</tr></tbody>` : ""}
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
-              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same)}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {})}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
+              const userMinute = timeMinuteFromText(user.currentDataTime || user.userDataTime);
+              const userTimeNote = Number.isFinite(Number(userMinute)) && Number.isFinite(Number(currentMajority.minute)) && userMinute !== currentMajority.minute
+                ? `<small class="comparison-ref">数据 ${minuteText(userMinute)} · 较多数${userMinute < currentMajority.minute ? "早" : "晚"} ${Math.abs(userMinute - currentMajority.minute)} 分钟</small>`
+                : "";
+              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}${userTimeNote}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {}, fmt, { dominantMinute: lastWeekMajority.minute, compactMajority: true })}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
             }).join("") : `<tr><td colspan="${dates.length + 8}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>
@@ -2911,7 +3061,7 @@
     $("#modalMask").addEventListener("click", closeDetail);
     $("#closeDetail").addEventListener("click", closeDetail);
     $("#closeDetailFoot").addEventListener("click", closeDetail);
-    $("#businessBody").addEventListener("click", e => {
+    function handleBusinessListClick(e) {
       if (e.target.closest("[data-fast-business]")) return;
       const dailyTarget = e.target.closest("[data-business-daily-index]");
       if (dailyTarget) {
@@ -2920,8 +3070,8 @@
       }
       const target = e.target.closest("[data-index]");
       if (target) openBusiness(filteredBusinesses()[Number(target.dataset.index)]).catch(error => toast(error.message || "用户明细加载失败"));
-    });
-    $("#businessBody").addEventListener("change", async e => {
+    }
+    async function handleFastBusinessChange(e) {
       const toggle = e.target.closest("[data-fast-business]");
       if (!toggle) return;
       try {
@@ -2937,7 +3087,11 @@
         toggle.checked = !toggle.checked;
         toast(error.message || "刷新策略保存失败");
       }
-    });
+    }
+    $("#businessBody").addEventListener("click", handleBusinessListClick);
+    $("#businessMobileCards").addEventListener("click", handleBusinessListClick);
+    $("#businessBody").addEventListener("change", handleFastBusinessChange);
+    $("#businessMobileCards").addEventListener("change", handleFastBusinessChange);
     $("#focusRangeTabs").addEventListener("click", e => {
       const btn = e.target.closest("[data-focus-range]");
       if (!btn) return;
