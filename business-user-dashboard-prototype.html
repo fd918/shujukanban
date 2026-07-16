@@ -411,6 +411,14 @@
       .topbar.mobile-header-collapsed #settingsBtn { display:none !important; }
       .topbar.mobile-header-collapsed .top-actions { width:auto; margin-left:auto; }
       .content { padding: 14px; }
+      .panel-head { align-items:flex-start; }
+      #listToolbar { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+      #listToolbar > #viewTabs { grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; }
+      #listToolbar > #viewTabs button { min-height:44px; }
+      #dailyControls.open { grid-column:1/-1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); width:100%; gap:7px; }
+      #dailyControls .field { grid-column:span 2; width:100%; min-width:0; min-height:44px; }
+      #dailyControls .btn { min-width:0; min-height:44px; padding:0 6px; }
+      #metricTabs button { min-height:44px; }
       .mobile-filter-toggle { display: block; width: 100%; }
       .filters.mobile-collapsed { display: none; }
       .source.mobile-collapsed { display: none; }
@@ -461,8 +469,8 @@
       .mobile-business-daily-day span { display:block; color:var(--muted); font-size:10px; }
       .mobile-business-daily-day strong { display:block; margin-top:4px; font-size:13px; }
       .mobile-detail-back { min-width:72px; min-height:44px; align-items:center; justify-content:center; border:0; background:transparent; color:var(--text); padding:0 10px; font-weight:700; touch-action:manipulation; }
-      .detail-modal { left:0; top:0; width:100%; max-width:none; height:100dvh; max-height:none; border-radius:0; transform:none; grid-template-rows:auto 1fr; }
-      .detail-modal.open { transform:none; }
+      .modal.detail-modal { left:0; top:0; width:100%; max-width:none; height:100dvh; max-height:none; border-radius:0; transform:none; grid-template-rows:auto 1fr; }
+      .modal.detail-modal.open { transform:none; }
       .detail-modal .modal-head { min-height:60px; display:grid; grid-template-columns:72px minmax(0,1fr) 72px; align-items:center; padding:8px 8px; }
       .detail-modal .modal-head > div { grid-column:2; min-width:0; text-align:center; }
       .detail-modal .modal-head h2 { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:17px; }
@@ -2487,6 +2495,7 @@
       state.detailSort = "impact";
       state.detailSortDir = "desc";
       state.detailExpandedUserId = "";
+      state.detailMobileLimit = 80;
       state.detailHistoryUserId = "";
       state.detailUsers = [];
       state.detailHistory = null;
@@ -3283,6 +3292,7 @@
     $("#cancelSettings").addEventListener("click", closeSettings);
     $("#modalMask").addEventListener("click", closeDetail);
     $("#closeDetail").addEventListener("click", closeDetail);
+    $("#mobileCloseDetail").addEventListener("click", closeDetail);
     $("#closeDetailFoot").addEventListener("click", closeDetail);
     $("#closeDetailInfo").addEventListener("click", closeDetailInfo);
     $("#closeDetailInfoFoot").addEventListener("click", closeDetailInfo);
@@ -3317,6 +3327,12 @@
     $("#businessMobileCards").addEventListener("click", handleBusinessListClick);
     $("#businessBody").addEventListener("change", handleFastBusinessChange);
     $("#businessMobileCards").addEventListener("change", handleFastBusinessChange);
+    $("#dailyMobileMatrix").addEventListener("click", e => {
+      const mode = e.target.closest("[data-mobile-daily-mode]");
+      if (!mode) return;
+      state.mobileDailyMode = mode.dataset.mobileDailyMode;
+      renderDailyTable();
+    });
     $("#focusRangeTabs").addEventListener("click", e => {
       const btn = e.target.closest("[data-focus-range]");
       if (!btn) return;
@@ -3438,10 +3454,17 @@
         if (result) result.innerHTML = renderDetailResult();
         return;
       }
+      if (e.target.closest("[data-detail-load-more]")) {
+        state.detailMobileLimit += 80;
+        const result = $("#detailResult");
+        if (result) result.innerHTML = renderDetailResult();
+        return;
+      }
       const detailSort = e.target.closest("[data-detail-sort]");
       if (detailSort) {
         state.detailSortDir = state.detailSort === detailSort.dataset.detailSort && state.detailSortDir === "desc" ? "asc" : "desc";
         state.detailSort = detailSort.dataset.detailSort;
+        state.detailMobileLimit = 80;
         const result = $("#detailResult");
         if (result) result.innerHTML = renderDetailResult();
         return;
@@ -3449,6 +3472,8 @@
       const mode = e.target.closest("[data-detail-mode]");
       if (mode) {
         state.detailMode = mode.dataset.detailMode;
+        state.detailMobileLimit = 80;
+        state.detailExpandedUserId = "";
         if (state.detailMode === "up") {
           state.detailSort = "impact";
           state.detailSortDir = "desc";
@@ -3500,6 +3525,8 @@
       if (e.target.id !== "detailSearch") return;
       state.detailSearch = e.target.value.trim();
       state.detailHistoryUserId = "";
+      state.detailMobileLimit = 80;
+      state.detailExpandedUserId = "";
       const result = $("#detailResult");
       if (result) result.innerHTML = renderDetailResult();
     });
