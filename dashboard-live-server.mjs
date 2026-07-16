@@ -35,6 +35,8 @@ const SNAPSHOT_RETENTION_DAYS = 8;
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
 let snapshotTimer = null;
+let snapshotScheduleVersion = 0;
+let snapshotRecordQueue = Promise.resolve();
 let lastSnapshotAt = 0;
 let lastSnapshotSlotKey = "";
 let lastSnapshotPruneDay = "";
@@ -1088,8 +1090,10 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   const historyLatestDataTime = history.savedAtText || "-";
   const fullCurrentLatestDataTime = full?.savedAtText || "";
   const currentLatestDataTime = fastIsNewer ? fast.savedAtText : (fullCurrentLatestDataTime || historyLatestDataTime);
+  const failedStatus = [...statuses].reverse().find(item => !item.ok);
   return {
     ok: history.ok,
+    message: history.ok ? "" : (failedStatus ? `${failedStatus.name}：${failedStatus.message}` : "中台业务用户历史接口未返回有效数据"),
     cached: Boolean(history.cached),
     latestDataTime: currentLatestDataTime,
     currentLatestDataTime,
@@ -1404,7 +1408,15 @@ async function warmStartupData() {
 async function readSnapshots(limit = 5000) {
   if (!existsSync(SNAPSHOT_PATH)) return [];
   const text = await readFile(SNAPSHOT_PATH, "utf8");
-  return text.trim().split("\n").filter(Boolean).slice(-limit).map(line => JSON.parse(line));
+  const snapshots = [];
+  for (const line of text.trim().split("\n").filter(Boolean).slice(-limit)) {
+    try {
+      snapshots.push(JSON.parse(line));
+    } catch {
+      // A partial final write must not make the whole dashboard unavailable.
+    }
+  }
+  return snapshots;
 }
 
 function compactSnapshot(snapshot) {
@@ -1689,7 +1701,14 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   return payload;
 }
 
-async function maybeRecordSnapshot(businesses, users, force = false, businessDaily = null, summary = null, options = {}) {
+async function maybeRecordSnapshot(...args) {
+  const run = () => recordSnapshot(...args);
+  const result = snapshotRecordQueue.then(run, run);
+  snapshotRecordQueue = result.catch(() => {});
+  return result;
+}
+
+async function recordSnapshot(businesses, users, force = false, businessDaily = null, summary = null, options = {}) {
   const config = await readConfig();
   const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
   const interval = intervalMinutes * 60 * 1000;
@@ -1798,10 +1817,16 @@ function focusSnapshotBusinesses(comparable) {
 }
 
 async function scheduleSnapshots() {
-  if (snapshotTimer) clearTimeout(snapshotTimer);
+  const scheduleVersion = ++snapshotScheduleVersion;
+  if (snapshotTimer) {
+    clearTimeout(snapshotTimer);
+    snapshotTimer = null;
+  }
   const config = await readConfig();
+  if (scheduleVersion !== snapshotScheduleVersion) return;
   const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
   const run = async () => {
+    if (scheduleVersion !== snapshotScheduleVersion) return;
     const slot = snapshotSlot(new Date(), intervalMinutes);
     try {
       const data = await liveDashboard({ recordSnapshot: false });
@@ -1821,10 +1846,13 @@ async function scheduleSnapshots() {
         .then(config => notifyOperationalIssue("snapshotRecordFailed", "快照异常：记录失败", error.message, config))
         .catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
     } finally {
-      snapshotTimer = setTimeout(run, nextSnapshotDelayMs(intervalMinutes));
+      if (scheduleVersion === snapshotScheduleVersion) {
+        snapshotTimer = setTimeout(run, nextSnapshotDelayMs(intervalMinutes));
+      }
     }
   };
   const delay = nextSnapshotDelayMs(intervalMinutes);
+  if (scheduleVersion !== snapshotScheduleVersion) return;
   snapshotTimer = setTimeout(run, delay);
   console.log(`[${nowText()}] 快照调度已对齐自然时间槽：每 ${intervalMinutes} 分钟，约 ${Math.round(delay / 1000)} 秒后执行下一次。`);
 }
