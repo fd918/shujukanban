@@ -154,7 +154,7 @@ logs/business-user-dashboard-error.log
 
 ## 开放平台毛利看板
 
-毛利看板使用本机文件，不发布原始 Excel 或明细 JSON。文件位置：
+毛利看板只允许从本机访问：公网统一入口不显示该看板，公网直接访问毛利页面会返回普通经营看板；同时不发布原始 Excel 或明细 JSON。文件位置：
 
 ```text
 data/private/开放平台毛利表2026.xlsx
