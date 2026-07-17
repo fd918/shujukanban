@@ -2114,7 +2114,10 @@
 
     function renderGlobalUserSearch() {
       const result = $("#globalUserResult");
-      $("#globalUserRefreshBtn").classList.toggle("hidden", state.publicMode || !state.globalUserSelectedId);
+      const refreshButton = $("#globalUserRefreshBtn");
+      refreshButton.classList.toggle("hidden", state.publicMode || !state.globalUserSelectedId);
+      refreshButton.disabled = state.globalUserLoading;
+      refreshButton.textContent = state.globalUserLoading ? "刷新中..." : "刷新该用户";
       $$("#globalUserRangeTabs button").forEach(button => button.classList.toggle("active", button.dataset.globalUserRange === state.globalUserRange));
       if (state.globalUserLoading && !state.globalUserData) {
         result.innerHTML = `<section class="source">正在查询用户缓存，请稍等...</section>`;
@@ -2247,6 +2250,26 @@
         body: JSON.stringify({ businessId, userId })
       });
       toast("已加入重点用户看板");
+    }
+
+    async function addGlobalSearchFocusUser(userId) {
+      const firstRow = (state.globalUserData?.businessRows || state.globalUserData?.rows || [])[0] || {};
+      const businessId = String(firstRow.businessId || firstRow.catalogBusinessId || "");
+      if (!userId) return;
+      if (state.publicMode) {
+        const added = savePublicFocusUser(businessId, userId);
+        toast(added ? "已加入重点用户看板" : "该用户已经在重点用户看板中");
+        syncPublicFocusToLocal(businessId, userId).then(synced => {
+          if (synced) toast("已同步到本地重点用户看板");
+        });
+        return;
+      }
+      await requestJson(apiUrl("/api/focus-users"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ businessId, userId })
+      });
+      toast("已加入重点用户看板，后台正在补全全部业务");
     }
 
     async function removeFocusUser(userId) {
@@ -2399,6 +2422,7 @@
         state.userAliases = { ...state.userAliases, [id]: next.trim() };
         render();
         if ($("#detailModal").classList.contains("open")) renderDetail(true);
+        if ($("#globalUserModal").classList.contains("open")) renderGlobalUserSearch();
         toast(next.trim() ? "备注已保存在当前浏览器" : "已恢复接口原名");
         return;
       }
@@ -2410,6 +2434,7 @@
       state.userAliases = data.aliases || {};
       render();
       if ($("#detailModal").classList.contains("open")) renderDetail(true);
+      if ($("#globalUserModal").classList.contains("open")) renderGlobalUserSearch();
       toast(next.trim() ? (data.published ? "备注已保存并同步公网" : "备注已保存，公网同步失败") : (data.published ? "备注已删除并同步公网" : "备注已删除，公网同步失败"));
     }
 
@@ -3508,6 +3533,7 @@
       $("#focusModal").classList.remove("open");
       $("#focusNoteModal").classList.remove("open");
       $("#detailInfoModal").classList.remove("open");
+      $("#globalUserModal").classList.remove("open");
       state.focusNoteTarget = null;
       state.businessDailyModalRow = null;
     }
@@ -3542,6 +3568,18 @@
     }));
     $("#platformSelect").addEventListener("change", e => { state.platform = e.target.value; render(); });
     $("#searchInput").addEventListener("input", e => { state.search = e.target.value.trim(); state.dailyBusinessId = ""; render(); });
+    $("#globalUserSearchInput").addEventListener("input", e => {
+      $("#globalUserSearchClear").classList.toggle("hidden", !e.target.value);
+    });
+    $("#globalUserSearchInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") openGlobalUserSearch(e.target.value);
+    });
+    $("#globalUserSearchBtn").addEventListener("click", () => openGlobalUserSearch($("#globalUserSearchInput").value));
+    $("#globalUserSearchClear").addEventListener("click", () => {
+      $("#globalUserSearchInput").value = "";
+      $("#globalUserSearchClear").classList.add("hidden");
+      $("#globalUserSearchInput").focus();
+    });
     $("#dailyStart").addEventListener("click", e => openDatePicker(e.target));
     $("#dailyEnd").addEventListener("click", e => openDatePicker(e.target));
     $("#dailyStart").addEventListener("change", e => { state.dailyStart = e.target.value; setTimeout(() => openDatePicker($("#dailyEnd")), 120); });
@@ -3583,6 +3621,58 @@
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#closeHelp").addEventListener("click", closeHelp);
     $("#closeHelpFoot").addEventListener("click", closeHelp);
+    $("#closeGlobalUserModal").addEventListener("click", closeGlobalUserSearch);
+    $("#closeGlobalUserModalFoot").addEventListener("click", closeGlobalUserSearch);
+    $("#globalUserModalInput").addEventListener("input", e => {
+      $("#globalUserModalClear").classList.toggle("hidden", !e.target.value);
+    });
+    $("#globalUserModalInput").addEventListener("keydown", e => {
+      if (e.key !== "Enter") return;
+      state.globalUserSelectedId = "";
+      loadGlobalUserSearch().catch(error => toast(error.message || "用户查询失败"));
+    });
+    $("#globalUserModalSearchBtn").addEventListener("click", () => {
+      state.globalUserSelectedId = "";
+      loadGlobalUserSearch().catch(error => toast(error.message || "用户查询失败"));
+    });
+    $("#globalUserModalClear").addEventListener("click", () => {
+      state.globalUserQuery = "";
+      state.globalUserSelectedId = "";
+      state.globalUserData = null;
+      $("#globalUserModalInput").value = "";
+      $("#globalUserModalClear").classList.add("hidden");
+      renderGlobalUserSearch();
+      $("#globalUserModalInput").focus();
+    });
+    $("#globalUserRefreshBtn").addEventListener("click", () => {
+      loadGlobalUserSearch({ refresh: true }).then(() => toast("该用户的全部业务已刷新")).catch(error => toast(error.message || "用户刷新失败"));
+    });
+    $("#globalUserRangeTabs").addEventListener("click", e => {
+      const button = e.target.closest("[data-global-user-range]");
+      if (!button) return;
+      state.globalUserRange = button.dataset.globalUserRange;
+      if (state.globalUserSelectedId) loadGlobalUserSearch({ userId: state.globalUserSelectedId }).catch(error => toast(error.message || "日期切换失败"));
+      else renderGlobalUserSearch();
+    });
+    $("#globalUserResult").addEventListener("click", e => {
+      const candidate = e.target.closest("[data-global-user-select]");
+      if (candidate) {
+        loadGlobalUserSearch({ userId: candidate.dataset.globalUserSelect }).catch(error => toast(error.message || "用户查询失败"));
+        return;
+      }
+      const copyId = e.target.closest("[data-copy-user-id]");
+      if (copyId) {
+        copyUserId(copyId.dataset.copyUserId);
+        return;
+      }
+      const alias = e.target.closest("[data-edit-user-alias]");
+      if (alias) {
+        editUserAlias(alias.dataset.editUserAlias).catch(error => toast(error.message || "备注保存失败"));
+        return;
+      }
+      const addFocus = e.target.closest("[data-global-add-focus]");
+      if (addFocus) addGlobalSearchFocusUser(addFocus.dataset.globalAddFocus).catch(error => toast(error.message || "添加重点用户失败"));
+    });
     $("#closeSettings").addEventListener("click", closeSettings);
     $("#cancelSettings").addEventListener("click", closeSettings);
     $("#modalMask").addEventListener("click", closeDetail);
