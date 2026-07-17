@@ -2604,7 +2604,7 @@
         render();
       }
       try {
-        const res = await fetch(`data/business-dashboard-public.enc.json?_=${Date.now()}`);
+        const res = await fetchWithTimeout(`data/business-dashboard-public.enc.json?_=${Date.now()}`, { cache: "no-store" });
         if (!res.ok) return Boolean(cached);
         const encrypted = await res.json();
         if (encrypted.updatedAt && encrypted.updatedAt === state.publicEnvelopeUpdatedAt && state.businesses.length) return true;
@@ -2652,6 +2652,25 @@
       const bytes = new Uint8Array(binary.length);
       for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
       return bytes;
+    }
+
+    function notifyDashboardShell(type, message = "") {
+      if (window.parent === window) return;
+      try {
+        window.parent.postMessage({ type, message }, location.origin);
+      } catch {}
+    }
+
+    function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+      if (typeof AbortController !== "function") {
+        return Promise.race([
+          fetch(url, options),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("公网数据连接超时")), timeoutMs))
+        ]);
+      }
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
     }
 
     async function decodePublicPayload(plain, compression) {
@@ -2725,7 +2744,10 @@
           if (clearOnFailure) removeLocalValue("businessDashboardPublicPassword");
           password = "";
           if (clearOnFailure) toast("密码错误或公网数据解密失败");
-          else break;
+          else {
+            notifyDashboardShell("business-dashboard-auth-failed");
+            break;
+          }
         }
       }
       return null;
@@ -3969,7 +3991,16 @@
     else if (typeof mobileHeaderMedia.addListener === "function") mobileHeaderMedia.addListener(syncMobileHeader);
     document.addEventListener("visibilitychange", refreshVisiblePageCache);
     window.addEventListener("focus", refreshVisiblePageCache);
-    loadData(false, true).then(setupAutoRefresh);
+    loadData(false, true).then(() => {
+      setupAutoRefresh();
+      if (!isLocalSettings && !state.businesses.length) {
+        notifyDashboardShell("business-dashboard-load-failed", "公网数据暂时加载失败，请检查手机网络后重新加载。");
+        return;
+      }
+      notifyDashboardShell("business-dashboard-ready");
+    }).catch(() => {
+      notifyDashboardShell("business-dashboard-load-failed", "页面初始化失败，请重新加载。");
+    });
   </script>
 </body>
 </html>

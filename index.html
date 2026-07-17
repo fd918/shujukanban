@@ -259,10 +259,29 @@
       line-height: 1.6;
       text-align: center;
       padding: 24px;
+      flex-direction: column;
+      gap: 12px;
     }
 
     .frame-loading.show {
       display: flex;
+    }
+
+    .frame-retry {
+      display: none;
+      min-height: 40px;
+      padding: 8px 18px;
+      border: 1px solid #e88a00;
+      border-radius: 8px;
+      background: #fff7ed;
+      color: #b65d00;
+      font-weight: 700;
+    }
+
+    .frame-retry.show {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .gate {
@@ -458,7 +477,10 @@
     </aside>
 
     <main class="viewer">
-      <div class="frame-loading" id="frameLoading">正在加载看板数据...</div>
+      <div class="frame-loading" id="frameLoading" aria-live="polite">
+        <span id="frameLoadingText">正在加载看板数据...</span>
+        <button class="frame-retry" id="frameRetry" type="button">重新加载</button>
+      </div>
       <iframe class="board-frame active" id="activityFrame" data-board-frame="activity" title="激励活动看板" src="about:blank"></iframe>
       <iframe class="board-frame" id="businessFrame" data-board-frame="business" title="用户内部看板" src="about:blank"></iframe>
       <iframe class="board-frame" id="focusFrame" data-board-frame="focus" title="重点用户看板" src="about:blank"></iframe>
@@ -475,13 +497,13 @@
       },
       business: {
         title: "用户内部看板",
-        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&v=20260717-focus-row-detail",
-        publicUrl: "./business-user-dashboard-prototype.html?embed=1&v=20260717-focus-row-detail"
+        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&v=20260717-mobile-entry-recovery",
+        publicUrl: "./business-user-dashboard-prototype.html?embed=1&v=20260717-mobile-entry-recovery"
       },
       focus: {
         title: "重点用户看板",
-        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&view=focus&v=20260717-focus-row-detail",
-        publicUrl: "./business-user-dashboard-prototype.html?embed=1&view=focus&v=20260717-focus-row-detail"
+        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&view=focus&v=20260717-mobile-entry-recovery",
+        publicUrl: "./business-user-dashboard-prototype.html?embed=1&view=focus&v=20260717-mobile-entry-recovery"
       }
     };
 
@@ -492,12 +514,9 @@
       focus: document.getElementById("focusFrame")
     };
 
-    window.addEventListener("message", event => {
-      if (event.source !== frames.business.contentWindow) return;
-      if (event.data?.type !== "business-dashboard-detail") return;
-      document.body.classList.toggle("business-detail-open", Boolean(event.data.open));
-    });
     const frameLoading = document.getElementById("frameLoading");
+    const frameLoadingText = document.getElementById("frameLoadingText");
+    const frameRetry = document.getElementById("frameRetry");
     const navButtons = Array.from(document.querySelectorAll(".nav-btn"));
     const collapseBtn = document.getElementById("collapseBtn");
     const passwordGate = document.getElementById("passwordGate");
@@ -508,7 +527,7 @@
     let transientPublicPassword = "";
     let activeBoardKey = "activity";
     let loadingDelayTimer = null;
-    let loadingHideTimer = null;
+    const frameReadyTimers = new Map();
     const loadedBoards = new Set();
 
     function boardUrl(board) {
@@ -524,21 +543,20 @@
 
     function clearFrameLoadingTimers() {
       if (loadingDelayTimer) clearTimeout(loadingDelayTimer);
-      if (loadingHideTimer) clearTimeout(loadingHideTimer);
       loadingDelayTimer = null;
-      loadingHideTimer = null;
     }
 
-    function showFrameLoading(text = "正在加载看板数据...") {
+    function showFrameLoading(text = "正在加载看板数据...", retry = false) {
       clearFrameLoadingTimers();
-      frameLoading.textContent = text;
+      frameLoadingText.textContent = text;
+      frameRetry.classList.toggle("show", retry);
       frameLoading.classList.add("show");
-      loadingHideTimer = setTimeout(hideFrameLoading, 5000);
     }
 
     function scheduleFrameLoading(text = "正在加载看板数据...", delayMs = 1500) {
       clearFrameLoadingTimers();
-      frameLoading.textContent = text;
+      frameLoadingText.textContent = text;
+      frameRetry.classList.remove("show");
       frameLoading.classList.remove("show");
       loadingDelayTimer = setTimeout(() => showFrameLoading(text), delayMs);
     }
@@ -546,6 +564,43 @@
     function hideFrameLoading() {
       clearFrameLoadingTimers();
       frameLoading.classList.remove("show");
+      frameRetry.classList.remove("show");
+    }
+
+    function clearFrameReadyTimer(boardKey) {
+      const timer = frameReadyTimers.get(boardKey);
+      if (timer) clearTimeout(timer);
+      frameReadyTimers.delete(boardKey);
+    }
+
+    function waitForFrameReady(boardKey) {
+      clearFrameReadyTimer(boardKey);
+      frameReadyTimers.set(boardKey, setTimeout(() => {
+        frameReadyTimers.delete(boardKey);
+        if (activeBoardKey === boardKey && !loadedBoards.has(boardKey)) {
+          showFrameLoading("页面加载超时，请检查手机网络后重新加载。", true);
+        }
+      }, 15000));
+    }
+
+    function markFrameReady(boardKey) {
+      clearFrameReadyTimer(boardKey);
+      loadedBoards.add(boardKey);
+      if (activeBoardKey === boardKey) hideFrameLoading();
+    }
+
+    function resetPublicAccess(message) {
+      removePublicPassword();
+      publicUnlocked = false;
+      frameReadyTimers.forEach(timer => clearTimeout(timer));
+      frameReadyTimers.clear();
+      Object.values(frames).forEach(item => { item.src = "about:blank"; });
+      loadedBoards.clear();
+      hideFrameLoading();
+      gateError.textContent = message;
+      passwordGate.classList.add("show");
+      passwordInput.value = "";
+      passwordInput.focus();
     }
 
     function activateFrame(boardKey) {
@@ -564,7 +619,9 @@
       if (publicUnlocked) {
         activateFrame(resolvedKey);
         if (shouldLoad) {
+          loadedBoards.delete(resolvedKey);
           scheduleFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : resolvedKey === "focus" ? "正在加载重点用户看板..." : "正在加载用户看板...");
+          if (resolvedKey !== "activity") waitForFrameReady(resolvedKey);
           frame.src = publicFrameUrl(url, { fresh: Boolean(options.fresh) });
         } else {
           hideFrameLoading();
@@ -628,9 +685,27 @@
 
     window.getDashboardPublicPassword = () => cachedPublicPassword();
 
+    function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+      if (typeof AbortController !== "function") {
+        return Promise.race([
+          fetch(url, options),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("公网连接超时，请检查手机网络后重试。")), timeoutMs))
+        ]);
+      }
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+    }
+
     async function verifyPublicPassword(password) {
-      let res = await fetch(`data/public-auth-check.enc.json?_=${Date.now()}`);
-      if (!res.ok) res = await fetch(`data/business-dashboard-public.enc.json?_=${Date.now()}`);
+      let res;
+      try {
+        res = await fetchWithTimeout(`data/public-auth-check.enc.json?_=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) res = await fetchWithTimeout(`data/business-dashboard-public.enc.json?_=${Date.now()}`, { cache: "no-store" });
+      } catch (error) {
+        if (error?.name === "AbortError") throw new Error("公网连接超时，请检查手机网络后重试。");
+        throw error;
+      }
       if (!res.ok) throw new Error("公网加密数据不存在，暂时无法验证密码。");
       const encrypted = await res.json();
       const salt = base64ToBytes(encrypted.salt);
@@ -677,6 +752,28 @@
       passwordInput.focus();
     }
 
+    window.addEventListener("message", event => {
+      const boardEntry = Object.entries(frames).find(([, frame]) => event.source === frame.contentWindow);
+      if (!boardEntry) return;
+      const [boardKey] = boardEntry;
+      if (event.data?.type === "business-dashboard-detail") {
+        document.body.classList.toggle("business-detail-open", Boolean(event.data.open));
+        return;
+      }
+      if (event.data?.type === "business-dashboard-ready") {
+        markFrameReady(boardKey);
+        return;
+      }
+      if (event.data?.type === "business-dashboard-auth-failed" && !isLocalAccess) {
+        resetPublicAccess("已保存的访问凭证已失效，请重新输入密码。重新输入一次后，后续会自动进入。");
+        return;
+      }
+      if (event.data?.type === "business-dashboard-load-failed" && activeBoardKey === boardKey) {
+        clearFrameReadyTimer(boardKey);
+        showFrameLoading(event.data.message || "公网数据暂时加载失败，请检查手机网络后重新加载。", true);
+      }
+    });
+
     navButtons.forEach((button) => {
       button.addEventListener("click", () => setBoard(button.dataset.board));
     });
@@ -684,9 +781,13 @@
     Object.entries(frames).forEach(([key, item]) => {
       item.addEventListener("load", () => {
         if (item.src === "about:blank") return;
-        loadedBoards.add(key);
-        if (key === activeBoardKey) hideFrameLoading();
+        if (key === "activity") markFrameReady(key);
+        else if (key === activeBoardKey && !loadedBoards.has(key)) showFrameLoading("页面已打开，正在读取并解密数据...");
       });
+    });
+
+    frameRetry.addEventListener("click", () => {
+      setBoard(activeBoardKey, false, { fresh: true });
     });
 
     collapseBtn.addEventListener("click", () => {
