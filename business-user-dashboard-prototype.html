@@ -2596,28 +2596,42 @@
       } catch {}
     }
 
+    async function refreshPublicSnapshotInBackground() {
+      if (state.publicSnapshotRefreshInFlight) return;
+      state.publicSnapshotRefreshInFlight = true;
+      try {
+        const res = await fetchWithTimeout(`data/business-dashboard-public.enc.json?_=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return false;
+        const encrypted = await res.json();
+        if (encrypted.updatedAt && encrypted.updatedAt === state.publicEnvelopeUpdatedAt && state.businesses.length) return true;
+        const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
+        if (!data) return false;
+        state.publicEnvelopeUpdatedAt = encrypted.updatedAt || state.publicEnvelopeUpdatedAt;
+        applyPublicSnapshot(data);
+        saveCachedPublicPayload(data);
+        state.loading = false;
+        state.refreshing = false;
+        render();
+        loadPublicFocusNotesOverlay().catch(() => {});
+        return true;
+      } catch {
+        return false;
+      } finally {
+        state.publicSnapshotRefreshInFlight = false;
+      }
+    }
+
     async function loadPublicSnapshot() {
       const cached = loadCachedPublicPayload();
       if (cached && !state.businesses.length) {
         applyPublicSnapshot(cached);
         state.loading = false;
         render();
-      }
-      try {
-        const res = await fetchWithTimeout(`data/business-dashboard-public.enc.json?_=${Date.now()}`, { cache: "no-store" });
-        if (!res.ok) return Boolean(cached);
-        const encrypted = await res.json();
-        if (encrypted.updatedAt && encrypted.updatedAt === state.publicEnvelopeUpdatedAt && state.businesses.length) return true;
-        const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
-        if (!data) return Boolean(cached);
-        state.publicEnvelopeUpdatedAt = encrypted.updatedAt || state.publicEnvelopeUpdatedAt;
-        applyPublicSnapshot(data);
-        saveCachedPublicPayload(data);
-        loadPublicFocusNotesOverlay().catch(() => {});
+        notifyDashboardShell("business-dashboard-ready");
+        setTimeout(() => refreshPublicSnapshotInBackground(), 50);
         return true;
-      } catch {
-        return Boolean(cached);
       }
+      return refreshPublicSnapshotInBackground();
     }
 
     async function loadPublicFocusNotesOverlay() {
