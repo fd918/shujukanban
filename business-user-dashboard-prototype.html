@@ -84,10 +84,12 @@
     .filters {
       padding: 12px;
       display: grid;
-      grid-template-columns: 180px minmax(240px, 1fr);
+      grid-template-columns: 180px minmax(220px, 1fr) minmax(280px, 1fr);
       gap: 10px;
       align-items: center;
     }
+    .global-user-search { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; }
+    .global-user-search .search-with-clear { max-width:none; }
     .field {
       width: 100%;
       min-height: 38px;
@@ -168,6 +170,7 @@
     .comparison-ref { display:block; margin-top:3px; color:#a15c00; font-size:11px; font-weight:650; line-height:1.25; white-space:nowrap; }
     .comparison-ref.legacy { color:#8a5b12; }
     .comparison-majority { display:block; margin-top:3px; color:#667085; font-size:10px; font-weight:600; line-height:1.2; white-space:nowrap; }
+    .mobile-time-summary { display:none; }
 
     .tag { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; border-radius: 999px; padding: 0 9px; font-size: 12px; border: 1px solid transparent; }
     .tag.red { color: var(--red); background: #fff1f2; border-color: #fecdd3; }
@@ -223,6 +226,15 @@
     .modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
     .modal.detail-modal { width: min(1680px, 98vw); max-height: 94vh; }
     .modal.detail-info-modal { width: min(760px, 92vw); z-index: 44; }
+    .modal.global-user-modal { width:min(1540px,97vw); max-height:94vh; }
+    .global-user-profile { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 14px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
+    .global-user-profile-main strong { display:flex; align-items:center; gap:5px; font-size:16px; }
+    .global-user-profile-main span { display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+    .global-user-metrics { display:grid; grid-template-columns:repeat(4,minmax(120px,1fr)); gap:8px; margin:12px 0; }
+    .global-user-candidates { display:grid; gap:8px; }
+    .global-user-candidate { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:14px; padding:11px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+    .global-user-candidate strong, .global-user-candidate span { display:block; }
+    .global-user-candidate span { margin-top:3px; color:var(--muted); font-size:12px; }
     .modal-body { overflow: auto; padding: 16px 18px; }
     .detail-table-wrap { overflow-x: scroll; overflow-y: auto; max-height: 52vh; border: 1px solid var(--line); border-radius: 8px; scrollbar-gutter: stable both-edges; overscroll-behavior-x: contain; }
     .detail-table-wrap table { min-width: 1120px; }
@@ -433,6 +445,13 @@
 
     @media (max-width: 960px) {
       .filters, .kpis, .settings-grid, .detail-grid, .history-analysis, .notification-list { grid-template-columns: 1fr; }
+      .global-user-search { grid-template-columns:minmax(0,1fr) auto; }
+      .global-user-profile { align-items:flex-start; flex-direction:column; }
+      .global-user-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .global-user-candidate { grid-template-columns:minmax(0,1fr) auto; }
+      .global-user-candidate > .muted { display:none; }
+      .modal.global-user-modal { left:0; top:0; width:100%; max-width:none; height:100dvh; max-height:none; border-radius:0; transform:none; grid-template-rows:auto 1fr auto; }
+      .modal.global-user-modal.open { transform:none; }
       .topbar { align-items: start; flex-direction: column; }
       .mobile-header-toggle { display:inline-flex; align-items:center; justify-content:center; min-width:96px; min-height:44px; touch-action:manipulation; }
       .topbar.mobile-header-collapsed { min-height:60px; padding:8px 14px; flex-direction:row; align-items:center; gap:10px; }
@@ -544,6 +563,10 @@
       .mobile-expanded-day strong { display:block; margin-top:4px; color:var(--text); font-size:13px; }
       .mobile-load-more { width:calc(100% - 20px); min-height:46px; margin:10px; touch-action:manipulation; }
       .mobile-data-cards:not(.hidden) { display:grid; gap:10px; padding:10px; background:#f4f6f8; }
+      .mobile-time-summary { grid-column:1/-1; display:flex; align-items:center; gap:8px 14px; overflow-x:auto; padding:9px 11px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); font-size:11px; white-space:nowrap; scrollbar-width:none; }
+      .mobile-time-summary::-webkit-scrollbar { display:none; }
+      .mobile-time-summary span { display:inline-flex; gap:5px; }
+      .mobile-time-summary b { color:var(--text); }
       .mobile-data-card { min-width:0; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 8px rgba(15,23,42,.05); }
       .mobile-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:12px 12px 10px; border-bottom:1px solid #edf1f6; }
       .mobile-card-title { min-width:0; }
@@ -600,6 +623,10 @@
     <section class="filters" id="businessFilters">
       <select class="field" id="platformSelect"><option value="all">全部平台</option></select>
       <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
+      <div class="global-user-search">
+        <div class="search-with-clear"><input class="field" id="globalUserSearchInput" placeholder="查询用户ID或名称（跨业务）"><button class="search-clear hidden" id="globalUserSearchClear" title="清空用户搜索">×</button></div>
+        <button class="btn primary" id="globalUserSearchBtn">查询用户</button>
+      </div>
     </section>
 
     <section class="source" id="sourceBox">
@@ -675,8 +702,8 @@
               <th><button class="sort-btn" data-sort="name">业务名称</button></th>
               <th><button class="sort-btn active" data-sort="today" id="currentHeader">当前订单</button></th>
               <th><button class="sort-btn" data-sort="yesterday" id="baselineHeader">前一日同时刻</button></th>
-              <th><button class="sort-btn" data-sort="lastWeek">上周同时刻</button></th>
-              <th><button class="sort-btn" data-sort="sevenAvg">近7日同期均值</button></th>
+              <th><button class="sort-btn" data-sort="lastWeek" id="lastWeekHeader">上周同时刻</button></th>
+              <th><button class="sort-btn" data-sort="sevenAvg" id="sevenAvgHeader">近7日同期均值</button></th>
               <th><button class="sort-btn" data-sort="ratio">变化比例</button></th>
               <th><button class="sort-btn" data-sort="impact">影响量</button></th>
               <th><button class="sort-btn" data-sort="level">异常等级</button></th>
@@ -852,12 +879,26 @@
     <div class="modal-foot"><span class="muted" id="focusNoteResult"></span><button class="btn" id="cancelFocusNote">取消</button><button class="btn primary" id="saveFocusNote">保存备注</button></div>
   </section>
 
+  <section class="modal global-user-modal" id="globalUserModal">
+    <div class="modal-head"><div><h2 id="globalUserTitle">跨业务用户查询</h2><small id="globalUserSub">查看该用户在全部有单业务中的订单</small></div><button class="icon-btn" id="closeGlobalUserModal">×</button></div>
+    <div class="modal-body">
+      <div class="toolbar" style="margin-bottom:12px;">
+        <div class="search-with-clear" style="min-width:280px;flex:1 1 360px;"><input class="field" id="globalUserModalInput" placeholder="输入用户ID或名称"><button class="search-clear hidden" id="globalUserModalClear" title="清空">×</button></div>
+        <button class="btn primary" id="globalUserModalSearchBtn">查询</button>
+        <div class="segmented" id="globalUserRangeTabs"><button class="active" data-global-user-range="7">近7天</button><button data-global-user-range="month">本月</button><button data-global-user-range="30">近30天</button></div>
+        <button class="btn hidden" id="globalUserRefreshBtn">刷新该用户</button>
+      </div>
+      <div id="globalUserResult"><section class="source">请输入用户ID或名称后查询。</section></div>
+    </div>
+    <div class="modal-foot"><span class="muted" id="globalUserFoot">查询优先使用已保存缓存，不会额外请求中台。</span><button class="btn" id="closeGlobalUserModalFoot">关闭</button></div>
+  </section>
+
   <div class="toast" id="toast">已刷新</div>
   <div class="loading-mask" id="loadingMask"><div class="loading-card">正在加载<span id="loadingText">正在请求中台数据，请稍等...</span></div></div>
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -894,10 +935,33 @@
       const winner = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
       return winner ? { minute: winner[0], count: winner[1] } : { minute: null, count: 0 };
     }
-    function majorityHeader(label, majority, matchedCount) {
+    function majorityHeader(label, majority, matchedCount, unit = "人") {
       if (!isFiniteMinute(majority?.minute)) return "";
-      const countText = matchedCount ? `${majority.count}/${matchedCount} 人` : `${majority.count} 人`;
+      const countText = matchedCount ? `${majority.count}/${matchedCount} ${unit}` : `${majority.count} ${unit}`;
       return `<small class="comparison-majority" title="当前列表中 ${countText} 使用该时刻">${label} ${minuteText(majority.minute)}</small>`;
+    }
+    function businessCurrentDataTime(row = {}) {
+      return row.currentDataTime || row.dataTime || state.source?.latestDataTime || "";
+    }
+    function businessTimeContext(rows = []) {
+      const currentMatched = rows.map(row => timeMinuteFromText(businessCurrentDataTime(row))).filter(isFiniteMinute);
+      const yesterdayMatched = rows.map(row => row.sameTime?.yesterdayReference || row.sameTime || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
+      const lastWeekMatched = rows.map(row => row.sameTime?.lastWeekReference || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
+      return {
+        currentMatched,
+        currentMajority: majorityMinute(currentMatched),
+        yesterdayMatched,
+        yesterdayMajority: majorityMinute(yesterdayMatched.map(reference => reference.comparisonMinute)),
+        lastWeekMatched,
+        lastWeekMajority: majorityMinute(lastWeekMatched.map(reference => reference.comparisonMinute))
+      };
+    }
+    function currentDataCell(value, dataTime, majority, formatter = fmt) {
+      const formatted = formatter(value);
+      const actualMinute = timeMinuteFromText(dataTime);
+      if (!isFiniteMinute(actualMinute) || !isFiniteMinute(majority?.minute) || Number(actualMinute) === Number(majority.minute)) return formatted;
+      const offset = Number(actualMinute) - Number(majority.minute);
+      return `${formatted}<small class="comparison-ref" title="该业务数据时间与当前列表多数时间不同">数据 ${minuteText(actualMinute)} · 较多数${offset < 0 ? "早" : "晚"} ${Math.abs(offset)} 分钟</small>`;
     }
     function comparisonReferenceCell(value, reference = {}, formatter = fmt, options = {}) {
       if (value === null || value === undefined) return "-";
@@ -1574,15 +1638,22 @@
         container.innerHTML = `<div class="mobile-data-card"><div class="mobile-card-note muted">数据加载中，请稍等...</div></div>`;
         return;
       }
-      container.innerHTML = rows.length ? rows.map((row, index) => {
+      const timeContext = businessTimeContext(rows);
+      const sharedTimes = [
+        isFiniteMinute(timeContext.currentMajority.minute) ? `<span><b>当前数据</b>${minuteText(timeContext.currentMajority.minute)}</span>` : "",
+        isFiniteMinute(timeContext.yesterdayMajority.minute) ? `<span><b>昨日参考</b>${minuteText(timeContext.yesterdayMajority.minute)}</span>` : "",
+        isFiniteMinute(timeContext.lastWeekMajority.minute) ? `<span><b>上周参考</b>${minuteText(timeContext.lastWeekMajority.minute)}</span>` : ""
+      ].filter(Boolean).join("");
+      const summary = sharedTimes ? `<div class="mobile-time-summary" aria-label="当前业务列表统一数据时间">${sharedTimes}</div>` : "";
+      container.innerHTML = rows.length ? summary + rows.map((row, index) => {
         const same = row.sameTime || {};
         const fastUserRefresh = isFastUserBusiness(row);
         const refreshBusinessId = row.platformBusinessId || row.businessId;
-        const currentValue = state.metric === "commission" ? money(row.cmp.today) : fmt(row.cmp.today);
+        const valueFormatter = state.metric === "commission" ? money : fmt;
+        const currentValue = currentDataCell(row.cmp.today, businessCurrentDataTime(row), timeContext.currentMajority, valueFormatter);
         const yesterdayValue = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null;
         const lastWeekValue = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
         const sevenDayValue = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
-        const valueFormatter = state.metric === "commission" ? money : fmt;
         return `<article class="mobile-data-card" data-mobile-business-card="${index}">
           <div class="mobile-card-head">
             <div class="mobile-card-title"><strong>${escapeHtml(row.name || "-")}</strong><span>${escapeHtml(row.platform || "-")}｜${escapeHtml(refreshBusinessId || "-")}</span></div>
@@ -1590,8 +1661,8 @@
           </div>
           <div class="mobile-card-stats">
             <div class="mobile-card-stat"><label>${escapeHtml(currentMetricLabel())}</label><strong>${currentValue}</strong></div>
-            <div class="mobile-card-stat"><label>${escapeHtml(baselineLabel())}</label><strong>${comparisonReferenceCell(yesterdayValue, same.yesterdayReference || same, valueFormatter)}</strong></div>
-            <div class="mobile-card-stat"><label>上周同时刻</label><strong>${comparisonReferenceCell(lastWeekValue, same.lastWeekReference || {}, valueFormatter)}</strong></div>
+            <div class="mobile-card-stat"><label>${escapeHtml(baselineLabel())}</label><strong>${comparisonReferenceCell(yesterdayValue, same.yesterdayReference || same, valueFormatter, { dominantMinute: timeContext.yesterdayMajority.minute, compactMajority: true })}</strong></div>
+            <div class="mobile-card-stat"><label>上周同时刻</label><strong>${comparisonReferenceCell(lastWeekValue, same.lastWeekReference || {}, valueFormatter, { dominantMinute: timeContext.lastWeekMajority.minute, compactMajority: true })}</strong></div>
             <div class="mobile-card-stat"><label>近7日同期均值</label><strong>${sevenDayReferenceCell(sevenDayValue, same, valueFormatter)}</strong></div>
             <div class="mobile-card-stat"><label>变化比例</label><strong class="${row.cmp.diff < 0 ? "down" : row.cmp.diff > 0 ? "up" : ""}">${pctValue(row.cmp.ratio)}</strong></div>
             <div class="mobile-card-stat"><label>影响量</label><strong>${fmtValue(row.cmp.impact)}</strong></div>
@@ -1627,15 +1698,29 @@
         return;
       }
       const rows = filteredBusinesses();
-      $("#currentHeader").textContent = currentMetricLabel();
-      $("#baselineHeader").textContent = baselineLabel();
+      const timeContext = businessTimeContext(rows);
       $("#baselineHeader").title = "优先使用昨日完全相同分钟槽；缺失时采用前后20分钟最近值并标注实际参考时间";
+      const sortLabels = {
+        platform: "平台",
+        name: "业务名称",
+        today: currentMetricLabel(),
+        yesterday: baselineLabel(),
+        lastWeek: "上周同时刻",
+        sevenAvg: "近7日同期均值",
+        ratio: "变化比例",
+        impact: "影响量",
+        level: "异常等级",
+        users: "相关用户"
+      };
       $$(".sort-btn").forEach(btn => {
         const active = btn.dataset.sort === state.sort;
         btn.classList.toggle("active", active);
-        const baseText = btn.textContent.replace(/[↑↓]$/, "");
+        const baseText = sortLabels[btn.dataset.sort] || btn.textContent.replace(/[↑↓]$/, "");
         btn.textContent = active ? `${baseText}${state.sortDir === "asc" ? "↑" : "↓"}` : baseText;
       });
+      $("#currentHeader").insertAdjacentHTML("beforeend", majorityHeader("多数数据", timeContext.currentMajority, timeContext.currentMatched.length, "个业务"));
+      $("#baselineHeader").insertAdjacentHTML("beforeend", majorityHeader("多数参考", timeContext.yesterdayMajority, timeContext.yesterdayMatched.length, "个业务"));
+      $("#lastWeekHeader").insertAdjacentHTML("beforeend", majorityHeader("多数参考", timeContext.lastWeekMajority, timeContext.lastWeekMatched.length, "个业务"));
       renderBusinessMobileCards(rows);
       if (state.loading && !rows.length) {
         $("#businessBody").innerHTML = `<tr><td colspan="13" class="muted">数据加载中，请稍等...</td></tr>`;
@@ -1649,9 +1734,9 @@
           <td>${index + 1}</td>
           <td>${row.platform}</td>
           <td><button class="business-history-link" data-business-daily-index="${index}" title="查看该业务每日数据">${row.name}</button></td>
-          <td>${state.metric === "commission" ? money(row.cmp.today) : fmt(row.cmp.today)}</td>
-          <td>${comparisonReferenceCell(same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null, same.yesterdayReference || same, state.metric === "commission" ? money : fmt)}</td>
-          <td>${comparisonReferenceCell(same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null, same.lastWeekReference || {}, state.metric === "commission" ? money : fmt)}</td>
+          <td>${currentDataCell(row.cmp.today, businessCurrentDataTime(row), timeContext.currentMajority, state.metric === "commission" ? money : fmt)}</td>
+          <td>${comparisonReferenceCell(same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null, same.yesterdayReference || same, state.metric === "commission" ? money : fmt, { dominantMinute: timeContext.yesterdayMajority.minute, compactMajority: true })}</td>
+          <td>${comparisonReferenceCell(same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null, same.lastWeekReference || {}, state.metric === "commission" ? money : fmt, { dominantMinute: timeContext.lastWeekMajority.minute, compactMajority: true })}</td>
           <td>${sevenDayReferenceCell(same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null, same, state.metric === "commission" ? money : fmt)}</td>
           <td class="${row.cmp.diff < 0 ? "down" : row.cmp.diff > 0 ? "up" : ""}">${pctValue(row.cmp.ratio)}</td>
           <td>${fmtValue(row.cmp.impact)}</td>
@@ -1935,6 +2020,176 @@
         state.focusLoading = false;
         renderFocusUsers();
       }
+    }
+
+    async function loadPublicGlobalUserIndex() {
+      if (state.publicGlobalUserIndexData?.users) return state.publicGlobalUserIndexData;
+      const manifest = state.publicGlobalUserIndexManifest;
+      if (!manifest?.shard) throw new Error("当前公网快照还没有用户跨业务索引，请稍后刷新页面");
+      const response = await fetch(`${manifest.shard}?_=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`公网用户索引加载失败：HTTP ${response.status}`);
+      const encrypted = await response.json();
+      const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
+      if (!data?.users) throw new Error("公网用户索引解密失败，请重新打开页面并输入密码");
+      state.publicGlobalUserIndexData = data;
+      return data;
+    }
+
+    function matchPublicGlobalUsers(users, keyword) {
+      const query = String(keyword || "").trim().toLowerCase();
+      if (!query) return [];
+      return (users || []).map(user => {
+        const name = userDisplayName({ id: user.userId, name: user.name });
+        const haystack = `${user.userId} ${name} ${user.sourceName || ""} ${user.phone || ""}`.toLowerCase();
+        if (!haystack.includes(query)) return null;
+        let score = 0;
+        if (String(user.userId).toLowerCase() === query) score += 1000;
+        if (String(name).toLowerCase() === query || String(user.sourceName || "").toLowerCase() === query) score += 800;
+        else if (String(name).toLowerCase().startsWith(query) || String(user.sourceName || "").toLowerCase().startsWith(query)) score += 500;
+        score += Math.min(100, user.businessIds?.length || 0);
+        return { ...user, name, businessCount: user.businessIds?.length || 0, score };
+      }).filter(Boolean).sort((a, b) => b.score - a.score || b.businessCount - a.businessCount || a.name.localeCompare(b.name, "zh-CN")).slice(0, 20).map(({ score, ...user }) => user);
+    }
+
+    async function buildPublicGlobalUserResult(keyword, selectedId = "") {
+      const index = await loadPublicGlobalUserIndex();
+      const candidates = matchPublicGlobalUsers(index.users, selectedId || keyword);
+      const userId = String(selectedId || (candidates.length === 1 ? candidates[0].userId : candidates.find(user => String(user.userId) === String(keyword))?.userId || ""));
+      if (!userId) return { ok: true, query: keyword, candidates, selectedUserId: "", businessRows: [], rows: [] };
+      const selected = candidates.find(user => String(user.userId) === userId) || index.users.find(user => String(user.userId) === userId);
+      if (!selected) return { ok: true, query: keyword, candidates: [], selectedUserId: "", businessRows: [], rows: [] };
+      const endDate = state.dateRange?.endDate || dayText(new Date());
+      const range = publicFocusRange(state.globalUserRange, endDate);
+      const dates = dateTextList(range.startDate, range.endDate);
+      const previousDates = dateTextList(range.comparisonStartDate, range.comparisonEndDate);
+      const businessRows = (await Promise.all((selected.businessIds || []).map(async businessId => {
+        const detail = await loadPublicUserDetail(String(businessId));
+        const history = (detail.history?.rows || []).find(row => String(row.id || row.userId || "") === userId) || {};
+        const current = (detail.rows || []).find(row => String(row.id || row.userId || "") === userId) || {};
+        const merged = { ...history, ...current, days: { ...(history.days || {}), ...(current.days || {}) } };
+        const business = state.businesses.find(row => String(row.platformBusinessId || row.businessId) === String(businessId) || String(row.businessId) === String(businessId));
+        const days = Object.fromEntries(dates.map(date => [date, Number(merged.days?.[date] || 0)]));
+        const periodTotal = Object.values(days).reduce((sum, value) => sum + value, 0);
+        const previousPeriodTotal = previousDates.reduce((sum, date) => sum + Number(merged.days?.[date] || 0), 0);
+        const todayOrders = Number(current.todayOrders ?? merged.days?.[endDate] ?? 0);
+        const baseline = current.sameTime?.yesterday?.orders ?? current.yesterdaySameTime ?? merged.sameTime?.yesterday?.orders ?? merged.yesterdaySameTime;
+        const yesterdaySameTime = baseline === null || baseline === undefined ? null : Number(baseline);
+        const diff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
+        const periodDiff = periodTotal - previousPeriodTotal;
+        return {
+          ...merged,
+          userId,
+          businessId: String(businessId),
+          businessName: business?.name || business?.businessName || "未命名业务",
+          platform: business?.platform || "-",
+          days,
+          todayOrders,
+          yesterdaySameTime,
+          sameTime: current.sameTime || merged.sameTime || {},
+          ratio: yesterdaySameTime === null ? null : (yesterdaySameTime ? diff / yesterdaySameTime * 100 : (todayOrders ? 100 : 0)),
+          impact: diff === null ? null : Math.abs(diff),
+          periodTotal,
+          previousPeriodTotal,
+          periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null,
+          periodImpact: Math.abs(periodDiff),
+          userDataTime: detail.currentLatestDataTime || detail.latestDataTime || detail.history?.latestDataTime || "-"
+        };
+      }))).filter(row => row.todayOrders > 0 || row.yesterdaySameTime > 0 || row.periodTotal > 0 || row.previousPeriodTotal > 0);
+      const todayOrders = businessRows.reduce((sum, row) => sum + Number(row.todayOrders || 0), 0);
+      const comparable = businessRows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
+      const yesterdaySameTime = comparable.length ? comparable.reduce((sum, row) => sum + Number(row.yesterdaySameTime || 0), 0) : null;
+      return {
+        ok: true,
+        query: keyword,
+        candidates,
+        selectedUserId: userId,
+        user: { ...selected, businessCount: businessRows.length, todayOrders, yesterdaySameTime, periodTotal: businessRows.reduce((sum, row) => sum + Number(row.periodTotal || 0), 0), previousPeriodTotal: businessRows.reduce((sum, row) => sum + Number(row.previousPeriodTotal || 0), 0) },
+        range,
+        dates,
+        businessRows,
+        rows: businessRows,
+        latestDataTime: businessRows.map(row => row.userDataTime).filter(Boolean).sort().at(-1) || index.updatedAtText || "-"
+      };
+    }
+
+    function renderGlobalUserSearch() {
+      const result = $("#globalUserResult");
+      $("#globalUserRefreshBtn").classList.toggle("hidden", state.publicMode || !state.globalUserSelectedId);
+      $$("#globalUserRangeTabs button").forEach(button => button.classList.toggle("active", button.dataset.globalUserRange === state.globalUserRange));
+      if (state.globalUserLoading && !state.globalUserData) {
+        result.innerHTML = `<section class="source">正在查询用户缓存，请稍等...</section>`;
+        return;
+      }
+      const data = state.globalUserData;
+      if (!data) {
+        result.innerHTML = `<section class="source">请输入用户ID或名称后查询。查询缓存本身不会请求中台。</section>`;
+        return;
+      }
+      if (!data.selectedUserId) {
+        if (!data.candidates?.length) {
+          result.innerHTML = `<section class="source warn">没有找到匹配用户。可尝试输入完整用户ID，或先刷新本机用户索引。</section>`;
+          return;
+        }
+        result.innerHTML = `<section class="source"><strong>找到 ${fmt(data.candidates.length)} 个匹配用户：</strong>请选择要查看的用户。</section><div class="global-user-candidates">${data.candidates.map(user => `<div class="global-user-candidate"><div><strong>${escapeHtml(userDisplayName({ id:user.userId, name:user.name }))}</strong><span>${copyUserIdButton(user)}｜${escapeHtml(user.phone || "-")}</span></div><span class="muted">缓存关联 ${fmt(user.businessCount || 0)} 个业务</span><button class="btn primary" data-global-user-select="${escapeHtml(user.userId)}">查看业务订单</button></div>`).join("")}</div>`;
+        return;
+      }
+      const user = data.user || {};
+      const rows = (data.businessRows || data.rows || []).slice().sort((a, b) => Number(b.todayOrders || 0) - Number(a.todayOrders || 0));
+      const dates = data.dates || [];
+      const yesterdayComparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
+      const currentMajority = majorityMinute(rows.map(row => timeMinuteFromText(row.userDataTime)));
+      const yesterdayReferences = rows.map(row => row.sameTime?.yesterdayReference || row.sameTime || row).filter(reference => isFiniteMinute(reference.comparisonMinute));
+      const yesterdayMajority = majorityMinute(yesterdayReferences.map(reference => reference.comparisonMinute));
+      const todayDiff = user.yesterdaySameTime === null || user.yesterdaySameTime === undefined ? null : Number(user.todayOrders || 0) - Number(user.yesterdaySameTime || 0);
+      const currentTimeNote = row => {
+        const minute = timeMinuteFromText(row.userDataTime);
+        if (!isFiniteMinute(minute) || !isFiniteMinute(currentMajority.minute) || minute === currentMajority.minute) return "";
+        return `<small class="comparison-ref">数据 ${minuteText(minute)} · 较多数${minute < currentMajority.minute ? "早" : "晚"} ${Math.abs(minute - currentMajority.minute)} 分钟</small>`;
+      };
+      result.innerHTML = `<div class="global-user-profile"><div class="global-user-profile-main"><strong>${escapeHtml(userDisplayName({ id:user.userId, name:user.name }))}${aliasEditButton({ id:user.userId, name:user.name })}</strong><span>${copyUserIdButton(user)}｜${escapeHtml(user.phone || "-")}｜版本：${escapeHtml(user.version || "-")}</span></div><div class="toolbar"><button class="btn" data-global-add-focus="${escapeHtml(user.userId)}">加入重点用户</button></div></div>
+        <div class="global-user-metrics"><div class="focus-metric"><label>有单业务</label><strong>${fmt(rows.length)}</strong></div><div class="focus-metric"><label>今日订单合计</label><strong>${fmt(user.todayOrders)}</strong></div><div class="focus-metric"><label>昨日同时刻合计</label><strong>${user.yesterdaySameTime === null || user.yesterdaySameTime === undefined ? "-" : fmt(user.yesterdaySameTime)}</strong></div><div class="focus-metric"><label>今日净变化</label><strong class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${todayDiff === null ? "-" : `${todayDiff > 0 ? "+" : ""}${fmt(todayDiff)}`}</strong></div></div>
+        <section class="source"><strong>数据时间：</strong>${escapeHtml(data.latestDataTime || "-")}｜当前展示缓存中的有单业务；${state.publicMode ? "公网不能直接请求中台。" : "需要最新结果可点“刷新该用户”。"}</section>
+        <div class="detail-table-wrap"><table class="compact wide-date-table focus-table"><thead><tr><th>序号</th><th>平台</th><th class="focus-business-col">业务</th><th>今日订单${majorityHeader("多数数据", currentMajority, rows.length)}</th><th>昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayReferences.length)}</th><th>变化比例</th><th>影响订单</th><th>状态</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${escapeHtml(data.range?.label || "本期")}合计</th><th>上一同期</th><th>合计变化</th></tr></thead><tbody>${rows.length ? rows.map((row,index) => { const comparison = row.yesterdaySameTime === null || row.yesterdaySameTime === undefined ? {level:"missing",label:"缺少基准"} : Math.abs(Number(row.ratio || 0)) <= 10 ? {level:"normal",label:"正常"} : Number(row.ratio || 0) > 0 ? {level:"up",label:"增长"} : {level:"critical",label:"流失风险"}; return `<tr><td>${index+1}</td><td>${escapeHtml(row.platform || "-")}</td><td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong></td><td>${fmt(row.todayOrders)}${currentTimeNote(row)}</td><td>${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, fmt, {dominantMinute:yesterdayMajority.minute,compactMajority:true})}</td><td class="${Number(row.ratio)<0?"down":Number(row.ratio)>0?"up":""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td><td>${tag(comparison.level,comparison.label)}</td>${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}<td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio)<0?"down":Number(row.periodRatio)>0?"up":""}">${pctValue(row.periodRatio)}</td></tr>`; }).join("") : `<tr><td colspan="${dates.length+11}" class="muted">当前缓存中没有找到该用户的有单业务。可点击“刷新该用户”重新扫描。</td></tr>`}</tbody></table></div>`;
+    }
+
+    async function loadGlobalUserSearch({ refresh = false, userId = "" } = {}) {
+      const query = String($("#globalUserModalInput").value || state.globalUserQuery || "").trim();
+      if (!query && !userId) throw new Error("请输入用户ID或名称");
+      state.globalUserQuery = query || userId;
+      state.globalUserSelectedId = String(userId || state.globalUserSelectedId || "");
+      state.globalUserLoading = true;
+      renderGlobalUserSearch();
+      try {
+        if (state.publicMode) state.globalUserData = await buildPublicGlobalUserResult(state.globalUserQuery, state.globalUserSelectedId);
+        else {
+          const params = new URLSearchParams({ q: state.globalUserQuery, preset: state.globalUserRange, _: Date.now() });
+          if (state.globalUserSelectedId) params.set("user_id", state.globalUserSelectedId);
+          if (refresh) params.set("refresh", "1");
+          state.globalUserData = await requestJson(apiUrl(`/api/global-user-search?${params}`));
+        }
+        state.globalUserSelectedId = String(state.globalUserData.selectedUserId || "");
+      } finally {
+        state.globalUserLoading = false;
+        renderGlobalUserSearch();
+      }
+    }
+
+    function openGlobalUserSearch(query = "") {
+      state.globalUserQuery = String(query || "").trim();
+      state.globalUserSelectedId = "";
+      state.globalUserData = null;
+      $("#globalUserModalInput").value = state.globalUserQuery;
+      $("#globalUserModalClear").classList.toggle("hidden", !state.globalUserQuery);
+      $("#modalMask").classList.add("open");
+      $("#globalUserModal").classList.add("open");
+      renderGlobalUserSearch();
+      if (state.globalUserQuery) loadGlobalUserSearch().catch(error => toast(error.message || "用户查询失败"));
+      else setTimeout(() => $("#globalUserModalInput").focus(), 0);
+    }
+
+    function closeGlobalUserSearch() {
+      $("#globalUserModal").classList.remove("open");
+      $("#modalMask").classList.remove("open");
     }
 
     function openFocusModal(userId = "", businessHint = "") {
@@ -2277,6 +2532,7 @@
       state.userAliases = { ...(data.userAliases || state.userAliases || {}), ...readPublicUserAliases() };
       state.publicUserDetails = data.userDetails || {};
       state.publicBusinessTrends = data.businessTrends || {};
+      state.publicGlobalUserIndexManifest = data.globalUserIndex || state.publicGlobalUserIndexManifest;
       state.focusData = data.focusUsers || state.focusData;
       state.publicFocusUsers = data.focusUsersByRange || { month: data.focusUsers };
       if (state.publicFocusNotesUpdatedAt) state.focusData = mergedPublicFocusData(state.focusRange);

@@ -25,6 +25,7 @@ const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.jso
 const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
 const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.json");
 const PUBLIC_FOCUS_NOTES_PATH = join(ROOT, "data/business-focus-notes-public.enc.json");
+const PUBLIC_GLOBAL_USER_INDEX_PATH = join(ROOT, "data/business-global-user-index.enc.json");
 const PUBLIC_USER_DETAIL_DIR = join(ROOT, "data/business-public-users");
 const USER_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.username";
 const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
@@ -2243,6 +2244,91 @@ function focusUserCacheIndex(userIds = []) {
   return index;
 }
 
+function globalUserRelationshipIndex() {
+  const index = new Map();
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    let businessId = "";
+    try { businessId = String(JSON.parse(cacheKey).businessId || ""); } catch {}
+    if (!businessId || !Array.isArray(payload?.rows)) continue;
+    for (const row of payload.rows) {
+      const userId = String(row.id || row.userId || "");
+      if (!userId) continue;
+      const current = index.get(userId) || { businessIds: new Set(), name: "", phone: "", version: "-" };
+      current.businessIds.add(businessId);
+      if (row.name && !String(row.name).startsWith("用户 ")) current.name = String(row.name);
+      const phone = plainPhoneValue(userId, row.phone);
+      if (phone !== "-") current.phone = phone;
+      if (row.version && row.version !== "-") current.version = String(row.version);
+      index.set(userId, current);
+    }
+  }
+  return index;
+}
+
+async function globalUserCandidates(keyword, limit = 20) {
+  const query = String(keyword || "").trim().toLowerCase();
+  if (!query) return [];
+  const aliases = (await readUserAliases()).aliases || {};
+  const relationships = globalUserRelationshipIndex();
+  const ids = new Set([...userProfileCache.keys(), ...relationships.keys(), ...Object.keys(aliases)]);
+  const candidates = [];
+  for (const userId of ids) {
+    const profile = userProfileCache.get(String(userId)) || {};
+    const cached = relationships.get(String(userId)) || {};
+    const alias = String(aliases[userId] || "");
+    const sourceName = String(cached.name || profile.name || "");
+    const name = alias || sourceName || `用户 ${userId}`;
+    const phone = plainPhoneValue(userId, cached.phone, profile.phone);
+    const haystack = `${userId} ${alias} ${sourceName} ${phone}`.toLowerCase();
+    if (!haystack.includes(query)) continue;
+    let score = 0;
+    if (String(userId).toLowerCase() === query) score += 1000;
+    if (alias.toLowerCase() === query || sourceName.toLowerCase() === query) score += 800;
+    else if (alias.toLowerCase().startsWith(query) || sourceName.toLowerCase().startsWith(query)) score += 500;
+    score += Math.min(100, cached.businessIds?.size || 0);
+    candidates.push({ userId: String(userId), name, sourceName: sourceName || name, phone, version: cached.version || "-", businessCount: cached.businessIds?.size || 0, score });
+  }
+  return candidates.sort((a, b) => b.score - a.score || b.businessCount - a.businessCount || a.name.localeCompare(b.name, "zh-CN")).slice(0, limit).map(({ score, ...item }) => item);
+}
+
+async function buildGlobalUserSearch(query = {}) {
+  const keyword = String(query.q || query.keyword || "").trim();
+  const requestedId = String(query.user_id || "").trim();
+  const candidates = await globalUserCandidates(requestedId || keyword, 20);
+  const selectedId = requestedId || (candidates.length === 1 ? candidates[0].userId : (candidates.find(item => item.userId === keyword)?.userId || ""));
+  if (!selectedId) return { ok: true, query: keyword, candidates, selectedUserId: "", businessRows: [], rows: [] };
+  const selected = candidates.find(item => item.userId === selectedId) || (await globalUserCandidates(selectedId, 1))[0] || { userId: selectedId, name: `用户 ${selectedId}`, phone: "-", version: "-", businessCount: 0 };
+  if (query.refresh === "1") await discoverFocusUserBusinesses({ userId: selectedId, name: selected.name, phone: selected.phone, version: selected.version, businessHints: [] });
+  const range = focusRange(query);
+  const dates = dayList(range.startDate, range.endDate);
+  const previousDates = dayList(range.comparisonStartDate, range.comparisonEndDate);
+  const snapshots = await readSnapshots();
+  const catalog = await focusBusinessCatalog();
+  const cacheIndex = focusUserCacheIndex([selectedId]);
+  const relation = globalUserRelationshipIndex().get(selectedId);
+  const businessHints = [...(relation?.businessIds || [])].map(businessId => ({ businessId }));
+  const item = { userId: selectedId, name: selected.name, phone: selected.phone, version: selected.version, businessHints };
+  const businessRows = catalog.map(business => focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex)).filter(Boolean);
+  const todayOrders = businessRows.reduce((sum, row) => sum + number(row.todayOrders), 0);
+  const comparable = businessRows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
+  const yesterdaySameTime = comparable.length ? comparable.reduce((sum, row) => sum + number(row.yesterdaySameTime), 0) : null;
+  const periodTotal = businessRows.reduce((sum, row) => sum + number(row.periodTotal), 0);
+  const previousPeriodTotal = businessRows.reduce((sum, row) => sum + number(row.previousPeriodTotal), 0);
+  const latestTimes = businessRows.map(row => row.userDataTime).filter(Boolean).sort();
+  return {
+    ok: true,
+    query: keyword,
+    candidates,
+    selectedUserId: selectedId,
+    user: { ...selected, businessCount: businessRows.length, todayOrders, yesterdaySameTime, periodTotal, previousPeriodTotal },
+    range,
+    dates,
+    businessRows,
+    rows: businessRows,
+    latestDataTime: latestTimes.at(-1) || userDetailCacheSavedAtText || "-"
+  };
+}
+
 function cachedFocusCurrentUser(businessId, userId) {
   const key = JSON.stringify({ type: "focus-current", businessId: String(businessId), userId: String(userId), date: dayKey() });
   const payload = userDetailCache.get(key);
@@ -2785,9 +2871,38 @@ async function writePublicUserDetailShards(details = {}) {
   return manifest;
 }
 
+async function writePublicGlobalUserIndex() {
+  const aliases = (await readUserAliases()).aliases || {};
+  const relationships = globalUserRelationshipIndex();
+  const users = [...relationships.entries()].map(([userId, relation]) => {
+    const profile = userProfileCache.get(String(userId)) || {};
+    const sourceName = String(relation.name || profile.name || "");
+    return {
+      userId: String(userId),
+      name: String(aliases[userId] || sourceName || `用户 ${userId}`),
+      sourceName: sourceName || `用户 ${userId}`,
+      phone: plainPhoneValue(userId, relation.phone, profile.phone),
+      version: relation.version || "-",
+      businessIds: [...relation.businessIds]
+    };
+  });
+  const payload = { ok: true, updatedAt: new Date().toISOString(), updatedAtText: nowText(), users };
+  const contentHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  let shouldWrite = true;
+  if (existsSync(PUBLIC_GLOBAL_USER_INDEX_PATH)) {
+    try {
+      const current = JSON.parse(await readFile(PUBLIC_GLOBAL_USER_INDEX_PATH, "utf8"));
+      shouldWrite = current.contentHash !== contentHash || current.compression !== "gzip" || Number(current.iterations) !== PUBLIC_KDF_ITERATIONS;
+    } catch {}
+  }
+  if (shouldWrite) await writeFile(PUBLIC_GLOBAL_USER_INDEX_PATH, JSON.stringify(await encryptPublicPayload(payload, { compression: "gzip", contentHash })));
+  return { shard: "data/business-global-user-index.enc.json", total: users.length, updatedAtText: payload.updatedAtText };
+}
+
 async function publishPublicDashboardNow(data) {
   const payload = await sanitizePublicDashboard(data);
   payload.userDetails = await writePublicUserDetailShards(payload.userDetails || {});
+  payload.globalUserIndex = await writePublicGlobalUserIndex();
   const encryptedPayload = await encryptPublicPayload(payload, { compression: "gzip" });
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(PUBLIC_DASHBOARD_PATH, JSON.stringify(encryptedPayload, null, 2));
@@ -2819,8 +2934,8 @@ async function publishPublicFocusNotes() {
 }
 
 async function pushPublicDashboard() {
-  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-public-users"]);
-  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-public-users"]);
+  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
+  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
   if (!status) {
     console.log(`[${nowText()}] 业务看板公开文件没有变化，跳过 GitHub 推送。`);
     return false;
@@ -2940,6 +3055,7 @@ const server = createServer(async (req, res) => {
       const config = await writeConfig({ ...current, fastUserBusinessIds: [...ids] });
       return json(res, 200, { ok: true, config });
     }
+    if (url.pathname === "/api/global-user-search" && req.method === "GET") return json(res, 200, await buildGlobalUserSearch(Object.fromEntries(url.searchParams.entries())));
     if (url.pathname === "/api/focus-users" && req.method === "GET") return json(res, 200, await buildFocusUsers(Object.fromEntries(url.searchParams.entries())));
     if (url.pathname === "/api/focus-users/state" && req.method === "GET") {
       const saved = await readFocusUsers();
