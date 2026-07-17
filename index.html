@@ -389,7 +389,7 @@
       }
 
       .nav {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 6px;
         padding: 8px 10px 10px;
       }
@@ -471,6 +471,13 @@
             <span class="nav-desc">跨业务关注用户订单</span>
           </span>
         </button>
+        <button class="nav-btn local-only-board" type="button" data-board="profit" aria-selected="false" title="开放平台毛利看板">
+          <span class="nav-icon">利</span>
+          <span class="nav-text">
+            <span class="nav-title">开放平台毛利</span>
+            <span class="nav-desc">利润结构与经营底盘</span>
+          </span>
+        </button>
       </nav>
 
       <div class="side-foot"></div>
@@ -484,6 +491,7 @@
       <iframe class="board-frame active" id="activityFrame" data-board-frame="activity" title="激励活动看板" src="about:blank"></iframe>
       <iframe class="board-frame" id="businessFrame" data-board-frame="business" title="用户内部看板" src="about:blank"></iframe>
       <iframe class="board-frame" id="focusFrame" data-board-frame="focus" title="重点用户看板" src="about:blank"></iframe>
+      <iframe class="board-frame" id="profitFrame" data-board-frame="profit" title="开放平台毛利看板" src="about:blank"></iframe>
     </main>
   </div>
 
@@ -504,6 +512,11 @@
         title: "重点用户看板",
         localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&view=focus&v=20260717-mobile-entry-recovery",
         publicUrl: "./business-user-dashboard-prototype.html?embed=1&view=focus&v=20260717-mobile-entry-recovery"
+      },
+      profit: {
+        title: "开放平台毛利看板",
+        localUrl: "http://127.0.0.1:8791/open-platform-profit-dashboard.html?embed=1&v=20260717-profit-dashboard",
+        publicUrl: "about:blank"
       }
     };
 
@@ -511,7 +524,8 @@
     const frames = {
       activity: document.getElementById("activityFrame"),
       business: document.getElementById("businessFrame"),
-      focus: document.getElementById("focusFrame")
+      focus: document.getElementById("focusFrame"),
+      profit: document.getElementById("profitFrame")
     };
 
     const frameLoading = document.getElementById("frameLoading");
@@ -620,7 +634,7 @@
         activateFrame(resolvedKey);
         if (shouldLoad) {
           loadedBoards.delete(resolvedKey);
-          scheduleFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : resolvedKey === "focus" ? "正在加载重点用户看板..." : "正在加载用户看板...");
+          scheduleFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : resolvedKey === "focus" ? "正在加载重点用户看板..." : resolvedKey === "profit" ? "正在加载毛利看板..." : "正在加载用户看板...");
           if (resolvedKey !== "activity") waitForFrameReady(resolvedKey);
           frame.src = publicFrameUrl(url, { fresh: Boolean(options.fresh) });
         } else {
@@ -818,6 +832,10 @@
     });
 
     let sidebarCollapsed = false;
+    if (!isLocalAccess) {
+      document.querySelectorAll(".local-only-board").forEach((item) => { item.hidden = true; });
+      if (location.hash === "#profit") history.replaceState(null, "", "#activity");
+    }
     try { sidebarCollapsed = localStorage.getItem("dashboardSidebarCollapsed") === "1"; } catch {}
     applySidebarState(sidebarCollapsed);
     setBoard(location.hash.replace("#", "") || "activity", false);

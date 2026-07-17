@@ -9,6 +9,7 @@
 - “激励活动看板”：对应 `meituan-dashboard-preview.html`。
 - “用户内部看板”：本地打开时由统一入口嵌入本机实时服务 `http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1`，公网打开时由统一入口嵌入加密公开快照。
 - “重点用户看板”：统一入口左侧独立入口，直接进入跨平台、跨业务的关注用户页面；与用户内部看板共用数据和缓存。
+- “开放平台毛利”：仅在本机入口显示，读取蒋敏工作日邮件中的 `开放平台毛利表2026.xlsx`，展示累计毛利、月度走势、利润结构、经营底盘、项目贡献与异常日期。经营数据不会进入公网发布文件。
 
 日常只使用统一入口 `index.html`；单独访问 `business-user-dashboard-prototype.html` 会自动跳回统一入口的“用户内部看板”。
 其中“用户内部看板”要显示实时数据，需要先确认“业务用户看板服务”已经启动。
@@ -150,6 +151,24 @@ logs/business-user-dashboard-error.log
 ```
 
 如果重启电脑后看板打不开，双击桌面的“业务用户看板服务.command”，先选择“查看服务状态”；如果未启动或日志报错，再选择“重启服务”。如果提示缺少钥匙串账号，选择“写入/更新钥匙串账号”重新录入中台账号密码。
+
+## 开放平台毛利看板
+
+毛利看板使用本机文件，不发布原始 Excel 或明细 JSON。文件位置：
+
+```text
+data/private/开放平台毛利表2026.xlsx
+data/private/open-platform-profit-workbook.json
+data/open-platform-profit-dashboard.json
+```
+
+上述目录和数据文件已加入 `.gitignore`，不会被 Git 提交。更新流程是：先从飞书邮箱下载蒋敏最新发送的 `开放平台毛利表2026.xlsx`，再运行项目脚本生成看板数据。macOS 终端在项目根目录执行：
+
+```bash
+zsh scripts/refresh-open-platform-profit-dashboard.zsh
+```
+
+正常结果会显示“毛利看板数据已更新”。更新后刷新本地统一入口的“开放平台毛利”页面即可。若提示没有找到 Excel，先确认附件已下载到 `/Users/tanwenjie/Downloads/开放平台毛利表2026.xlsx`；若浏览器页面打不开，先用桌面的“业务用户看板服务.command”重启本机服务。
 
 业务异常监控看板目前包含：
 
