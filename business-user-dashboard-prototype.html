@@ -399,6 +399,8 @@
     .focus-note-edit { width:24px; height:24px; flex:0 0 24px; border:0; border-radius:4px; background:#f2f4f7; color:var(--muted); padding:0; cursor:pointer; }
     .focus-note-edit:hover { color:var(--blue); background:#eff6ff; }
     .focus-note-modal { width:min(640px,94vw); }
+    .focus-user-drilldown { cursor:pointer; }
+    .focus-user-drilldown:focus-visible { outline:2px solid var(--blue); outline-offset:-2px; }
     .focus-note-editor { width:100%; min-height:220px; resize:vertical; line-height:1.65; font-family:inherit; }
     .focus-note-help { margin:0 0 10px; color:var(--muted); font-size:12px; }
     .focus-table thead .focus-business-col, .focus-table thead .focus-user-col, .focus-table th:first-child { background:#f8fafc; z-index:4; }
@@ -1877,7 +1879,7 @@
           : `${row.platform || "-"}｜${row.businessId || "-"}`;
         const note = state.focusMode === "business" ? focusNoteText(row) : "";
         const dailyItems = dates.map(date => `<div class="mobile-daily-item"><label>${escapeHtml(date.slice(5).replace("-", "/"))}</label><strong>${fmt(row.days?.[date])}</strong></div>`).join("");
-        return `<article class="mobile-data-card" data-mobile-focus-card="${index}">
+        return `<article class="mobile-data-card ${state.focusMode === "business" ? "focus-user-drilldown" : ""}" data-mobile-focus-card="${index}" ${state.focusMode === "business" ? `data-focus-user-detail="${escapeHtml(row.userId)}" tabindex="0" aria-label="查看${escapeHtml(title)}的全部业务数据" title="点击查看该用户的全部业务数据"` : ""}>
           <div class="mobile-card-head">
             <div class="mobile-card-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span></div>
             ${tag(comparison.level, comparison.label)}
@@ -1989,7 +1991,7 @@
       const baseColumns = state.focusMode === "business" ? 3 : 2;
       $("#focusBody").innerHTML = state.focusLoading && !rows.length
         ? `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">正在更新重点用户，原有数据会在加载完成后替换...</td></tr>`
-        : (rows.length ? rows.map((row, index) => `<tr>
+        : (rows.length ? rows.map((row, index) => `<tr ${state.focusMode === "business" ? `class="focus-user-drilldown" data-focus-user-detail="${escapeHtml(row.userId)}" tabindex="0" aria-label="查看${escapeHtml(userDisplayName(row))}的全部业务数据" title="点击查看该用户的全部业务数据"` : ""}>
           <td>${index + 1}</td>
           ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从全部业务移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
           <td class="focus-order-col">${fmt(row.todayOrders)}${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
@@ -2177,10 +2179,13 @@
       }
     }
 
-    function openGlobalUserSearch(query = "") {
+    function openGlobalUserSearch(query = "", options = {}) {
       state.globalUserQuery = String(query || "").trim();
       state.globalUserSelectedId = "";
       state.globalUserData = null;
+      const fromFocus = Boolean(options.fromFocus);
+      $("#globalUserTitle").textContent = fromFocus ? "重点用户｜全部业务数据" : "跨业务用户查询";
+      $("#globalUserSub").textContent = fromFocus ? "与“按用户看”一致，展示该用户在全部有单业务中的数据" : "查看该用户在全部有单业务中的订单";
       $("#globalUserModalInput").value = state.globalUserQuery;
       $("#globalUserModalClear").classList.toggle("hidden", !state.globalUserQuery);
       $("#modalMask").classList.add("open");
@@ -3773,7 +3778,20 @@
         return;
       }
       const btn = e.target.closest("[data-remove-focus]");
-      if (btn) removeFocusUser(btn.dataset.userId).catch(error => toast(error.message || "移除失败"));
+      if (btn) {
+        removeFocusUser(btn.dataset.userId).catch(error => toast(error.message || "移除失败"));
+        return;
+      }
+      const userDetail = e.target.closest("[data-focus-user-detail]");
+      if (!userDetail || e.target.closest("button, input, select, textarea, a, summary, details")) return;
+      openGlobalUserSearch(userDetail.dataset.focusUserDetail, { fromFocus: true });
+    });
+    $("#focusView").addEventListener("keydown", e => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const userDetail = e.target.closest("[data-focus-user-detail]");
+      if (!userDetail || e.target !== userDetail) return;
+      e.preventDefault();
+      openGlobalUserSearch(userDetail.dataset.focusUserDetail, { fromFocus: true });
     });
     $("#addFocusBtn").addEventListener("click", () => openFocusModal());
     $("#closeFocusModal").addEventListener("click", closeFocusModal);

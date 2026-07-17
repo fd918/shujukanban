@@ -2305,9 +2305,7 @@ async function buildGlobalUserSearch(query = {}) {
   const snapshots = await readSnapshots();
   const catalog = await focusBusinessCatalog();
   const cacheIndex = focusUserCacheIndex([selectedId]);
-  const relation = globalUserRelationshipIndex().get(selectedId);
-  const businessHints = [...(relation?.businessIds || [])].map(businessId => ({ businessId }));
-  const item = { userId: selectedId, name: selected.name, phone: selected.phone, version: selected.version, businessHints };
+  const item = { userId: selectedId, name: selected.name, phone: selected.phone, version: selected.version, businessHints: [] };
   const businessRows = catalog.map(business => focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex)).filter(Boolean);
   const todayOrders = businessRows.reduce((sum, row) => sum + number(row.todayOrders), 0);
   const comparable = businessRows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
