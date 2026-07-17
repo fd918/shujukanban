@@ -33,6 +33,7 @@ for (const sheet of source) {
     const name = String(row?.[2] || "").trim();
     return name && name !== "合计" && name !== "日平均值";
   });
+  const sourceTotalRow = values.find((row) => String(row?.[2] || "").trim() === "合计");
   let carriedCategory = "未分类";
   const normalizedRows = projectRows.map((row) => {
     if (String(row?.[1] || "").trim()) carriedCategory = String(row[1]).trim();
@@ -84,7 +85,8 @@ for (const sheet of source) {
     if (date > latestDate) latestDate = date;
   }
 
-  const total = round(sum(monthDaily.map((item) => item.total)));
+  const cachedSourceTotal = Number(sourceTotalRow?.[header.length - 1]);
+  const total = Number.isFinite(cachedSourceTotal) ? round(cachedSourceTotal) : round(sum(monthDaily.map((item) => item.total)));
   months.push({
     month: monthKey,
     label: `${Number(monthKey.slice(5))}月`,
