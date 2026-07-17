@@ -140,6 +140,14 @@
       text-align: left;
     }
 
+    .local-only-board {
+      display: none !important;
+    }
+
+    html.local-access .local-only-board {
+      display: grid !important;
+    }
+
     .nav-btn[aria-selected="true"] {
       background: var(--brand-soft);
       border-color: #fed7aa;
@@ -471,7 +479,7 @@
             <span class="nav-desc">跨业务关注用户订单</span>
           </span>
         </button>
-        <button class="nav-btn local-only-board" type="button" data-board="profit" aria-selected="false" title="开放平台毛利看板">
+        <button class="nav-btn local-only-board" type="button" data-board="profit" aria-selected="false" title="开放平台毛利看板" hidden>
           <span class="nav-icon">利</span>
           <span class="nav-text">
             <span class="nav-title">开放平台毛利</span>
@@ -497,6 +505,10 @@
 
   <script>
     const isLocalAccess = ["", "localhost", "127.0.0.1"].includes(location.hostname) || location.protocol === "file:";
+    if (isLocalAccess) {
+      document.documentElement.classList.add("local-access");
+      document.querySelectorAll(".local-only-board").forEach((item) => { item.hidden = false; });
+    }
     const boards = {
       activity: {
         title: "激励活动看板",
