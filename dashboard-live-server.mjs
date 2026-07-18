@@ -33,7 +33,7 @@ const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook"
 const FEISHU_SECRET_SERVICE = "com.tanwenjie.business-dashboard.feishu.secret";
 const PUBLIC_PASSWORD_SERVICE = "com.tanwenjie.business-dashboard.public.password";
 const SNAPSHOT_RETENTION_DAYS = 8;
-const PUBLIC_KDF_ITERATIONS = 120000;
+const PUBLIC_KDF_ITERATIONS = 60000;
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;

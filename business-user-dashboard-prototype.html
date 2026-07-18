@@ -2600,7 +2600,7 @@
       if (state.publicSnapshotRefreshInFlight) return;
       state.publicSnapshotRefreshInFlight = true;
       try {
-        const res = await fetchWithTimeout(`data/business-dashboard-public.enc.json?_=${Date.now()}`, { cache: "no-store" });
+        const res = await fetchPublicSnapshotEnvelope({ fresh: true });
         if (!res.ok) return false;
         const encrypted = await res.json();
         if (encrypted.updatedAt && encrypted.updatedAt === state.publicEnvelopeUpdatedAt && state.businesses.length) return true;
@@ -2621,6 +2621,11 @@
       }
     }
 
+    async function fetchPublicSnapshotEnvelope({ fresh = false } = {}) {
+      const url = fresh ? `data/business-dashboard-public.enc.json?_=${Date.now()}` : "data/business-dashboard-public.enc.json";
+      return fetchWithTimeout(url, { cache: fresh ? "no-store" : "default" });
+    }
+
     async function loadPublicSnapshot() {
       const cached = loadCachedPublicPayload();
       if (cached && !state.businesses.length) {
@@ -2631,7 +2636,20 @@
         setTimeout(() => refreshPublicSnapshotInBackground(), 50);
         return true;
       }
-      return refreshPublicSnapshotInBackground();
+      try {
+        const res = await fetchPublicSnapshotEnvelope();
+        if (!res.ok) return refreshPublicSnapshotInBackground();
+        const encrypted = await res.json();
+        const data = await decryptPublicSnapshot(encrypted, { clearOnFailure: false, promptOnMissing: false });
+        if (!data) return false;
+        state.publicEnvelopeUpdatedAt = encrypted.updatedAt || state.publicEnvelopeUpdatedAt;
+        applyPublicSnapshot(data);
+        saveCachedPublicPayload(data);
+        setTimeout(() => refreshPublicSnapshotInBackground(), 50);
+        return true;
+      } catch {
+        return refreshPublicSnapshotInBackground();
+      }
     }
 
     async function loadPublicFocusNotesOverlay() {
