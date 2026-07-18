@@ -606,7 +606,7 @@
         if (activeBoardKey === boardKey && !loadedBoards.has(boardKey)) {
           showFrameLoading("页面加载超时，请检查手机网络后重新加载。", true);
         }
-      }, 15000));
+      }, 45000));
     }
 
     function markFrameReady(boardKey) {
@@ -711,7 +711,7 @@
 
     window.getDashboardPublicPassword = () => cachedPublicPassword();
 
-    function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+    function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
       if (typeof AbortController !== "function") {
         return Promise.race([
           fetch(url, options),
