@@ -3838,5 +3838,21 @@
     "todayRedemptionAmount": 131.12,
     "cumulativeRedemptionOrders": 95,
     "cumulativeRedemptionAmount": 2490.13
+  },
+  {
+    "activityId": "1407",
+    "title": "【美团闪购】美团闪购便利店专场供给及激励政策-7.13-7.20",
+    "metric": "orders",
+    "date": "2026-07-18",
+    "hour": 12,
+    "slotMinute": 30,
+    "dateHour": "2026-07-18 12:30",
+    "recordedAt": "2026/7/18 12:34:26",
+    "todayValidOrders": 8,
+    "todayRedemptionOrders": 7,
+    "todayActualPayment": 202.89,
+    "todayRedemptionAmount": 172.89,
+    "cumulativeRedemptionOrders": 97,
+    "cumulativeRedemptionAmount": 2531.9
   }
 ]
