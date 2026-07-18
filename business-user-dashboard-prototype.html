@@ -2671,7 +2671,7 @@
     function notifyDashboardShell(type, message = "") {
       if (window.parent === window) return;
       try {
-        window.parent.postMessage({ type, message }, location.origin);
+        window.parent.postMessage({ type, message }, "*");
       } catch {}
     }
 
