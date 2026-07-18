@@ -2675,7 +2675,7 @@
       } catch {}
     }
 
-    function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+    function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
       if (typeof AbortController !== "function") {
         return Promise.race([
           fetch(url, options),
