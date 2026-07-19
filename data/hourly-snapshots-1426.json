@@ -2478,5 +2478,21 @@
     "todayRedemptionAmount": 1751,
     "cumulativeRedemptionOrders": 704,
     "cumulativeRedemptionAmount": 43833.8
+  },
+  {
+    "activityId": "1426",
+    "title": "【美团闪购】名创优品专场716-719",
+    "metric": "orders",
+    "date": "2026-07-19",
+    "hour": 13,
+    "slotMinute": 30,
+    "dateHour": "2026-07-19 13:30",
+    "recordedAt": "2026/7/19 13:33:12",
+    "todayValidOrders": 44,
+    "todayRedemptionOrders": 30,
+    "todayActualPayment": 2747.93,
+    "todayRedemptionAmount": 1866.58,
+    "cumulativeRedemptionOrders": 707,
+    "cumulativeRedemptionAmount": 44010.420000000006
   }
 ]
