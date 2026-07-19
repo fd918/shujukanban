@@ -12,6 +12,7 @@ import { gzipSync } from "node:zlib";
 const execFileAsync = promisify(execFile);
 const BASE_URL = "https://adminalliance.yunzhanxinxi.com";
 const PORT = Number(process.env.DASHBOARD_PORT || 8791);
+const HOST = process.env.DASHBOARD_HOST || "0.0.0.0";
 const ROOT = process.cwd();
 const CONFIG_PATH = join(ROOT, "data/business-dashboard-config.json");
 const SNAPSHOT_PATH = join(ROOT, "data/business-dashboard-snapshots.jsonl");
@@ -3162,8 +3163,9 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, "127.0.0.1", async () => {
+server.listen(PORT, HOST, async () => {
   await scheduleSnapshots();
   console.log(`业务异常监控看板已启动：http://127.0.0.1:${PORT}/`);
+  console.log(`同一 Wi-Fi 手机可访问：http://本机局域网IP:${PORT}/`);
   warmStartupData();
 });
