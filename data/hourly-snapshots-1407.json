@@ -5223,11 +5223,11 @@
     "hour": 7,
     "slotMinute": 30,
     "dateHour": "2026-07-20 07:30",
-    "recordedAt": "2026/7/20 07:32:52",
-    "todayValidOrders": null,
-    "todayRedemptionOrders": null,
-    "todayActualPayment": null,
-    "todayRedemptionAmount": null,
+    "recordedAt": "2026/7/20 07:45:49",
+    "todayValidOrders": 1,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 14.8,
+    "todayRedemptionAmount": 0,
     "cumulativeRedemptionOrders": 131,
     "cumulativeRedemptionAmount": 3302.82
   }
