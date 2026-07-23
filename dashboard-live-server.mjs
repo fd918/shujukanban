@@ -35,6 +35,7 @@ const FEISHU_SECRET_SERVICE = "com.tanwenjie.business-dashboard.feishu.secret";
 const PUBLIC_PASSWORD_SERVICE = "com.tanwenjie.business-dashboard.public.password";
 const SNAPSHOT_RETENTION_DAYS = 8;
 const PUBLIC_KDF_ITERATIONS = 60000;
+const T1_USER_BUSINESS_IDS = new Set(["2410"]);
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
@@ -1003,6 +1004,63 @@ function deduplicateBusinessUsers(rows = []) {
   return [...users.values()];
 }
 
+function buildT1BusinessUserDetail(history, businessId) {
+  if (!T1_USER_BUSINESS_IDS.has(String(businessId))) return null;
+  const rows = deduplicateBusinessUsers(history?.rows || []);
+  const dates = [...new Set(history?.dates || [])].sort();
+  const latestAllowedDate = shiftDay(dayKey(), -1);
+  const orderSum = date => rows.reduce((sum, row) => sum + number(row.days?.[date]), 0);
+  const currentBusinessDate = [...dates].reverse().find(date => date <= latestAllowedDate && orderSum(date) > 0);
+  if (!currentBusinessDate) return null;
+  const comparisonBusinessDate = [...dates].reverse().find(date => date < currentBusinessDate) || "";
+  const lastWeekBusinessDate = shiftDay(currentBusinessDate, -7);
+  const latestDataTime = history?.savedAtText || history?.latestDataTime || "-";
+  const users = rows.map(row => {
+    const currentOrders = number(row.days?.[currentBusinessDate]);
+    const comparisonOrders = comparisonBusinessDate ? number(row.days?.[comparisonBusinessDate]) : null;
+    const hasLastWeek = Object.prototype.hasOwnProperty.call(row.days || {}, lastWeekBusinessDate);
+    return {
+      ...row,
+      todayOrders: currentOrders,
+      yesterdayOrders: comparisonOrders,
+      currentDataTime: latestDataTime,
+      currentBusinessDate,
+      comparisonBusinessDate,
+      realtimeToday: true,
+      sameTime: {
+        yesterday: comparisonOrders === null ? null : { orders: comparisonOrders, commission: 0 },
+        lastWeek: hasLastWeek ? { orders: number(row.days?.[lastWeekBusinessDate]), commission: 0 } : null,
+        comparisonSlotLabel: "",
+        comparisonTargetMinute: null,
+        comparisonMinute: null,
+        comparisonOffsetMinutes: null,
+        comparisonExact: true,
+        comparisonQuality: "complete_day",
+        yesterdayReference: { comparisonQuality: "complete_day" },
+        lastWeekReference: { comparisonQuality: hasLastWeek ? "complete_day" : "missing" },
+        hasSnapshot: false,
+        hasApiBaseline: comparisonOrders !== null,
+        t1CompleteDay: true
+      }
+    };
+  });
+  return {
+    reportingMode: "t1",
+    currentBusinessDate,
+    comparisonBusinessDate,
+    lastWeekBusinessDate,
+    latestDataTime,
+    currentLatestDataTime: latestDataTime,
+    fullCurrentLatestDataTime: latestDataTime,
+    historyLatestDataTime: latestDataTime,
+    realtimeUserCount: users.length,
+    total: rows.length,
+    userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0),
+    comparisonOrderSum: users.reduce((sum, row) => sum + number(row.yesterdayOrders), 0),
+    users
+  };
+}
+
 function latestFastBusinessUsers(businessId, date = dayKey()) {
   let latest = null;
   let latestAt = 0;
@@ -1044,16 +1102,34 @@ function latestFullBusinessUsers(businessId, date = dayKey()) {
 }
 
 async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
+  const isT1Business = T1_USER_BUSINESS_IDS.has(String(businessId));
   const history = await fetchBusinessUserHistory({
     businessId,
     startDate,
     endDate,
     pageSize,
-    refresh: false,
+    refresh: isT1Business && refresh,
     enrichPhones: true
   }, statuses);
-  const snapshots = await readSnapshots();
   const historyRows = deduplicateBusinessUsers(history.rows || []).map(row => ({ ...row, currentDataTime: history.savedAtText || "" }));
+  const t1Detail = buildT1BusinessUserDetail({ ...history, rows: historyRows }, businessId);
+  if (t1Detail) {
+    return {
+      ok: history.ok,
+      message: history.ok ? "" : "中台业务用户历史接口未返回有效数据",
+      cached: Boolean(history.cached),
+      ...t1Detail,
+      history: {
+        ok: history.ok,
+        cached: Boolean(history.cached),
+        latestDataTime: history.savedAtText || "-",
+        dates: history.dates,
+        rows: historyRows,
+        total: history.total
+      }
+    };
+  }
+  const snapshots = await readSnapshots();
   const refreshedFull = refresh && endDate === dayKey() ? await fetchBusinessUsers({
     businessId,
     startDate: endDate,
@@ -2710,6 +2786,11 @@ async function encryptedPublicUserDetails(dateRange) {
       detail.history.dates = [...new Set(detail.history.dates || [])].sort();
       detail.history.total = detail.history.rows.length;
       detail.historyLatestDataTime = detail.history.latestDataTime || "-";
+    }
+    const t1Detail = buildT1BusinessUserDetail(detail.history, businessId);
+    if (t1Detail) {
+      Object.assign(detail, t1Detail);
+      continue;
     }
     if (dateRange.endDate !== dayKey()) continue;
     const full = latestFullBusinessUsers(businessId, dateRange.endDate);

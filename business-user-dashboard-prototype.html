@@ -902,7 +902,7 @@
   <div class="chart-tooltip" id="chartTooltip"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -977,7 +977,7 @@
       const dominantMinute = isFiniteMinute(options.dominantMinute) ? Number(options.dominantMinute) : null;
       const differsFromMajority = dominantMinute !== null && actualMinute !== null && actualMinute !== dominantMinute;
       if (options.compactMajority && dominantMinute !== null && !differsFromMajority) return formatted;
-      if (!quality || quality === "missing" || (quality === "exact" && !differsFromMajority)) return formatted;
+      if (!quality || quality === "missing" || quality === "complete_day" || (quality === "exact" && !differsFromMajority)) return formatted;
       const offset = Math.abs(Number(reference.comparisonOffsetMinutes || 0));
       const kind = quality === "legacy" ? "历史参考" : "参考";
       const majorityOffset = differsFromMajority ? actualMinute - dominantMinute : 0;
@@ -1359,6 +1359,9 @@
     }
 
     function detailScopeLabel() {
+      if (state.detailScope === "today" && state.detailReportingMode === "t1" && state.detailCurrentBusinessDate) {
+        return state.detailCurrentBusinessDate.slice(5);
+      }
       return { today: "今日", seven: "近7天", month: "本月" }[state.detailScope] || "近7天";
     }
 
@@ -1367,7 +1370,26 @@
     }
 
     function compareBaseLabel(scope = state.detailScope) {
+      if (scope === "today" && state.detailReportingMode === "t1" && state.detailComparisonBusinessDate) {
+        return `${state.detailComparisonBusinessDate.slice(5)}全天`;
+      }
       return { today: "昨日同时刻", seven: "前7天", month: "上月同期" }[scope] || "对比基准";
+    }
+
+    function detailCurrentColumnLabel() {
+      return state.detailReportingMode === "t1" && state.detailCurrentBusinessDate
+        ? `${state.detailCurrentBusinessDate.slice(5)}订单`
+        : "今日订单";
+    }
+
+    function detailBaselineColumnLabel() {
+      return state.detailReportingMode === "t1" && state.detailComparisonBusinessDate
+        ? `${state.detailComparisonBusinessDate.slice(5)}订单`
+        : "昨日同时刻";
+    }
+
+    function detailLastWeekColumnLabel() {
+      return state.detailReportingMode === "t1" ? "上周同日" : "上周同时刻";
     }
 
     function detailCacheKey(row = state.detailRow, scope = state.detailScope) {
@@ -2928,6 +2950,10 @@
       state.detailSyncedData = null;
       state.detailSyncedBusinessId = "";
       state.detailStats = null;
+      state.detailReportingMode = "realtime";
+      state.detailCurrentBusinessDate = "";
+      state.detailComparisonBusinessDate = "";
+      state.detailLastWeekBusinessDate = "";
       state.detailRefreshing = false;
       state.detailLoadingLabel = "";
       state.detailLatestTime = "";
@@ -2982,6 +3008,18 @@
 
     function applySynchronizedUserData(data, row, cached = false) {
       const today = dayText(new Date());
+      const reportingMode = data.reportingMode || "realtime";
+      const firstT1Load = reportingMode === "t1" && state.detailReportingMode !== "t1";
+      state.detailReportingMode = reportingMode;
+      state.detailCurrentBusinessDate = data.currentBusinessDate || "";
+      state.detailComparisonBusinessDate = data.comparisonBusinessDate || "";
+      state.detailLastWeekBusinessDate = data.lastWeekBusinessDate || "";
+      if (firstT1Load) {
+        state.detailMode = "all";
+        state.detailDisplayRange = "7";
+        state.detailHistoryEnd = state.detailCurrentBusinessDate;
+        state.detailHistoryStart = shiftDayText(state.detailCurrentBusinessDate, -6);
+      }
       const historyRows = data.history?.rows || [];
       const historyById = new Map(historyRows.map(user => [String(user.id || ""), user]));
       const synchronizedById = new Map();
@@ -2994,13 +3032,21 @@
       state.detailUsers = synchronizedUsers.map(user => {
         const historyUser = historyById.get(String(user.id || ""));
         const realtimeToday = Boolean(user.realtimeToday);
-        const synced = historyUser ? {
-          ...historyUser,
-          ...user,
-          days: { ...(historyUser.days || {}), ...(realtimeToday ? { [today]: Number(user.todayOrders || 0) } : {}) },
-          todayOrders: realtimeToday ? Number(user.todayOrders || 0) : Number(historyUser.days?.[today] || 0),
-          realtimeToday
-        } : user;
+        const synced = reportingMode === "t1"
+          ? {
+              ...(historyUser || {}),
+              ...user,
+              days: { ...(historyUser?.days || {}), ...(user.days || {}) },
+              todayOrders: Number(user.todayOrders || 0),
+              realtimeToday: true
+            }
+          : historyUser ? {
+              ...historyUser,
+              ...user,
+              days: { ...(historyUser.days || {}), ...(realtimeToday ? { [today]: Number(user.todayOrders || 0) } : {}) },
+              todayOrders: realtimeToday ? Number(user.todayOrders || 0) : Number(historyUser.days?.[today] || 0),
+              realtimeToday
+            } : user;
         return { ...synced, cmp: compareDetailUser(synced) };
       }).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || Number(b.cmp.impact || 0) - Number(a.cmp.impact || 0));
       state.detailMonthAnalysis = buildMonthAnalysis(data.history || { rows: [] });
@@ -3010,8 +3056,20 @@
         realtimeUserCount: Number(data.realtimeUserCount || state.detailUsers.filter(user => user.realtimeToday).length),
         currentLatestDataTime: data.currentLatestDataTime || data.latestDataTime || "-",
         fullCurrentLatestDataTime: data.fullCurrentLatestDataTime || "-",
-        historyLatestDataTime: data.historyLatestDataTime || data.history?.latestDataTime || "-"
+        historyLatestDataTime: data.historyLatestDataTime || data.history?.latestDataTime || "-",
+        reportingMode,
+        currentBusinessDate: state.detailCurrentBusinessDate,
+        comparisonBusinessDate: state.detailComparisonBusinessDate
       };
+      if (reportingMode === "t1") {
+        const aggregate = classifyChange({
+          current: state.detailStats.userOrderSum,
+          base: data.comparisonOrderSum,
+          labelPrefix: `${state.detailCurrentBusinessDate || "最近完整日"}比${state.detailComparisonBusinessDate || "前一日"}`
+        });
+        state.detailRow = { ...row, cmp: aggregate };
+        $("#detailSub").textContent = `${row.platform}｜T+1业务｜数据日 ${state.detailCurrentBusinessDate || "-"}`;
+      }
       state.detailLatestTime = state.detailScope === "today" ? state.detailStats.currentLatestDataTime : state.detailStats.historyLatestDataTime;
       state.detailSyncedData = data;
       state.detailSyncedBusinessId = String(row.platformBusinessId || row.businessId || "");
@@ -3037,6 +3095,11 @@
           users: detail.rows || [],
           history: detail.history || { rows: [], dates: [] },
           total: detail.total || detail.rows?.length || 0,
+          reportingMode: detail.reportingMode || "realtime",
+          currentBusinessDate: detail.currentBusinessDate || "",
+          comparisonBusinessDate: detail.comparisonBusinessDate || "",
+          lastWeekBusinessDate: detail.lastWeekBusinessDate || "",
+          comparisonOrderSum: detail.comparisonOrderSum,
           latestDataTime: detail.latestDataTime || detail.history?.latestDataTime || "-",
           currentLatestDataTime: detail.currentLatestDataTime || detail.latestDataTime || "-",
           fullCurrentLatestDataTime: detail.fullCurrentLatestDataTime || "-",
@@ -3265,6 +3328,7 @@
 
     function renderDetail(cached = false) {
       const row = state.detailRow;
+      const isT1Detail = state.detailReportingMode === "t1";
       const periodScope = false;
       if (state.detailMode === "decline") state.detailMode = "abnormal";
       const allUsers = state.detailUsers || [];
@@ -3293,6 +3357,7 @@
       const minDailyDate = availableDates[0] || "";
       const maxDailyDate = availableDates.at(-1) || "";
       $("#detailBody").innerHTML = `
+        ${isT1Detail ? `<section class="source"><strong>T+1 数据口径：</strong>该业务当天没有用户明细，当前自动展示最近完整业务日 <strong>${escapeHtml(state.detailCurrentBusinessDate || "-")}</strong> 的全部用户，并与 ${escapeHtml(state.detailComparisonBusinessDate || "-")} 全天比较。数据获取时间：${escapeHtml(detailDataTime || "-")}。</section>` : ""}
         <div class="detail-grid">
           <div class="detail"><label>${detailScopeLabel()}订单</label><strong>${fmt(userOrderSum)}</strong></div>
           <div class="detail"><label>${compareBaseLabel()}基准</label><strong>${fmt(baselineSum)}</strong></div>
@@ -3315,7 +3380,7 @@
           <button class="btn" data-detail-display-apply="1">应用日期</button>
           <div class="search-with-clear"><input class="field" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID"><button class="search-clear ${state.detailSearch ? "" : "hidden"}" data-detail-search-clear="1" title="清空搜索">×</button></div>
           <button class="btn" data-detail-refresh="1">刷新用户</button>
-          <span class="muted">${state.detailRefreshing ? `正在刷新${state.detailLoadingLabel || "用户"}，暂时保留原数据` : (cached ? "当前使用缓存" : "当前为最新请求")}｜今日 ${detailDataTime || "-"}｜每日 ${state.detailStats?.historyLatestDataTime || "-"}</span>
+          <span class="muted">${state.detailRefreshing ? `正在刷新${state.detailLoadingLabel || "用户"}，暂时保留原数据` : (cached ? "当前使用缓存" : "当前为最新请求")}｜${isT1Detail ? `数据日 ${state.detailCurrentBusinessDate || "-"}，获取时间 ${detailDataTime || "-"}` : `今日 ${detailDataTime || "-"}`}｜每日 ${state.detailStats?.historyLatestDataTime || "-"}</span>
           <button class="btn" data-detail-info="1">数据说明</button>
         </div>
         <div id="detailResult">${renderDetailResult()}</div>`;
@@ -3323,6 +3388,7 @@
 
     function detailInfoMarkup() {
       const row = state.detailRow || { cmp: {} };
+      const isT1Detail = state.detailReportingMode === "t1";
       const allUsers = state.detailUsers || [];
       const allDecliningUsers = allUsers.filter(user => Number(user.cmp?.diff || 0) < 0);
       const impactSum = allDecliningUsers.reduce((sum, user) => sum + Number(user.cmp?.impact || 0), 0);
@@ -3333,9 +3399,9 @@
       const unattributed = businessImpact ? businessImpact - locatedNet : null;
       const diff = userOrderSum - Number(row.cmp?.today || 0);
       return `
-        <section class="source"><strong>更新时间：</strong>今日数据按“${detailFrequencyText()}”执行，当前时间 ${state.detailStats?.currentLatestDataTime || "-"}；每日订单在 ${userRefreshTimesText()} 更新，当前历史时间 ${state.detailStats?.historyLatestDataTime || "-"}。页面自动检查只读取缓存，不请求中台。</section>
-        <section class="source warn"><strong>影响定位：</strong>外层业务净下降 ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；增长用户显示所有同一时刻订单净增长大于0的用户。缺少同时刻基准的用户不能归因，不会用全天数据代替。</section>
-        <section class="source ${diff ? "warn" : ""}"><strong>数据校验：</strong>今日用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人，当前订单口径差异 ${fmt(diff)}。</section>`;
+        <section class="source"><strong>更新时间：</strong>${isT1Detail ? `该业务按 T+1 更新，数据日 ${state.detailCurrentBusinessDate || "-"}，获取时间 ${state.detailStats?.currentLatestDataTime || "-"}；点击“刷新用户”会刷新历史明细，不请求当天空数据。` : `今日数据按“${detailFrequencyText()}”执行，当前时间 ${state.detailStats?.currentLatestDataTime || "-"}；`}每日订单在 ${userRefreshTimesText()} 更新，当前历史时间 ${state.detailStats?.historyLatestDataTime || "-"}。页面自动检查只读取缓存，不请求中台。</section>
+        <section class="source warn"><strong>影响定位：</strong>${isT1Detail ? `${state.detailCurrentBusinessDate || "最近完整日"}比${state.detailComparisonBusinessDate || "前一日"}净下降` : "外层业务净下降"} ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；增长用户显示所有${isT1Detail ? "完整业务日" : "同一时刻"}订单净增长大于0的用户。</section>
+        <section class="source ${diff ? "warn" : ""}"><strong>数据校验：</strong>${isT1Detail ? `${state.detailCurrentBusinessDate || "数据日"}` : "今日"}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人，当前订单口径差异 ${fmt(diff)}。</section>`;
     }
 
     function openDetailInfo() {
@@ -3382,7 +3448,7 @@
       const emptyText = state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。";
       return `<div class="mobile-detail-matrix">
         <div class="mobile-matrix-status"><span>共 ${fmt(users.length)} 人，已显示 ${fmt(visibleUsers.length)} 人</span><span>用户列固定，右侧可滑动</span></div>
-        <div class="mobile-matrix-scroll" data-mobile-matrix-scroll="users"><table class="mobile-matrix-table mobile-detail-table"><thead><tr><th class="mobile-identity-col">用户信息<br><small>点击展开明细</small></th><th class="mobile-today-col">今日订单</th><th>昨日同时刻</th><th>变化率</th><th>下降影响</th><th class="mobile-status-col">状态</th>${selectedDate ? `<th>${selectedDate.slice(5)}<br>选中日期</th>` : ""}</tr></thead>
+        <div class="mobile-matrix-scroll" data-mobile-matrix-scroll="users"><table class="mobile-matrix-table mobile-detail-table"><thead><tr><th class="mobile-identity-col">用户信息<br><small>点击展开明细</small></th><th class="mobile-today-col">${detailCurrentColumnLabel()}</th><th>${detailBaselineColumnLabel()}</th><th>变化率</th><th>下降影响</th><th class="mobile-status-col">状态</th>${selectedDate ? `<th>${selectedDate.slice(5)}<br>选中日期</th>` : ""}</tr></thead>
         ${users.length ? `<tbody class="mobile-total-row"><tr><td class="mobile-identity-col">当前列表合计</td><td class="mobile-today-col" data-mobile-total="today" data-value="${todaySum}">${fmt(todaySum)}</td><td data-mobile-total="base" data-value="${baseSum}">${baseUsers.length ? fmt(baseSum) : "-"}</td><td>-</td><td data-mobile-total="impact" data-value="${impactTotal}">${fmt(impactTotal)}</td><td>-</td>${selectedDate ? `<td data-mobile-total-date="${selectedDate}" data-value="${selectedDateSum}">${fmt(selectedDateSum)}</td>` : ""}</tr></tbody>` : ""}
         <tbody>${visibleUsers.length ? visibleUsers.map(user => {
           const id = String(user.id || "");
@@ -3395,6 +3461,7 @@
 
     function renderDetailResult() {
       const row = state.detailRow;
+      const isT1Detail = state.detailReportingMode === "t1";
       const allUsers = state.detailUsers || [];
       const downUsers = allUsers.filter(user => user.cmp.diff < 0 && user.cmp.level !== "normal");
       const allDecliningUsers = allUsers.filter(user => user.cmp.diff < 0);
@@ -3421,22 +3488,22 @@
       const lastWeekSum = lastWeekUsers.reduce((sum, user) => sum + Number(user.sameTime.lastWeek.orders || 0), 0);
       const impactTotal = users.reduce((sum, user) => sum + Number(user.cmp?.impact || 0), 0);
       const dailySums = Object.fromEntries(dates.map(date => [date, users.reduce((sum, user) => sum + Number(user.days?.[date] || 0), 0)]));
-      const currentMajority = majorityMinute(users.map(user => timeMinuteFromText(user.currentDataTime || user.userDataTime)));
-      const yesterdayMatched = users.map(user => user.sameTime?.yesterdayReference || user.sameTime || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
+      const currentMajority = isT1Detail ? { minute: null, count: 0 } : majorityMinute(users.map(user => timeMinuteFromText(user.currentDataTime || user.userDataTime)));
+      const yesterdayMatched = isT1Detail ? [] : users.map(user => user.sameTime?.yesterdayReference || user.sameTime || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
       const yesterdayMajority = majorityMinute(yesterdayMatched.map(reference => reference.comparisonMinute));
-      const lastWeekMatched = users.map(user => user.sameTime?.lastWeekReference || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
+      const lastWeekMatched = isT1Detail ? [] : users.map(user => user.sameTime?.lastWeekReference || {}).filter(reference => isFiniteMinute(reference.comparisonMinute));
       const lastWeekMajority = majorityMinute(lastWeekMatched.map(reference => reference.comparisonMinute));
       if (isMobileViewport()) return renderMobileDetailResult(users, dates);
       return `
         <div class="detail-table-wrap">
           <table class="compact wide-date-table user-data-table">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", "今日订单")}${majorityHeader("多数数据", currentMajority, users.length)}</th><th>昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>上周同时刻${majorityHeader("多数参考", lastWeekMajority, lastWeekMatched.length)}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", detailCurrentColumnLabel())}${isT1Detail ? "" : majorityHeader("多数数据", currentMajority, users.length)}</th><th>${detailBaselineColumnLabel()}${isT1Detail ? "" : majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>${detailLastWeekColumnLabel()}${isT1Detail ? "" : majorityHeader("多数参考", lastWeekMajority, lastWeekMatched.length)}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
             ${users.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(todaySum)}</td><td>${baseUsers.length ? fmt(baseSum) : "-"}</td><td>${lastWeekUsers.length ? fmt(lastWeekSum) : "-"}</td><td>-</td><td>${fmt(impactTotal)}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}</tr></tbody>` : ""}
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
               const userMinute = timeMinuteFromText(user.currentDataTime || user.userDataTime);
-              const userTimeNote = isFiniteMinute(userMinute) && isFiniteMinute(currentMajority.minute) && userMinute !== currentMajority.minute
+              const userTimeNote = !isT1Detail && isFiniteMinute(userMinute) && isFiniteMinute(currentMajority.minute) && userMinute !== currentMajority.minute
                 ? `<small class="comparison-ref">数据 ${minuteText(userMinute)} · 较多数${userMinute < currentMajority.minute ? "早" : "晚"} ${Math.abs(userMinute - currentMajority.minute)} 分钟</small>`
                 : "";
               return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}${userTimeNote}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {}, fmt, { dominantMinute: lastWeekMajority.minute, compactMajority: true })}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
