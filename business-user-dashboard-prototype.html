@@ -524,6 +524,7 @@
       .mobile-business-daily-day { min-height:48px; padding:7px 9px; background:#fff; }
       .mobile-business-daily-day span { display:block; color:var(--muted); font-size:10px; }
       .mobile-business-daily-day strong { display:block; margin-top:4px; font-size:13px; }
+      .mobile-business-daily-actions { display:flex; justify-content:flex-end; padding:0 12px 12px; background:#fff; }
       .mobile-detail-back { min-width:72px; min-height:44px; align-items:center; justify-content:center; border:0; background:transparent; color:var(--text); padding:0 10px; font-weight:700; touch-action:manipulation; }
       .modal.detail-modal { left:0; top:0; width:100%; max-width:none; height:100dvh; max-height:none; border-radius:0; transform:none; grid-template-rows:auto 1fr; }
       .modal.detail-modal.open { transform:none; }
@@ -1769,15 +1770,17 @@
       if (state.mobileDailyMode === "business") {
         container.innerHTML = `${modeToolbar}${status}<div class="mobile-business-daily-list">${rows.map((row, index) => {
           const rangeTotal = dates.reduce((sum, date) => sum + valueOf(row, date), 0);
+          const dailyBusinessId = escapeHtml(row.platformBusinessId || row.businessId || "");
           return `<details class="mobile-business-daily-row" ${index === 0 ? "open" : ""} data-mobile-daily-business="${escapeHtml(row.platformBusinessId || row.businessId || index)}">
             <summary><span><span class="mobile-business-name">${escapeHtml(row.name || "-")}</span><span class="mobile-business-platform">${escapeHtml(row.platform || "-")}</span></span><span class="mobile-business-daily-value"><strong>${valueText(valueOf(row, dates.at(-1)))}</strong><span>末日值｜合计 ${valueText(rangeTotal)}</span></span></summary>
             <div class="mobile-business-daily-days">${dates.map(date => `<div class="mobile-business-daily-day ${date === today ? "mobile-today-col" : ""}" data-business-id="${escapeHtml(row.platformBusinessId || row.businessId || "")}" data-date="${date}" data-value="${valueOf(row, date)}"><span>${date.slice(5)}${date === today ? "｜今天" : ""}</span><strong>${valueText(valueOf(row, date))}</strong></div>`).join("")}</div>
+            <div class="mobile-business-daily-actions"><button class="btn primary" data-daily-user-business="${dailyBusinessId}">查看用户</button></div>
           </details>`;
         }).join("")}</div>`;
         return;
       }
       const dailyTotals = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + valueOf(row, date), 0)]));
-      container.innerHTML = `${modeToolbar}${status}<div class="mobile-matrix-scroll" data-mobile-matrix-scroll="daily"><table class="mobile-matrix-table"><thead><tr><th class="mobile-identity-col">业务名称<br><small>左列固定</small></th>${dates.map(date => `<th class="${date === today ? "mobile-today-col" : ""}">${date.slice(5)}<br>${date === today ? "今天" : ""}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr><td class="mobile-identity-col"><span class="mobile-business-name">${escapeHtml(row.name || "-")}</span><span class="mobile-business-platform">${escapeHtml(row.platform || "-")}</span></td>${dates.map(date => `<td class="${date === today ? "mobile-today-col" : ""}" data-business-id="${escapeHtml(row.platformBusinessId || row.businessId || "")}" data-date="${date}" data-value="${valueOf(row, date)}">${valueText(valueOf(row, date))}</td>`).join("")}</tr>`).join("")}<tr class="mobile-total-row"><td class="mobile-identity-col">当前列表合计</td>${dates.map(date => `<td class="${date === today ? "mobile-today-col" : ""}" data-date="${date}" data-total-value="${dailyTotals[date]}">${valueText(dailyTotals[date])}</td>`).join("")}</tr></tbody></table></div>`;
+      container.innerHTML = `${modeToolbar}${status}<div class="mobile-matrix-scroll" data-mobile-matrix-scroll="daily"><table class="mobile-matrix-table"><thead><tr><th class="mobile-identity-col">业务名称<br><small>点击查看用户</small></th>${dates.map(date => `<th class="${date === today ? "mobile-today-col" : ""}">${date.slice(5)}<br>${date === today ? "今天" : ""}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr><td class="mobile-identity-col"><button class="business-history-link" data-daily-user-business="${escapeHtml(row.platformBusinessId || row.businessId || "")}"><span class="mobile-business-name">${escapeHtml(row.name || "-")}</span><span class="mobile-business-platform">${escapeHtml(row.platform || "-")}</span></button></td>${dates.map(date => `<td class="${date === today ? "mobile-today-col" : ""}" data-business-id="${escapeHtml(row.platformBusinessId || row.businessId || "")}" data-date="${date}" data-value="${valueOf(row, date)}">${valueText(valueOf(row, date))}</td>`).join("")}</tr>`).join("")}<tr class="mobile-total-row"><td class="mobile-identity-col">当前列表合计</td>${dates.map(date => `<td class="${date === today ? "mobile-today-col" : ""}" data-date="${date}" data-total-value="${dailyTotals[date]}">${valueText(dailyTotals[date])}</td>`).join("")}</tr></tbody></table></div>`;
       requestAnimationFrame(() => {
         const scroller = container.querySelector("[data-mobile-matrix-scroll='daily']");
         if (scroller) scroller.scrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
@@ -1802,12 +1805,26 @@
       $("#dailyBody").innerHTML = rows.length ? rows.map((row, index) => `<tr>
         <td>${index + 1}</td>
         <td>${row.platform}</td>
-        <td><strong>${row.name}</strong></td>
+        <td><button class="business-history-link" data-daily-user-business="${escapeHtml(row.platformBusinessId || row.businessId || "")}" title="查看该业务用户列表">${escapeHtml(row.name || "-")}</button></td>
         ${dates.map(date => {
           const item = row.days?.[date] || {};
           return `<td>${state.metric === "commission" ? money(item.commission) : fmt(item.orders)}</td>`;
         }).join("")}
       </tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有每日业务数据。</td></tr>`;
+    }
+
+    function openDailyBusinessUsers(businessId) {
+      const dailyRow = (state.businessDaily?.rows || []).find(row =>
+        [row.platformBusinessId, row.businessId].filter(Boolean).some(id => String(id) === String(businessId))
+      );
+      if (!dailyRow) {
+        toast("未找到该业务，请刷新后重试");
+        return;
+      }
+      const current = findCurrentBusiness(dailyRow);
+      const row = { ...dailyRow, ...current };
+      row.cmp = compare(row);
+      openBusiness(row).catch(error => toast(error.message || "用户明细加载失败"));
     }
 
     function showBusinessDaily(row) {
@@ -3807,7 +3824,16 @@
     $("#businessMobileCards").addEventListener("click", handleBusinessListClick);
     $("#businessBody").addEventListener("change", handleFastBusinessChange);
     $("#businessMobileCards").addEventListener("change", handleFastBusinessChange);
+    $("#dailyBody").addEventListener("click", e => {
+      const target = e.target.closest("[data-daily-user-business]");
+      if (target) openDailyBusinessUsers(target.dataset.dailyUserBusiness);
+    });
     $("#dailyMobileMatrix").addEventListener("click", e => {
+      const userTarget = e.target.closest("[data-daily-user-business]");
+      if (userTarget) {
+        openDailyBusinessUsers(userTarget.dataset.dailyUserBusiness);
+        return;
+      }
       const mode = e.target.closest("[data-mobile-daily-mode]");
       if (!mode) return;
       state.mobileDailyMode = mode.dataset.mobileDailyMode;
