@@ -103,6 +103,12 @@ function headersFilePath() {
   return resolve(root, env.MEITUAN_HEADERS_FILE || "meituan-request-headers.txt");
 }
 
+function savedRawHeaders() {
+  const path = headersFilePath();
+  if (!existsSync(path)) return "";
+  return readFileSync(path, "utf8").trim();
+}
+
 function mtgsigTimeFromHeaders(text) {
   const line = String(text || "").split(/\r?\n/).find(item => /^mtgsig:/i.test(item.trim()));
   if (!line) return "";
@@ -155,9 +161,13 @@ async function writeSecret(service, value) {
 }
 
 async function feishuStatus() {
+  const webhookUrl = await readSecret(FEISHU_WEBHOOK_SERVICE);
+  const signSecret = await readSecret(FEISHU_SECRET_SERVICE);
   return {
-    hasWebhook: Boolean(await readSecret(FEISHU_WEBHOOK_SERVICE)),
-    hasSignSecret: Boolean(await readSecret(FEISHU_SECRET_SERVICE))
+    hasWebhook: Boolean(webhookUrl),
+    hasSignSecret: Boolean(signSecret),
+    webhookUrl,
+    signSecret
   };
 }
 
@@ -778,7 +788,9 @@ function startRefreshServer() {
 
     if (url.pathname === "/headers") {
       if (req.method === "GET") {
-        sendJson(res, 200, { ok: true, headers: headersStatus() });
+        const status = headersStatus();
+        if (url.searchParams.get("raw") === "1") status.rawHeaders = savedRawHeaders();
+        sendJson(res, 200, { ok: true, headers: status });
         return;
       }
       if (req.method === "POST") {

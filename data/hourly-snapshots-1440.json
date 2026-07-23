@@ -4238,5 +4238,21 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 0,
     "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1440",
+    "title": "【美团闪购】TOPTOY-7.17~7.19",
+    "metric": "amount",
+    "date": "2026-07-23",
+    "hour": 9,
+    "slotMinute": 30,
+    "dateHour": "2026-07-23 09:30",
+    "recordedAt": "2026/7/23 09:59:57",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 0,
+    "cumulativeRedemptionAmount": 0
   }
 ]
