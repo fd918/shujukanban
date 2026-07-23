@@ -2057,8 +2057,9 @@ async function getPublicConfig() {
 
 async function saveConfig(body) {
   if (body.credentials?.username || body.credentials?.password) {
-    const username = String(body.credentials?.username || "").trim();
-    const password = String(body.credentials?.password || "");
+    const username = String(body.credentials?.username || await readSecret(USER_SERVICE) || "").trim();
+    const password = String(body.credentials?.password || await readSecret(PASS_SERVICE) || "");
+    if (!username || !password) throw new Error("中台账号和密码必须同时配置完整。");
     const nextToken = await loginWithCredentials(username, password);
     await writeSecret(USER_SERVICE, username);
     await writeSecret(PASS_SERVICE, password);
@@ -2068,7 +2069,7 @@ async function saveConfig(body) {
   if (body.feishu?.webhookUrl) await writeSecret(FEISHU_WEBHOOK_SERVICE, body.feishu.webhookUrl);
   if (body.feishu?.signSecret) await writeSecret(FEISHU_SECRET_SERVICE, body.feishu.signSecret);
   const current = await readConfig();
-  return writeConfig({
+  await writeConfig({
     ...current,
     rules: body.rules || current.rules,
     refreshSeconds: Number(body.refreshSeconds || current.refreshSeconds || defaultConfig.refreshSeconds),
@@ -2083,6 +2084,7 @@ async function saveConfig(body) {
     },
     public: { ...current.public, ...(body.public || {}) }
   });
+  return getPublicConfig();
 }
 
 function mergeFocusUserRecords(items = []) {

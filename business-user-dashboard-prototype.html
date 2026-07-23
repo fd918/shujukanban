@@ -99,6 +99,7 @@
       padding: 0 11px;
       color: var(--text);
     }
+    .field.persisted-value { color: #64748b; background: #f8fafc; }
 
     .source {
       margin-top: 12px;
@@ -2785,7 +2786,34 @@
       return null;
     }
 
-    function fillSettings() {
+    const persistedSettingLabels = {
+      dashboardUsername: "已保存的中台账号",
+      dashboardPassword: "********",
+      feishuWebhook: "已保存的 Webhook URL",
+      feishuSecret: "********"
+    };
+
+    function fillPersistedSetting(id, saved) {
+      const input = $("#" + id);
+      if (!input) return;
+      if (saved) {
+        input.value = persistedSettingLabels[id];
+        input.dataset.persisted = "1";
+        input.classList.add("persisted-value");
+      } else {
+        input.value = "";
+        input.dataset.persisted = "0";
+        input.classList.remove("persisted-value");
+      }
+    }
+
+    function settingInputValue(id) {
+      const input = $("#" + id);
+      return input?.dataset.persisted === "1" ? "" : String(input?.value || "").trim();
+    }
+
+    function fillSettings(force = false) {
+      if (!force && $("#settingsModal")?.classList.contains("open")) return;
       const cfg = state.config || {};
       const rules = cfg.rules || {};
       for (const key of ["minorPct","minorOrders","majorPct","majorOrders","criticalPct","criticalOrders","upPct","upOrders"]) if ($("#" + key)) $("#" + key).value = rules[key] ?? "";
@@ -2796,10 +2824,14 @@
       document.querySelectorAll("[data-notification-event]").forEach(input => {
         input.checked = cfg.notification?.events?.[input.dataset.notificationEvent] !== false;
       });
-      $("#webhookStatus").textContent = cfg.notification?.hasWebhook ? "已配置" : "未配置";
-      $("#secretStatus").textContent = cfg.notification?.hasSignSecret ? "已配置" : "未配置";
-      $("#credentialUserStatus").textContent = cfg.credentials?.hasUsername ? "已配置" : "未配置";
-      $("#credentialPassStatus").textContent = cfg.credentials?.hasPassword ? "已配置" : "未配置";
+      fillPersistedSetting("dashboardUsername", Boolean(cfg.credentials?.hasUsername));
+      fillPersistedSetting("dashboardPassword", Boolean(cfg.credentials?.hasPassword));
+      fillPersistedSetting("feishuWebhook", Boolean(cfg.notification?.hasWebhook));
+      fillPersistedSetting("feishuSecret", Boolean(cfg.notification?.hasSignSecret));
+      $("#webhookStatus").textContent = cfg.notification?.hasWebhook ? "已保存；输入新地址可替换" : "未配置";
+      $("#secretStatus").textContent = cfg.notification?.hasSignSecret ? "已保存；输入新密钥可替换" : "未配置";
+      $("#credentialUserStatus").textContent = cfg.credentials?.hasUsername ? "已保存；输入新账号可替换" : "未配置";
+      $("#credentialPassStatus").textContent = cfg.credentials?.hasPassword ? "已保存；输入新密码可替换" : "未配置";
     }
 
     function collectSettings() {
@@ -2821,8 +2853,8 @@
           snapshotAlert: true,
           events: notificationEvents
         },
-        credentials: { username: $("#dashboardUsername").value.trim(), password: $("#dashboardPassword").value },
-        feishu: { webhookUrl: $("#feishuWebhook").value.trim(), signSecret: $("#feishuSecret").value.trim() }
+        credentials: { username: settingInputValue("dashboardUsername"), password: settingInputValue("dashboardPassword") },
+        feishu: { webhookUrl: settingInputValue("feishuWebhook"), signSecret: settingInputValue("feishuSecret") }
       };
     }
 
@@ -2830,11 +2862,7 @@
       $("#settingsResult").textContent = "正在保存并测试...";
       const data = await requestJson(apiUrl("/api/config"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(collectSettings()) });
       state.config = data.config;
-      $("#dashboardUsername").value = "";
-      $("#dashboardPassword").value = "";
-      $("#feishuWebhook").value = "";
-      $("#feishuSecret").value = "";
-      fillSettings();
+      fillSettings(true);
       setupAutoRefresh();
       render();
       $("#settingsResult").textContent = "配置已保存；如填写了中台账号，已测试通过";
@@ -3563,7 +3591,15 @@
     function openSettings() {
       $("#modalMask").classList.add("open");
       $("#settingsModal").classList.add("open");
-      if (isLocalSettings) requestJson(apiUrl("/api/request-stats")).then(data => {
+      fillSettings(true);
+      if (!isLocalSettings) return;
+      requestJson(apiUrl(`/api/config?_=${Date.now()}`)).then(config => {
+        state.config = config;
+        fillSettings(true);
+      }).catch(error => {
+        $("#settingsResult").textContent = `读取已保存配置失败：${error.message}`;
+      });
+      requestJson(apiUrl("/api/request-stats")).then(data => {
         const stats = data.stats || {};
         const detail = Number(stats.byPath?.["/api/v2/dashboard/business/user-order-statistics"] || 0);
         const fullRefreshes = Number(stats.byName?.["用户统计汇总"] || 0);
@@ -4012,6 +4048,20 @@
     }));
     $("#testFeishuBtn").addEventListener("click", testFeishu);
     $("#settingSnapshotBtn").addEventListener("click", recordSnapshot);
+    ["dashboardUsername", "dashboardPassword", "feishuWebhook", "feishuSecret"].forEach(id => {
+      const input = $("#" + id);
+      input.addEventListener("focus", () => {
+        if (input.dataset.persisted !== "1") return;
+        input.value = "";
+        input.dataset.persisted = "0";
+        input.classList.remove("persisted-value");
+      });
+      input.addEventListener("input", () => {
+        if (input.value === persistedSettingLabels[id]) return;
+        input.dataset.persisted = "0";
+        input.classList.remove("persisted-value");
+      });
+    });
 
     state.filtersCollapsed = window.matchMedia("(max-width: 960px)").matches;
     state.overviewCollapsed = readLocalValue("businessDashboardOverviewCollapsed") === "1";
