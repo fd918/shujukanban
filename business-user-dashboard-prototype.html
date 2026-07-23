@@ -3062,9 +3062,18 @@
         comparisonBusinessDate: state.detailComparisonBusinessDate
       };
       if (reportingMode === "t1") {
+        const selectedIds = new Set([row.platformBusinessId, row.businessId].filter(Boolean).map(String));
+        const dailyRow = (state.businessDaily?.rows || []).find(item =>
+          [item.platformBusinessId, item.businessId].filter(Boolean).some(id => selectedIds.has(String(id)))
+        );
+        const businessOrderTotal = Number(dailyRow?.days?.[state.detailCurrentBusinessDate]?.orders ?? state.detailStats.userOrderSum);
+        const businessComparisonTotal = Number(dailyRow?.days?.[state.detailComparisonBusinessDate]?.orders ?? data.comparisonOrderSum ?? 0);
+        state.detailStats.businessOrderTotal = businessOrderTotal;
+        state.detailStats.businessComparisonTotal = businessComparisonTotal;
+        state.detailStats.userOrderGap = state.detailStats.userOrderSum - businessOrderTotal;
         const aggregate = classifyChange({
-          current: state.detailStats.userOrderSum,
-          base: data.comparisonOrderSum,
+          current: businessOrderTotal,
+          base: businessComparisonTotal,
           labelPrefix: `${state.detailCurrentBusinessDate || "最近完整日"}比${state.detailComparisonBusinessDate || "前一日"}`
         });
         state.detailRow = { ...row, cmp: aggregate };
@@ -3356,8 +3365,9 @@
       const availableDates = state.detailSyncedData?.history?.dates || [];
       const minDailyDate = availableDates[0] || "";
       const maxDailyDate = availableDates.at(-1) || "";
+      const t1UserOrderGap = Number(state.detailStats?.userOrderGap || 0);
       $("#detailBody").innerHTML = `
-        ${isT1Detail ? `<section class="source"><strong>T+1 数据口径：</strong>该业务当天没有用户明细，当前自动展示最近完整业务日 <strong>${escapeHtml(state.detailCurrentBusinessDate || "-")}</strong> 的全部用户，并与 ${escapeHtml(state.detailComparisonBusinessDate || "-")} 全天比较。数据获取时间：${escapeHtml(detailDataTime || "-")}。</section>` : ""}
+        ${isT1Detail ? `<section class="source ${t1UserOrderGap ? "warn" : ""}"><strong>T+1 数据口径：</strong>该业务当天没有用户明细，当前自动展示最近完整业务日 <strong>${escapeHtml(state.detailCurrentBusinessDate || "-")}</strong> 的全部用户，并与 ${escapeHtml(state.detailComparisonBusinessDate || "-")} 全天比较。数据获取时间：${escapeHtml(detailDataTime || "-")}。${t1UserOrderGap ? `用户明细合计 ${fmt(state.detailStats?.userOrderSum)}，业务汇总 ${fmt(state.detailStats?.businessOrderTotal)}，中台接口差异 ${fmt(Math.abs(t1UserOrderGap))} 单。` : "用户明细合计与业务汇总一致。"}</section>` : ""}
         <div class="detail-grid">
           <div class="detail"><label>${detailScopeLabel()}订单</label><strong>${fmt(userOrderSum)}</strong></div>
           <div class="detail"><label>${compareBaseLabel()}基准</label><strong>${fmt(baselineSum)}</strong></div>
