@@ -351,18 +351,45 @@ function averageHistoricalValidMetric(rows = [], metric, beforeDate) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+function actualMetricValueForDate(rows = [], metric, date) {
+  const row = rows.find(item => item[0] === date);
+  if (!row || row[4] == null || isIncompleteToday(row, rows)) return 0;
+  return rowMetricValue(row, metric);
+}
+
+function clampGrowthFactor(value) {
+  if (!Number.isFinite(value) || value <= 0) return 1;
+  return Math.min(3, Math.max(0.5, value));
+}
+
+function recentGrowthFactor(rows = [], metric, beforeDate) {
+  const candidates = rows
+    .filter(row => row[0] < beforeDate && row[4] != null && !isIncompleteToday(row, rows))
+    .sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+  const ratios = [];
+  for (const row of candidates) {
+    const referenceValue = actualMetricValueForDate(rows, metric, dateOffset(row[0], -7));
+    const currentValue = rowMetricValue(row, metric);
+    if (referenceValue > 0 && currentValue > 0) ratios.push(currentValue / referenceValue);
+    if (ratios.length >= 3) break;
+  }
+  if (!ratios.length) return 1;
+  return clampGrowthFactor(ratios.reduce((sum, value) => sum + value, 0) / ratios.length);
+}
+
 function estimateRow(row, rows, metric, overrides = {}) {
   const date = row[0];
   const manual = Number(overrides[date] || 0);
   if (manual > 0) return { value: manual, source: "手动预估" };
   if (row[4] != null && !isIncompleteToday(row, rows)) return { value: rowMetricValue(row, metric), source: "接口实际" };
-  const rate = historicalRedemptionRate(rows, metric, date);
   const sameWeekRow = rows.find(item => item[0] === dateOffset(date, -7));
-  if (sameWeekRow && sameWeekRow[4] != null && !isIncompleteToday(sameWeekRow, rows) && validMetricValue(sameWeekRow, metric) > 0) {
-    return { value: validMetricValue(sameWeekRow, metric) * rate, source: "上周同日×核销率" };
+  const sameWeekMetric = sameWeekRow && sameWeekRow[4] != null && !isIncompleteToday(sameWeekRow, rows) ? rowMetricValue(sameWeekRow, metric) : 0;
+  if (sameWeekMetric > 0) {
+    return { value: sameWeekMetric * recentGrowthFactor(rows, metric, date), source: "上周同日×增长倍数" };
   }
+  const rate = historicalRedemptionRate(rows, metric, date);
   const average = averageHistoricalValidMetric(rows, metric, date);
-  if (average != null) return { value: average * rate, source: "历史均值×核销率" };
+  if (average != null) return { value: average * rate * recentGrowthFactor(rows, metric, date), source: "历史均值×增长倍数" };
   const validCurrent = validMetricValue(row, metric);
   return { value: validCurrent > 0 ? Math.max(rowMetricValue(row, metric), validCurrent * rate) : rowMetricValue(row, metric), source: "当前有效×核销率" };
 }
@@ -477,7 +504,7 @@ function buildActivityFeishuCard(activity = {}) {
     },
     {
       tag: "note",
-      elements: [{ tag: "plain_text", content: `预估口径：有效数据预估后 × 历史完整日核销率；手动输入优先。今日来源：${summary.todayEstimate.source}。` }]
+      elements: [{ tag: "plain_text", content: `预估口径：未来日期优先用上周同日核销值 × 近期增长倍数；手动输入优先。今日来源：${summary.todayEstimate.source}。` }]
     },
     {
       tag: "action",
