@@ -238,5 +238,21 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 0,
     "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1502",
+    "title": "7.25-7.28【美团闪购】企业媒体锅圈食汇专场",
+    "metric": "orders",
+    "date": "2026-07-25",
+    "hour": 15,
+    "slotMinute": 30,
+    "dateHour": "2026-07-25 15:30",
+    "recordedAt": "2026/7/25 15:32:29",
+    "todayValidOrders": 1,
+    "todayRedemptionOrders": 0,
+    "todayActualPayment": 25.7,
+    "todayRedemptionAmount": 0,
+    "cumulativeRedemptionOrders": 0,
+    "cumulativeRedemptionAmount": 0
   }
 ]
