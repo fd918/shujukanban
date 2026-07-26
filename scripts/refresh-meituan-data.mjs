@@ -311,6 +311,10 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
   mkdirSync(dataDir, { recursive: true });
   const now = new Date();
   const today = now.toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+  const [todayYear, todayMonth, todayDay] = today.split("-").map(Number);
+  const retentionStartDate = new Date(Date.UTC(todayYear, todayMonth - 1, todayDay - 7))
+    .toISOString()
+    .slice(0, 10);
   const hourText = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Shanghai",
     hour: "2-digit",
@@ -355,7 +359,7 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
     cumulativeRedemptionOrders,
     cumulativeRedemptionAmount
   };
-  const next = snapshots.filter(item => item.dateHour !== dateHour);
+  const next = snapshots.filter(item => item.date >= retentionStartDate && item.dateHour !== dateHour);
   next.push(snapshot);
   next.sort((a, b) => String(a.dateHour).localeCompare(String(b.dateHour)));
   writeFileSync(file, JSON.stringify(next, null, 2));
