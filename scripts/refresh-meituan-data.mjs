@@ -322,8 +322,15 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
   }).format(now);
   const hour = Number(hourText);
   const minute = Number(minuteText);
-  const slotMinute = minute < 30 ? 0 : 30;
-  const dateHour = `${today} ${String(hour).padStart(2, "0")}:${String(slotMinute).padStart(2, "0")}`;
+  const configuredInterval = Number(readJson(resolve(dataDir, "watch-config.json"), {}).intervalMinutes);
+  const slotIntervalMinutes = Number.isFinite(configuredInterval)
+    ? Math.min(1440, Math.max(1, Math.round(configuredInterval)))
+    : 30;
+  const minuteOfDay = hour * 60 + minute;
+  const slotMinuteOfDay = Math.floor(minuteOfDay / slotIntervalMinutes) * slotIntervalMinutes;
+  const slotHour = Math.floor(slotMinuteOfDay / 60);
+  const slotMinute = slotMinuteOfDay % 60;
+  const dateHour = `${today} ${String(slotHour).padStart(2, "0")}:${String(slotMinute).padStart(2, "0")}`;
   const todayRow = rows.find(row => row[0] === today) || [];
   const metric = tiers.find(tier => tier.metric)?.metric || "amount";
   const actualRows = rows.filter(row => row[4] != null);
@@ -336,8 +343,9 @@ function writeHourlySnapshot(activityId, title, rows, tiers, updatedAt) {
     title,
     metric,
     date: today,
-    hour,
+    hour: slotHour,
     slotMinute,
+    slotIntervalMinutes,
     dateHour,
     recordedAt: updatedAt,
     todayValidOrders: todayRow[1] ?? null,
