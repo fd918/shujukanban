@@ -2816,5 +2816,22 @@
     "todayRedemptionAmount": 628.72,
     "cumulativeRedemptionOrders": 65,
     "cumulativeRedemptionAmount": 6779.89
+  },
+  {
+    "activityId": "1462",
+    "title": "【美团闪购】三福专场供给及激励政策-7.22-7.26",
+    "metric": "orders",
+    "date": "2026-07-26",
+    "hour": 13,
+    "slotMinute": 0,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-26 13:00",
+    "recordedAt": "2026/7/26 13:04:06",
+    "todayValidOrders": 10,
+    "todayRedemptionOrders": 8,
+    "todayActualPayment": 951.32,
+    "todayRedemptionAmount": 688.42,
+    "cumulativeRedemptionOrders": 66,
+    "cumulativeRedemptionAmount": 6839.59
   }
 ]
