@@ -395,10 +395,31 @@
     .focus-table .focus-order-col { width:86px; min-width:86px; padding-left:6px; padding-right:6px; text-align:right; }
     .focus-table .focus-note-col { width:210px; min-width:210px; max-width:210px; white-space:normal; }
     .focus-note-content { display:flex; align-items:flex-start; gap:6px; min-width:0; }
-    .focus-note-text { color:var(--text); line-height:1.45; white-space:normal; word-break:break-word; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+    .focus-note-text { color:var(--text); line-height:1.45; white-space:normal; word-break:break-word; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; cursor:help; }
+    .focus-note-text:focus-visible { outline:2px solid var(--blue); outline-offset:2px; border-radius:3px; }
     .focus-note-empty { color:var(--muted); }
     .focus-note-edit { width:24px; height:24px; flex:0 0 24px; border:0; border-radius:4px; background:#f2f4f7; color:var(--muted); padding:0; cursor:pointer; }
     .focus-note-edit:hover { color:var(--blue); background:#eff6ff; }
+    .focus-note-tooltip {
+      position:fixed;
+      z-index:120;
+      display:none;
+      width:max-content;
+      max-width:min(460px,calc(100vw - 32px));
+      max-height:min(420px,70vh);
+      overflow:auto;
+      padding:10px 12px;
+      border:1px solid #344054;
+      border-radius:7px;
+      background:#111827;
+      color:#fff;
+      box-shadow:0 12px 28px rgba(15,23,42,.24);
+      font-size:13px;
+      line-height:1.6;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .focus-note-tooltip.show { display:block; }
     .focus-note-modal { width:min(640px,94vw); }
     .focus-user-drilldown { cursor:pointer; }
     .focus-user-drilldown:focus-visible { outline:2px solid var(--blue); outline-offset:-2px; }
@@ -900,6 +921,7 @@
   <div class="toast" id="toast">已刷新</div>
   <div class="loading-mask" id="loadingMask"><div class="loading-card">正在加载<span id="loadingText">正在请求中台数据，请稍等...</span></div></div>
   <div class="chart-tooltip" id="chartTooltip"></div>
+  <div class="focus-note-tooltip" id="focusNoteTooltip" role="tooltip" aria-hidden="true"></div>
 
   <script>
     const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
@@ -928,6 +950,45 @@
     function timeMinuteFromText(value) {
       const match = String(value || "").match(/\s(\d{1,2}):(\d{2})(?::\d{2})?$/);
       return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+    }
+    let focusNoteTooltipHideTimer = null;
+    function clearFocusNoteTooltipHide() {
+      if (!focusNoteTooltipHideTimer) return;
+      clearTimeout(focusNoteTooltipHideTimer);
+      focusNoteTooltipHideTimer = null;
+    }
+    function showFocusNoteTooltip(target) {
+      const tooltip = $("#focusNoteTooltip");
+      const text = String(target?.dataset.fullNote || "").trim();
+      if (!tooltip || !text) return;
+      clearFocusNoteTooltipHide();
+      tooltip.textContent = text;
+      tooltip.classList.add("show");
+      tooltip.setAttribute("aria-hidden", "false");
+      const targetRect = target.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const viewportGap = 8;
+      const left = Math.min(
+        window.innerWidth - tooltipRect.width - viewportGap,
+        Math.max(viewportGap, targetRect.left)
+      );
+      const below = targetRect.bottom + viewportGap;
+      const top = below + tooltipRect.height <= window.innerHeight - viewportGap
+        ? below
+        : Math.max(viewportGap, targetRect.top - tooltipRect.height - viewportGap);
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    }
+    function hideFocusNoteTooltip() {
+      clearFocusNoteTooltipHide();
+      const tooltip = $("#focusNoteTooltip");
+      if (!tooltip) return;
+      tooltip.classList.remove("show");
+      tooltip.setAttribute("aria-hidden", "true");
+    }
+    function scheduleFocusNoteTooltipHide() {
+      clearFocusNoteTooltipHide();
+      focusNoteTooltipHideTimer = setTimeout(hideFocusNoteTooltip, 120);
     }
     function majorityMinute(values = []) {
       const counts = new Map();
@@ -2033,7 +2094,7 @@
         ? `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">正在更新重点用户，原有数据会在加载完成后替换...</td></tr>`
         : (rows.length ? rows.map((row, index) => `<tr ${state.focusMode === "business" ? `class="focus-user-drilldown" data-focus-user-detail="${escapeHtml(row.userId)}" tabindex="0" aria-label="查看${escapeHtml(userDisplayName(row))}的全部业务数据" title="点击查看该用户的全部业务数据"` : ""}>
           <td>${index + 1}</td>
-          ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从全部业务移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" title="${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
+          ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从全部业务移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" data-full-note="${escapeHtml(focusNoteText(row) || "添加观察备注")}" tabindex="0" aria-label="完整观察备注：${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
           <td class="focus-order-col">${fmt(row.todayOrders)}${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
           <td>${tag(compareFocusRow(row).level, compareFocusRow(row).label)}</td>
           ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
@@ -3986,6 +4047,24 @@
       e.preventDefault();
       openGlobalUserSearch(userDetail.dataset.focusUserDetail, { fromFocus: true });
     });
+    $("#focusView").addEventListener("mouseover", e => {
+      const target = e.target.closest("[data-full-note]");
+      if (target) showFocusNoteTooltip(target);
+    });
+    $("#focusView").addEventListener("mouseout", e => {
+      if (e.target.closest("[data-full-note]")) scheduleFocusNoteTooltipHide();
+    });
+    $("#focusView").addEventListener("focusin", e => {
+      const target = e.target.closest("[data-full-note]");
+      if (target) showFocusNoteTooltip(target);
+    });
+    $("#focusView").addEventListener("focusout", e => {
+      if (e.target.closest("[data-full-note]")) scheduleFocusNoteTooltipHide();
+    });
+    $("#focusNoteTooltip").addEventListener("mouseenter", clearFocusNoteTooltipHide);
+    $("#focusNoteTooltip").addEventListener("mouseleave", scheduleFocusNoteTooltipHide);
+    window.addEventListener("resize", hideFocusNoteTooltip);
+    document.addEventListener("scroll", hideFocusNoteTooltip, true);
     $("#addFocusBtn").addEventListener("click", () => openFocusModal());
     $("#closeFocusModal").addEventListener("click", closeFocusModal);
     $("#cancelFocusAdd").addEventListener("click", closeFocusModal);
