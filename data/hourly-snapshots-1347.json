@@ -6130,12 +6130,29 @@
     "slotMinute": 30,
     "slotIntervalMinutes": 10,
     "dateHour": "2026-07-27 09:30",
-    "recordedAt": "2026/7/27 09:33:19",
-    "todayValidOrders": 13611,
-    "todayRedemptionOrders": 10358,
-    "todayActualPayment": 363134.92,
-    "todayRedemptionAmount": 282335.02,
-    "cumulativeRedemptionOrders": 3970075,
-    "cumulativeRedemptionAmount": 111377861.09
+    "recordedAt": "2026/7/27 09:33:27",
+    "todayValidOrders": 13619,
+    "todayRedemptionOrders": 10363,
+    "todayActualPayment": 363302.34,
+    "todayRedemptionAmount": 282486.23,
+    "cumulativeRedemptionOrders": 3970080,
+    "cumulativeRedemptionAmount": 111378012.30000001
+  },
+  {
+    "activityId": "1347",
+    "title": "美团联盟年框媒体激励2026年7月-云瞻",
+    "metric": "amount",
+    "date": "2026-07-27",
+    "hour": 9,
+    "slotMinute": 40,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-27 09:40",
+    "recordedAt": "2026/7/27 09:47:22",
+    "todayValidOrders": 14456,
+    "todayRedemptionOrders": 10966,
+    "todayActualPayment": 383787.48,
+    "todayRedemptionAmount": 295737.2,
+    "cumulativeRedemptionOrders": 3970683,
+    "cumulativeRedemptionAmount": 111391416.15000002
   }
 ]
