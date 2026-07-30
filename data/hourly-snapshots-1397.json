@@ -9487,5 +9487,39 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 0,
     "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1397",
+    "title": "7.13-7.19轻喜到家-家电清洗单单返激励",
+    "metric": "orders",
+    "date": "2026-07-30",
+    "hour": 15,
+    "slotMinute": 20,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-30 15:20",
+    "recordedAt": "2026/7/30 15:28:09",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 0,
+    "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1397",
+    "title": "7.13-7.19轻喜到家-家电清洗单单返激励",
+    "metric": "orders",
+    "date": "2026-07-30",
+    "hour": 15,
+    "slotMinute": 40,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-30 15:40",
+    "recordedAt": "2026/7/30 15:42:33",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 0,
+    "cumulativeRedemptionAmount": 0
   }
 ]

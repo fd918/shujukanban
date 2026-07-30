@@ -9487,5 +9487,39 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 25,
     "cumulativeRedemptionAmount": 7239
+  },
+  {
+    "activityId": "1171",
+    "title": "暑期早鸟订酒店团购媒体激励-2026年6月",
+    "metric": "amount",
+    "date": "2026-07-30",
+    "hour": 15,
+    "slotMinute": 20,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-30 15:20",
+    "recordedAt": "2026/7/30 15:26:20",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 25,
+    "cumulativeRedemptionAmount": 7239
+  },
+  {
+    "activityId": "1171",
+    "title": "暑期早鸟订酒店团购媒体激励-2026年6月",
+    "metric": "amount",
+    "date": "2026-07-30",
+    "hour": 15,
+    "slotMinute": 40,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-30 15:40",
+    "recordedAt": "2026/7/30 15:40:45",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 25,
+    "cumulativeRedemptionAmount": 7239
   }
 ]
