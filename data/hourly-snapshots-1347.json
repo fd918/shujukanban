@@ -11250,5 +11250,22 @@
     "todayRedemptionAmount": 4081476.86,
     "cumulativeRedemptionOrders": 4719452,
     "cumulativeRedemptionAmount": 132397286.50000001
+  },
+  {
+    "activityId": "1347",
+    "title": "美团联盟年框媒体激励2026年7月-云瞻",
+    "metric": "amount",
+    "date": "2026-07-31",
+    "hour": 23,
+    "slotMinute": 30,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-31 23:30",
+    "recordedAt": "2026/7/31 23:34:57",
+    "todayValidOrders": 153778,
+    "todayRedemptionOrders": 145244,
+    "todayActualPayment": 4436116.12,
+    "todayRedemptionAmount": 4124321.31,
+    "cumulativeRedemptionOrders": 4720708,
+    "cumulativeRedemptionAmount": 132440157.43000002
   }
 ]
