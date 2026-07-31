@@ -353,13 +353,12 @@
     "complete": true
   },
   "2026-07-31 12:00": {
-    "sentAt": "2026/7/31 12:00:03",
+    "sentAt": "2026/7/31 12:10:03",
     "activityIds": [
-      "1533"
-    ],
-    "failedActivityIds": [
+      "1533",
       "1347"
     ],
-    "complete": false
+    "failedActivityIds": [],
+    "complete": true
   }
 }
