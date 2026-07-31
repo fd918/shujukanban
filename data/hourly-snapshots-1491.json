@@ -10042,5 +10042,22 @@
     "todayRedemptionAmount": 0,
     "cumulativeRedemptionOrders": 4,
     "cumulativeRedemptionAmount": 55.16
+  },
+  {
+    "activityId": "1491",
+    "title": "7.24-7.31【美团闪购美妆】企业个护品牌专场激励",
+    "metric": "amount",
+    "date": "2026-07-31",
+    "hour": 9,
+    "slotMinute": 40,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-07-31 09:40",
+    "recordedAt": "2026/7/31 09:45:41",
+    "todayValidOrders": 1,
+    "todayRedemptionOrders": 1,
+    "todayActualPayment": 24.66,
+    "todayRedemptionAmount": 24.66,
+    "cumulativeRedemptionOrders": 5,
+    "cumulativeRedemptionAmount": 79.82
   }
 ]
