@@ -168,5 +168,22 @@
     "todayRedemptionAmount": 328243.51,
     "cumulativeRedemptionOrders": 11242,
     "cumulativeRedemptionAmount": 328243.51
+  },
+  {
+    "activityId": "1561",
+    "title": "【8.1-8.10外卖企业媒体日常奖励赛-第28期】",
+    "metric": "orders",
+    "date": "2026-08-01",
+    "hour": 10,
+    "slotMinute": 40,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-01 10:40",
+    "recordedAt": "2026/8/1 10:41:48",
+    "todayValidOrders": 17947,
+    "todayRedemptionOrders": 11994,
+    "todayActualPayment": 529016.39,
+    "todayRedemptionAmount": 348506.46,
+    "cumulativeRedemptionOrders": 11994,
+    "cumulativeRedemptionAmount": 348506.46
   }
 ]
