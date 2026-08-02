@@ -389,13 +389,12 @@
     "complete": true
   },
   "2026-08-02 12:00": {
-    "sentAt": "2026/8/2 12:00:03",
+    "sentAt": "2026/8/2 12:10:03",
     "activityIds": [
-      "1533"
-    ],
-    "failedActivityIds": [
+      "1533",
       "1347"
     ],
-    "complete": false
+    "failedActivityIds": [],
+    "complete": true
   }
 }
