@@ -12612,5 +12612,22 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 15,
     "cumulativeRedemptionAmount": 4535.66
+  },
+  {
+    "activityId": "1325",
+    "title": "暑期酒店团购媒体激励-2026年7月",
+    "metric": "amount",
+    "date": "2026-08-03",
+    "hour": 12,
+    "slotMinute": 30,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-03 12:30",
+    "recordedAt": "2026/8/3 12:38:21",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 15,
+    "cumulativeRedemptionAmount": 4535.66
   }
 ]
