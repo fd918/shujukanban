@@ -1019,6 +1019,7 @@
     const notifyParentDetail = open => { try { if (window.parent !== window) window.parent.postMessage({ type: "business-dashboard-detail", open: Boolean(open) }, "*"); } catch {} };
     const fmt = n => Number(n || 0).toLocaleString("zh-CN");
     const money = n => Number(n || 0).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
+    const costMoney = n => Number(n || 0).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const pct = n => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}%`;
     const fmtValue = n => n === null || n === undefined ? "-" : fmt(n);
     const pctValue = n => n === null || n === undefined ? "-" : pct(n);
@@ -2273,10 +2274,10 @@
       $$("#marketingCostStatusTabs button").forEach(button => button.classList.toggle("active", button.dataset.costStatus === state.marketingCostStatus));
       $("#focusUsersWorkspace").classList.toggle("hidden", state.focusWorkspace !== "users");
       $("#marketingCostWorkspace").classList.toggle("hidden", state.focusWorkspace !== "costs");
-      $("#marketingCostSummary").innerHTML = `<div class="cost-summary-item"><label>费用项</label><strong>${fmt(summary.itemCount)}</strong></div><div class="cost-summary-item"><label>涉及用户</label><strong>${fmt(summary.userCount)}</strong></div><div class="cost-summary-item"><label>周期订单</label><strong>${fmt(summary.orderCount)}</strong></div><div class="cost-summary-item total"><label>预估总费用</label><strong>¥${money(summary.estimatedAmount)}</strong></div>`;
+      $("#marketingCostSummary").innerHTML = `<div class="cost-summary-item"><label>费用项</label><strong>${fmt(summary.itemCount)}</strong></div><div class="cost-summary-item"><label>涉及用户</label><strong>${fmt(summary.userCount)}</strong></div><div class="cost-summary-item"><label>周期订单</label><strong>${fmt(summary.orderCount)}</strong></div><div class="cost-summary-item total"><label>预估总费用</label><strong>¥${costMoney(summary.estimatedAmount)}</strong></div>`;
       $("#marketingCostBody").innerHTML = state.marketingCostLoading && !rows.length
         ? `<tr><td colspan="11" class="cost-empty">正在加载费用数据...</td></tr>`
-        : rows.length ? rows.map((item, index) => `<tr><td>${index + 1}</td><td class="cost-user"><strong>${escapeHtml(item.userName || `用户 ${item.userId}`)}</strong><span>ID：${escapeHtml(item.userId)}</span></td><td class="cost-business"><strong>${escapeHtml(item.businessName || "-")}</strong><span class="muted">${escapeHtml(item.platform || "-")}</span></td><td>${escapeHtml(item.startDate)}</td><td>${escapeHtml(item.endDate)}</td><td><strong>${fmt(item.orderCount)}</strong>${item.complete === false ? `<span class="cost-incomplete">${item.t1Pending ? "T+1待更新" : `缺${fmt(item.missingDates?.length || 0)}天数据`}</span>` : ""}</td><td>¥${money(item.unitPrice)}</td><td><strong>¥${money(item.estimatedAmount)}</strong></td><td><span class="cost-status ${item.status === "confirmed" ? "confirmed" : ""}">${item.status === "confirmed" ? "已确认" : "待确认"}</span></td><td class="cost-note" title="${escapeHtml(item.note || "")}">${escapeHtml(item.note || "-")}</td><td><div class="cost-actions"><button class="btn" data-edit-marketing-cost="${escapeHtml(item.id)}">编辑</button>${item.status === "confirmed" ? `<button class="btn" data-draft-marketing-cost="${escapeHtml(item.id)}">改为草稿</button>` : `<button class="btn" data-confirm-marketing-cost="${escapeHtml(item.id)}" ${item.complete === false ? "disabled" : ""}>确认</button>`}<button class="btn danger" data-remove-marketing-cost="${escapeHtml(item.id)}">删除</button></div></td></tr>`).join("")
+        : rows.length ? rows.map((item, index) => `<tr><td>${index + 1}</td><td class="cost-user"><strong>${escapeHtml(item.userName || `用户 ${item.userId}`)}</strong><span>ID：${escapeHtml(item.userId)}</span></td><td class="cost-business"><strong>${escapeHtml(item.businessName || "-")}</strong><span class="muted">${escapeHtml(item.platform || "-")}</span></td><td>${escapeHtml(item.startDate)}</td><td>${escapeHtml(item.endDate)}</td><td><strong>${fmt(item.orderCount)}</strong>${item.complete === false ? `<span class="cost-incomplete">${item.t1Pending ? "T+1待更新" : `缺${fmt(item.missingDates?.length || 0)}天数据`}</span>` : ""}</td><td>¥${costMoney(item.unitPrice)}</td><td><strong>¥${costMoney(item.estimatedAmount)}</strong></td><td><span class="cost-status ${item.status === "confirmed" ? "confirmed" : ""}">${item.status === "confirmed" ? "已确认" : "待确认"}</span></td><td class="cost-note" title="${escapeHtml(item.note || "")}">${escapeHtml(item.note || "-")}</td><td><div class="cost-actions"><button class="btn" data-edit-marketing-cost="${escapeHtml(item.id)}">编辑</button>${item.status === "confirmed" ? `<button class="btn" data-draft-marketing-cost="${escapeHtml(item.id)}">改为草稿</button>` : `<button class="btn" data-confirm-marketing-cost="${escapeHtml(item.id)}" ${item.complete === false ? "disabled" : ""}>确认</button>`}<button class="btn danger" data-remove-marketing-cost="${escapeHtml(item.id)}">删除</button></div></td></tr>`).join("")
         : `<tr><td colspan="11" class="cost-empty">当前筛选条件下暂无费用项。点击“新增费用项”开始计算。</td></tr>`;
       $("#refreshMarketingCostBtn").disabled = state.marketingCostLoading;
       $("#refreshMarketingCostBtn").textContent = state.marketingCostLoading ? "刷新中..." : "刷新费用";
@@ -2313,7 +2314,7 @@
       const orderCount = dates.reduce((sum, date) => sum + Number(relationship?.days?.[date] || 0), 0);
       const amount = Math.round(orderCount * unitPrice * 100) / 100;
       $("#marketingCostPreviewOrders").textContent = fmt(orderCount);
-      $("#marketingCostPreviewAmount").textContent = `¥${money(amount)}`;
+      $("#marketingCostPreviewAmount").textContent = `¥${costMoney(amount)}`;
       $("#marketingCostFormHint").textContent = relationship
         ? `${relationship.businessName}｜数据时间 ${relationship.dataTime || "-"}${relationship.t1 && endDate === dayText(new Date()) ? "｜该业务T+1更新，今日订单暂不计费" : ""}`
         : "该用户当前没有匹配到这个业务的历史订单缓存。";
