@@ -41,6 +41,7 @@ const T1_USER_BUSINESS_IDS = new Set(["2410"]);
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
 let middlePlatformCookie = "";
+let performanceSessionPromise = null;
 let snapshotTimer = null;
 let snapshotScheduleVersion = 0;
 let snapshotRecordQueue = Promise.resolve();
@@ -425,12 +426,17 @@ async function login() {
 
 async function ensurePerformanceSession() {
   if (token && middlePlatformCookie && Date.now() < tokenExpiresAt) return { token, cookie: middlePlatformCookie };
-  const user = process.env.YZ_DASHBOARD_USER || await readSecret(USER_SERVICE);
-  const pass = process.env.YZ_DASHBOARD_PASS || await readSecret(PASS_SERVICE);
-  if (!user || !pass) throw new Error("缺少中台账号密码，无法读取订单明细中的成交金额。");
-  token = await loginWithCredentials(user, pass);
-  tokenExpiresAt = Date.now() + 20 * 60 * 1000;
-  return { token, cookie: middlePlatformCookie };
+  if (!performanceSessionPromise) {
+    performanceSessionPromise = (async () => {
+      const user = process.env.YZ_DASHBOARD_USER || await readSecret(USER_SERVICE);
+      const pass = process.env.YZ_DASHBOARD_PASS || await readSecret(PASS_SERVICE);
+      if (!user || !pass) throw new Error("缺少中台账号密码，无法读取订单明细中的成交金额。");
+      token = await loginWithCredentials(user, pass);
+      tokenExpiresAt = Date.now() + 20 * 60 * 1000;
+      return { token, cookie: middlePlatformCookie };
+    })().finally(() => { performanceSessionPromise = null; });
+  }
+  return performanceSessionPromise;
 }
 
 async function apiCall(name, method, path, data, timeoutMs = 12000) {
@@ -1721,7 +1727,8 @@ async function readSnapshots(limit = 5000) {
 function compactSnapshot(snapshot) {
   const compactValues = values => Object.fromEntries(Object.entries(values || {}).map(([id, value]) => [id, {
     orders: number(value?.orders),
-    commission: number(value?.commission)
+    commission: number(value?.commission),
+    amount: number(value?.amount)
   }]));
   return {
     createdAt: snapshot.createdAt,
@@ -1736,7 +1743,8 @@ function compactSnapshot(snapshot) {
       name: value?.name || "",
       platform: value?.platform || "",
       orders: number(value?.orders),
-      commission: number(value?.commission)
+      commission: number(value?.commission),
+      amount: number(value?.amount)
     }])),
     users: compactValues(snapshot.users),
     businessUsers: Object.fromEntries(Object.entries(snapshot.businessUsers || {}).map(([businessId, values]) => [businessId, compactValues(values)]))
@@ -1861,7 +1869,8 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
     const avg = sevenValues.length
       ? {
           orders: Math.round(sevenValues.reduce((sum, item) => sum + number(item.orders), 0) / sevenValues.length),
-          commission: Math.round(sevenValues.reduce((sum, item) => sum + number(item.commission), 0) / sevenValues.length * 100) / 100
+          commission: Math.round(sevenValues.reduce((sum, item) => sum + number(item.commission), 0) / sevenValues.length * 100) / 100,
+          amount: Math.round(sevenValues.reduce((sum, item) => sum + number(item.amount), 0) / sevenValues.length * 100) / 100
         }
       : null;
     return {
@@ -1925,7 +1934,8 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
     const avg = sevenValues.length
       ? {
           orders: Math.round(sevenValues.reduce((sum, item) => sum + number(item.orders), 0) / sevenValues.length),
-          commission: Math.round(sevenValues.reduce((sum, item) => sum + number(item.commission), 0) / sevenValues.length * 100) / 100
+          commission: Math.round(sevenValues.reduce((sum, item) => sum + number(item.commission), 0) / sevenValues.length * 100) / 100,
+          amount: Math.round(sevenValues.reduce((sum, item) => sum + number(item.amount), 0) / sevenValues.length * 100) / 100
         }
       : null;
     return {
@@ -1996,7 +2006,8 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
         phone: plainPhoneValue(userId, row.phone),
         version: row.version,
         orders: number(row.todayOrders),
-        commission: number(row.todayCommission)
+        commission: number(row.todayCommission),
+        amount: number(row.todayAmount)
       }]));
       continue;
     }
@@ -2009,13 +2020,13 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
     for (const row of deduplicateBusinessUsers(historyRows)) {
       const userId = String(row.id || "");
       if (!userId) continue;
-      byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
+      byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission), amount: number(row.todayAmount) };
     }
     if (comparisonMinuteFromText(group.exact?.payload.savedAtText) === Number(targetMinute)) {
       for (const row of deduplicateBusinessUsers(group.exact?.payload.rows || [])) {
         const userId = String(row.id || "");
         if (!userId) continue;
-        byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission) };
+        byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission), amount: number(row.todayAmount) };
       }
     }
     if (Object.keys(byUser).length) details[businessId] = byUser;
@@ -2030,7 +2041,8 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
         phone: plainPhoneValue(userId, row.phone),
         version: row.version,
         orders: number(row.todayOrders),
-        commission: number(row.todayCommission)
+        commission: number(row.todayCommission),
+        amount: number(row.todayAmount)
       };
     }
     if (Object.keys(byUser).length) details[businessId] = byUser;
@@ -2160,8 +2172,8 @@ async function recordSnapshot(businesses, users, force = false, businessDaily = 
     snapshotSlotLabel: slot.label,
     actualMinuteOfDay: minuteOfDay(),
     userDataStrict: true,
-    business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: row.todayCommission }])),
-    users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission }])),
+    business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: row.todayCommission, amount: row.todayAmount }])),
+    users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission, amount: row.todayAmount }])),
     businessUsers: cachedBusinessUsersSnapshot(dateRange, slot.minuteOfDay)
   };
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
@@ -3596,6 +3608,25 @@ const server = createServer(async (req, res) => {
         console.error(`[${nowText()}] 重点用户置顶状态公网同步失败：${error.message}`);
       });
       return;
+    }
+    if (url.pathname === "/api/focus-users/group" && req.method === "POST") {
+      const saved = await saveFocusUserGroup(await readBody(req));
+      const data = await buildFocusUsers({ preset: "7" });
+      const published = await publishLatestCachedDashboard().catch(error => {
+        console.error(`[${nowText()}] 重点用户运营分组公网同步失败：${error.message}`);
+        return false;
+      });
+      return json(res, 200, { ok: true, saved: { updatedAt: saved.updatedAt, updatedAtText: saved.updatedAtText }, data, published });
+    }
+    if (url.pathname === "/api/focus-users/refresh-metrics" && req.method === "POST") {
+      const body = await readBody(req);
+      const result = await refreshFocusUsersMetricHistories(body.days);
+      const data = await buildFocusUsers({ preset: "7" });
+      const published = await publishLatestCachedDashboard().catch(error => {
+        console.error(`[${nowText()}] 重点用户指标公网同步失败：${error.message}`);
+        return false;
+      });
+      return json(res, 200, { ok: true, ...result, data, published });
     }
     if (url.pathname === "/api/marketing-costs" && req.method === "GET") return json(res, 200, await buildMarketingCostWorkspace());
     if (url.pathname === "/api/marketing-costs" && req.method === "POST") {

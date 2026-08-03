@@ -366,6 +366,9 @@
     #focusView > .toolbar #focusSearch { flex-basis:220px; }
     #focusView > .toolbar .segmented, #focusView > .toolbar .btn { flex:0 0 auto; }
     .focus-entity-select { min-width:280px !important; max-width:440px; }
+    .focus-group-select { min-width:150px !important; }
+    .focus-group-badge { display:inline-flex; align-items:center; gap:4px; width:max-content; max-width:180px; margin-top:5px; padding:2px 7px; border:1px solid #cbd5e1; border-radius:999px; color:#475569; background:#f8fafc; font-size:11px; line-height:1.4; }
+    .focus-group-edit { border:0; background:transparent; color:var(--primary); padding:0; font:inherit; cursor:pointer; }
     .focus-range-toolbar { padding-top:0 !important; }
     .focus-custom-range { display:flex; align-items:center; gap:6px; }
     .focus-custom-range .field { flex:0 0 142px !important; min-width:142px !important; }
@@ -771,6 +774,7 @@
           <div class="segmented" id="metricTabs">
             <button class="active" data-metric="orders">订单</button>
             <button data-metric="commission">佣金</button>
+            <button data-metric="gmv">GMV</button>
           </div>
           <div class="segmented" id="levelTabs">
             <button class="active" data-level="all">全部</button>
@@ -816,17 +820,19 @@
           </div>
           <div id="focusUsersWorkspace">
           <div class="toolbar" style="padding:12px 14px;border-bottom:1px solid var(--line);">
+            <div class="segmented" id="focusMetricTabs"><button class="active" data-focus-metric="orders">订单</button><button data-focus-metric="commission">佣金</button><button data-focus-metric="gmv">GMV</button></div>
             <div class="segmented" id="focusModeTabs"><button class="active" data-focus-mode="business">按业务看</button><button data-focus-mode="user">按用户看</button></div>
+            <select class="field focus-group-select" id="focusGroupSelect" aria-label="运营分组"></select>
             <select class="field focus-entity-select" id="focusEntitySelect"></select>
             <div class="search-with-clear"><input class="field" id="focusSearch" placeholder="搜索用户名称或ID"><button class="search-clear" id="focusSearchClear" title="清空搜索">×</button></div>
             <button class="btn" id="refreshFocusBtn">刷新重点用户</button>
             <button class="btn primary" id="addFocusBtn">添加关注用户</button>
           </div>
           <div class="toolbar focus-range-toolbar" style="padding:0 14px 12px;border-bottom:1px solid var(--line);">
-            <span class="muted">每日订单范围</span>
+            <span class="muted">每日指标范围</span>
             <div class="segmented" id="focusRangeTabs"><button class="active" data-focus-range="7">近7天</button><button data-focus-range="month">本月</button><button data-focus-range="30">近30天</button><button data-focus-range="custom">自定义</button></div>
             <div class="focus-custom-range hidden" id="focusCustomRange"><input class="field" id="focusStart" type="date"><span class="muted">至</span><input class="field" id="focusEnd" type="date"><button class="btn" id="applyFocusRange">应用日期</button></div>
-            <span class="muted">日期只改变右侧每日订单列和区间合计。</span>
+            <span class="muted">日期只改变右侧每日指标列和区间合计。</span>
           </div>
           <div class="focus-shell" id="focusShell">
             <div class="focus-main">
@@ -1029,7 +1035,12 @@
   <div class="focus-note-tooltip" id="focusNoteTooltip" role="tooltip" aria-hidden="true"></div>
 
   <script>
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusOperatorGroup: "all", focusMetric: "orders", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
+    try {
+      const savedFocusMetric = localStorage.getItem("yunzhan_focus_metric_v1");
+      if (["orders", "commission", "gmv"].includes(savedFocusMetric)) state.focusMetric = savedFocusMetric;
+      state.focusOperatorGroup = localStorage.getItem("yunzhan_focus_operator_group_v1") || "all";
+    } catch {}
     const PUBLIC_PAYLOAD_CACHE_KEY = "businessDashboardPublicPayloadCache";
     const PUBLIC_FOCUS_USERS_KEY = "businessDashboardPublicFocusUsers";
     const PUBLIC_FOCUS_HIDDEN_KEY = "businessDashboardPublicFocusHidden";
@@ -1202,7 +1213,9 @@
 
     function currentMetricLabel() {
       const label = state.dateRange?.label || "今日";
-      return state.metric === "commission" ? `${label}佣金` : `${label}订单`;
+      if (state.metric === "commission") return `${label}佣金`;
+      if (state.metric === "gmv") return `${label}GMV`;
+      return `${label}订单`;
     }
 
     function baselineLabel() {
@@ -1575,11 +1588,13 @@
     function baseValue(row) {
       const same = row.sameTime || {};
       if (state.metric === "commission") return same.yesterday?.commission ?? same.lastWeek?.commission ?? same.sevenDayAvg?.commission ?? null;
+      if (state.metric === "gmv") return same.yesterday?.amount ?? same.lastWeek?.amount ?? same.sevenDayAvg?.amount ?? null;
       return same.yesterday?.orders ?? same.lastWeek?.orders ?? same.sevenDayAvg?.orders ?? null;
     }
 
     function todayValue(row) {
       if (state.metric === "commission") return row.todayCommission ?? row.todayAmount ?? 0;
+      if (state.metric === "gmv") return row.todayAmount ?? 0;
       return row.todayOrders ?? 0;
     }
 
@@ -1655,7 +1670,8 @@
       const same = row.sameTime || {};
       const data = same[key];
       if (!data) return 0;
-      return state.metric === "commission" ? Number(data.commission || 0) : Number(data.orders || 0);
+      const metricField = state.metric === "gmv" ? "amount" : state.metric;
+      return Number(data[metricField] || 0);
     }
 
     function sortValue(row, key) {
@@ -1845,11 +1861,12 @@
         const same = row.sameTime || {};
         const fastUserRefresh = isFastUserBusiness(row);
         const refreshBusinessId = row.platformBusinessId || row.businessId;
-        const valueFormatter = state.metric === "commission" ? money : fmt;
+        const valueFormatter = state.metric === "orders" ? fmt : money;
         const currentValue = currentDataCell(row.cmp.today, businessCurrentDataTime(row), timeContext.currentMajority, valueFormatter);
-        const yesterdayValue = same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null;
-        const lastWeekValue = same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null;
-        const sevenDayValue = same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null;
+        const metricField = state.metric === "gmv" ? "amount" : state.metric;
+        const yesterdayValue = same.yesterday ? same.yesterday[metricField] : null;
+        const lastWeekValue = same.lastWeek ? same.lastWeek[metricField] : null;
+        const sevenDayValue = same.sevenDayAvg ? same.sevenDayAvg[metricField] : null;
         return `<article class="mobile-data-card" data-mobile-business-card="${index}">
           <div class="mobile-card-head">
             <div class="mobile-card-title"><strong>${escapeHtml(row.name || "-")}</strong><span>${escapeHtml(row.platform || "-")}｜${escapeHtml(refreshBusinessId || "-")}</span></div>
@@ -1865,7 +1882,7 @@
           </div>
           <div class="mobile-card-foot">
             <span class="muted">相关用户：<strong>${fmt(row.users || row.userIds?.length || 0)}</strong></span>
-            <label class="refresh-switch"><input type="checkbox" data-fast-business="${escapeHtml(refreshBusinessId)}" data-fast-business-alias="${escapeHtml(row.businessId || "")}" ${fastUserRefresh ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${fastUserRefresh ? "前100每10分钟" : "固定时段"}</span></label>
+            <label class="refresh-switch"><input type="checkbox" data-fast-business="${escapeHtml(refreshBusinessId)}" data-fast-business-alias="${escapeHtml(row.businessId || "")}" ${fastUserRefresh ? "checked" : ""} ${state.publicMode || !isLocalSettings ? "disabled" : ""}><span>${fastUserRefresh ? "前100每10分钟" : "固定时段"}</span></label>
             <div class="mobile-card-buttons"><button class="btn" data-business-daily-index="${index}">历史订单</button><button class="btn primary" data-index="${index}">查看用户</button></div>
           </div>
         </article>`;
@@ -1883,7 +1900,7 @@
     function renderTable() {
       $("#listTitle").textContent = state.view === "focus" ? (state.focusWorkspace === "costs" ? "营销费用预估" : "重点用户") : state.view === "daily" ? "每日业务数据" : "业务列表";
       $("#listSubtitle").textContent = state.view === "focus"
-        ? (state.focusWorkspace === "costs" ? "按重点用户、业务、日期和单价计算营销费用；确认后锁定订单数与金额" : `今日订单每 10 分钟精确更新；历史日期在 ${userRefreshTimesText()} 更新`)
+        ? (state.focusWorkspace === "costs" ? "按重点用户、业务、日期和单价计算营销费用；确认后锁定订单数与金额" : `订单、佣金与 GMV 可切换；历史订单在 ${userRefreshTimesText()} 更新，历史金额可手动刷新`)
         : state.view === "daily"
           ? `按日期查看各业务订单或佣金｜每 10 分钟随业务缓存更新`
           : "默认展示全部业务，可在列表内筛选异常类型和排序｜每 10 分钟更新";
@@ -1932,21 +1949,23 @@
       }
       $("#businessBody").innerHTML = rows.length ? rows.map((row, index) => {
         const same = row.sameTime || {};
+        const metricField = state.metric === "gmv" ? "amount" : state.metric;
+        const valueFormatter = state.metric === "orders" ? fmt : money;
         const fastUserRefresh = isFastUserBusiness(row);
         const refreshBusinessId = row.platformBusinessId || row.businessId;
         return `<tr data-index="${index}">
           <td>${index + 1}</td>
           <td>${row.platform}</td>
           <td><button class="business-history-link" data-business-daily-index="${index}" title="查看该业务每日数据">${row.name}</button></td>
-          <td>${currentDataCell(row.cmp.today, businessCurrentDataTime(row), timeContext.currentMajority, state.metric === "commission" ? money : fmt)}</td>
-          <td>${comparisonReferenceCell(same.yesterday ? (state.metric === "commission" ? same.yesterday.commission : same.yesterday.orders) : null, same.yesterdayReference || same, state.metric === "commission" ? money : fmt, { dominantMinute: timeContext.yesterdayMajority.minute, compactMajority: true })}</td>
-          <td>${comparisonReferenceCell(same.lastWeek ? (state.metric === "commission" ? same.lastWeek.commission : same.lastWeek.orders) : null, same.lastWeekReference || {}, state.metric === "commission" ? money : fmt, { dominantMinute: timeContext.lastWeekMajority.minute, compactMajority: true })}</td>
-          <td>${sevenDayReferenceCell(same.sevenDayAvg ? (state.metric === "commission" ? same.sevenDayAvg.commission : same.sevenDayAvg.orders) : null, same, state.metric === "commission" ? money : fmt)}</td>
+          <td>${currentDataCell(row.cmp.today, businessCurrentDataTime(row), timeContext.currentMajority, valueFormatter)}</td>
+          <td>${comparisonReferenceCell(same.yesterday?.[metricField] ?? null, same.yesterdayReference || same, valueFormatter, { dominantMinute: timeContext.yesterdayMajority.minute, compactMajority: true })}</td>
+          <td>${comparisonReferenceCell(same.lastWeek?.[metricField] ?? null, same.lastWeekReference || {}, valueFormatter, { dominantMinute: timeContext.lastWeekMajority.minute, compactMajority: true })}</td>
+          <td>${sevenDayReferenceCell(same.sevenDayAvg?.[metricField] ?? null, same, valueFormatter)}</td>
           <td class="${row.cmp.diff < 0 ? "down" : row.cmp.diff > 0 ? "up" : ""}">${pctValue(row.cmp.ratio)}</td>
           <td>${fmtValue(row.cmp.impact)}</td>
           <td>${tag(row.cmp.level, row.cmp.label)}</td>
           <td>${fmt(row.users || row.userIds?.length || 0)}</td>
-          <td><label class="refresh-switch"><input type="checkbox" data-fast-business="${refreshBusinessId}" data-fast-business-alias="${row.businessId}" ${fastUserRefresh ? "checked" : ""} ${state.publicMode ? "disabled" : ""}><span>${fastUserRefresh ? "前100每10分钟" : "固定时段"}</span></label></td>
+          <td><label class="refresh-switch"><input type="checkbox" data-fast-business="${refreshBusinessId}" data-fast-business-alias="${row.businessId}" ${fastUserRefresh ? "checked" : ""} ${state.publicMode || !isLocalSettings ? "disabled" : ""}><span>${fastUserRefresh ? "前100每10分钟" : "固定时段"}</span></label></td>
           <td><button class="link" data-index="${index}">查看用户</button></td>
         </tr>`;
       }).join("") : `<tr><td colspan="13" class="muted">当前筛选条件下没有业务。</td></tr>`;
@@ -1954,11 +1973,12 @@
 
     function renderDailyMobileMatrix(rows, dates) {
       const container = $("#dailyMobileMatrix");
-      const valueOf = (row, date) => Number(row.days?.[date]?.[state.metric === "commission" ? "commission" : "orders"] || 0);
-      const valueText = value => state.metric === "commission" ? money(value) : fmt(value);
+      const metricField = state.metric === "gmv" ? "amount" : state.metric;
+      const valueOf = (row, date) => Number(row.days?.[date]?.[metricField] || 0);
+      const valueText = value => state.metric === "orders" ? fmt(value) : money(value);
       const today = dayText(new Date());
       const modeToolbar = `<div class="mobile-matrix-toolbar"><div class="segmented"><button class="${state.mobileDailyMode === "date" ? "active" : ""}" data-mobile-daily-mode="date">按日期看</button><button class="${state.mobileDailyMode === "business" ? "active" : ""}" data-mobile-daily-mode="business">按业务看</button></div></div>`;
-      const status = `<div class="mobile-matrix-status"><span>日期 ${dates[0] || "-"} 至 ${dates.at(-1) || "-"}｜${state.metric === "commission" ? "佣金" : "订单"}</span><span>${state.mobileDailyMode === "date" ? "业务列固定，日期区域可左右滑动" : "展开业务查看每日准确值"}</span></div>`;
+      const status = `<div class="mobile-matrix-status"><span>日期 ${dates[0] || "-"} 至 ${dates.at(-1) || "-"}｜${state.metric === "orders" ? "订单" : state.metric === "commission" ? "佣金" : "GMV"}</span><span>${state.mobileDailyMode === "date" ? "业务列固定，日期区域可左右滑动" : "展开业务查看每日准确值"}</span></div>`;
       if (state.loading && !rows.length) {
         container.innerHTML = `${modeToolbar}${status}<div class="mobile-matrix-status">每日业务数据加载中，请稍等...</div>`;
         return;
@@ -2008,7 +2028,7 @@
         <td><button class="business-history-link" data-daily-user-business="${escapeHtml(row.platformBusinessId || row.businessId || "")}" title="查看该业务用户列表">${escapeHtml(row.name || "-")}</button></td>
         ${dates.map(date => {
           const item = row.days?.[date] || {};
-          return `<td>${state.metric === "commission" ? money(item.commission) : fmt(item.orders)}</td>`;
+          return `<td>${state.metric === "orders" ? fmt(item.orders) : money(state.metric === "gmv" ? item.amount : item.commission)}</td>`;
         }).join("")}
       </tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有每日业务数据。</td></tr>`;
     }
@@ -2083,7 +2103,42 @@
       renderBusinessDailyModal();
     }
 
+    function focusMetricMeta() {
+      return {
+        orders: { label: "订单", todayLabel: "今日订单", impactLabel: "影响订单", dailyLabel: "每日订单", formatter: fmt },
+        commission: { label: "佣金", todayLabel: "今日佣金", impactLabel: "影响佣金", dailyLabel: "每日佣金", formatter: value => `¥${money(value)}` },
+        gmv: { label: "GMV", todayLabel: "今日GMV", impactLabel: "影响GMV", dailyLabel: "每日GMV", formatter: value => `¥${money(value)}` }
+      }[state.focusMetric] || { label: "订单", todayLabel: "今日订单", impactLabel: "影响订单", dailyLabel: "每日订单", formatter: fmt };
+    }
+
+    function applyFocusMetric(row = {}) {
+      const metric = row.metrics?.[state.focusMetric];
+      if (!metric) return row;
+      return {
+        ...row,
+        days: metric.days || {},
+        todayOrders: metric.today,
+        yesterdaySameTime: metric.yesterdaySameTime,
+        ratio: metric.ratio,
+        impact: metric.impact,
+        periodTotal: metric.periodTotal,
+        previousPeriodTotal: metric.previousPeriodTotal,
+        periodRatio: metric.periodRatio,
+        periodImpact: metric.periodImpact
+      };
+    }
+
+    function focusGroupText(row = {}) {
+      return String(row.operatorGroup || "").trim() || "未分组";
+    }
+
+    function focusGroupBadge(row = {}) {
+      const group = focusGroupText(row);
+      return `<span class="focus-group-badge">运营：${state.publicMode || !isLocalSettings ? escapeHtml(group) : `<button class="focus-group-edit" data-edit-focus-group="1" data-user-id="${escapeHtml(row.userId)}" title="设置运营分组">${escapeHtml(group)}</button>`}</span>`;
+    }
+
     function renderFocusMobileCards(rows, dates, data, compareFocusRow, focusDataTimeLabel, yesterdayMajority) {
+      const metricMeta = focusMetricMeta();
       const container = $("#focusMobileCards");
       if (state.focusLoading && !rows.length) {
         container.innerHTML = `<div class="mobile-data-card"><div class="mobile-card-note muted">正在更新重点用户，原有数据会在加载完成后替换...</div></div>`;
@@ -2096,39 +2151,48 @@
           ? `ID ${row.userId || "-"}｜${row.phone || "-"}｜${row.version || "-"}`
           : `${row.platform || "-"}｜${row.businessId || "-"}`;
         const note = state.focusMode === "business" ? focusNoteText(row) : "";
-        const dailyItems = dates.map(date => `<div class="mobile-daily-item"><label>${escapeHtml(date.slice(5).replace("-", "/"))}</label><strong>${fmt(row.days?.[date])}</strong></div>`).join("");
+        const dailyItems = dates.map(date => `<div class="mobile-daily-item"><label>${escapeHtml(date.slice(5).replace("-", "/"))}</label><strong>${metricMeta.formatter(row.days?.[date])}</strong></div>`).join("");
         return `<article class="mobile-data-card ${state.focusMode === "business" ? "focus-user-drilldown" : ""}" data-mobile-focus-card="${index}" ${state.focusMode === "business" ? `data-focus-user-detail="${escapeHtml(row.userId)}" tabindex="0" aria-label="查看${escapeHtml(title)}的全部业务数据" title="点击查看该用户的全部业务数据"` : ""}>
           <div class="mobile-card-head">
             <div class="mobile-card-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span></div>
             ${tag(comparison.level, comparison.label)}
           </div>
-          ${state.focusMode === "business" ? `<div class="mobile-card-note"><span class="muted">观察备注</span>${escapeHtml(note || "暂无备注")}${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${escapeHtml(row.newTop100At)}</span>` : ""}</div>` : ""}
+          ${state.focusMode === "business" ? `<div class="mobile-card-note"><span class="muted">观察备注</span>${escapeHtml(note || "暂无备注")}${focusGroupBadge(row)}${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${escapeHtml(row.newTop100At)}</span>` : ""}</div>` : ""}
           <div class="mobile-card-stats">
-            <div class="mobile-card-stat"><label>今日订单</label><strong>${fmt(row.todayOrders)}</strong>${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</div>
-            <div class="mobile-card-stat"><label>昨日同时刻</label><strong>${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, fmt, { dominantMinute: yesterdayMajority?.minute, compactMajority: true })}</strong></div>
+            <div class="mobile-card-stat"><label>${metricMeta.todayLabel}</label><strong>${metricMeta.formatter(row.todayOrders)}</strong>${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</div>
+            <div class="mobile-card-stat"><label>昨日同时刻</label><strong>${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, metricMeta.formatter, { dominantMinute: yesterdayMajority?.minute, compactMajority: true })}</strong></div>
             <div class="mobile-card-stat"><label>变化比例</label><strong class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</strong></div>
-            <div class="mobile-card-stat"><label>影响订单</label><strong>${fmtValue(row.impact)}</strong></div>
-            <div class="mobile-card-stat"><label>${escapeHtml(data.range?.label || "本期")}合计</label><strong>${fmt(row.periodTotal)}</strong></div>
-            <div class="mobile-card-stat"><label>上一同期</label><strong>${fmt(row.previousPeriodTotal)}</strong></div>
+            <div class="mobile-card-stat"><label>${metricMeta.impactLabel}</label><strong>${row.impact === null || row.impact === undefined ? "-" : metricMeta.formatter(row.impact)}</strong></div>
+            <div class="mobile-card-stat"><label>${escapeHtml(data.range?.label || "本期")}合计</label><strong>${metricMeta.formatter(row.periodTotal)}</strong></div>
+            <div class="mobile-card-stat"><label>上一同期</label><strong>${metricMeta.formatter(row.previousPeriodTotal)}</strong></div>
             <div class="mobile-card-stat"><label>合计变化比例</label><strong class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</strong></div>
-            <div class="mobile-card-stat"><label>合计影响订单</label><strong>${fmt(row.periodImpact)}</strong></div>
+            <div class="mobile-card-stat"><label>合计${metricMeta.impactLabel}</label><strong>${metricMeta.formatter(row.periodImpact)}</strong></div>
           </div>
-          <details class="mobile-card-daily"><summary>查看每日订单（${dates.length}天）</summary><div class="mobile-daily-grid">${dailyItems || '<span class="muted">当前日期范围暂无每日数据。</span>'}</div></details>
-          ${state.focusMode === "business" ? `<div class="mobile-card-foot"><details class="mobile-card-actions"><summary>用户操作</summary><div class="mobile-card-action-list"><button class="btn" data-copy-user-id="${escapeHtml(row.userId)}">复制用户ID</button><button class="btn" data-edit-user-alias="${escapeHtml(row.userId)}">修改名称</button><button class="btn" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}">编辑备注</button><button class="btn" data-pin-focus="1" data-user-id="${escapeHtml(row.userId)}" data-pinned="${row.pinned ? "1" : "0"}">${row.pinned ? "取消置顶" : "置顶用户"}</button><button class="btn danger" data-remove-focus="1" data-user-id="${escapeHtml(row.userId)}">移除关注</button></div></details></div>` : ""}
+          <details class="mobile-card-daily"><summary>查看${metricMeta.dailyLabel}（${dates.length}天）</summary><div class="mobile-daily-grid">${dailyItems || '<span class="muted">当前日期范围暂无每日数据。</span>'}</div></details>
+          ${state.focusMode === "business" ? `<div class="mobile-card-foot"><details class="mobile-card-actions"><summary>用户操作</summary><div class="mobile-card-action-list"><button class="btn" data-copy-user-id="${escapeHtml(row.userId)}">复制用户ID</button><button class="btn" data-edit-user-alias="${escapeHtml(row.userId)}">修改名称</button><button class="btn" data-edit-focus-group="1" data-user-id="${escapeHtml(row.userId)}">设置分组</button><button class="btn" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}">编辑备注</button><button class="btn" data-pin-focus="1" data-user-id="${escapeHtml(row.userId)}" data-pinned="${row.pinned ? "1" : "0"}">${row.pinned ? "取消置顶" : "置顶用户"}</button><button class="btn danger" data-remove-focus="1" data-user-id="${escapeHtml(row.userId)}">移除关注</button></div></details></div>` : ""}
         </article>`;
       }).join("") : `<div class="mobile-data-card"><div class="mobile-card-note muted">${state.focusMode === "business" ? "当前业务暂无有单重点用户。" : "该用户当前没有匹配到有单业务。"}</div></div>`;
     }
 
     function renderFocusUsers() {
       const data = state.focusData || { dates: [], rows: [], users: [], range: { label: "近7天" } };
-      const businessRows = data.businessRows || data.rows || [];
-      const usersById = new Map((data.users || []).map(user => [String(user.userId), user]));
-      businessRows.forEach(row => { if (!usersById.has(String(row.userId))) usersById.set(String(row.userId), row); });
+      const rawBusinessRows = data.businessRows || data.rows || [];
+      const rawUsersById = new Map((data.users || []).map(user => [String(user.userId), user]));
+      rawBusinessRows.forEach(row => { if (!rawUsersById.has(String(row.userId))) rawUsersById.set(String(row.userId), row); });
+      const operatorGroups = [...new Set([...rawUsersById.values()].map(focusGroupText))].sort((a, b) => a.localeCompare(b, "zh-CN"));
+      const groupSelect = $("#focusGroupSelect");
+      groupSelect.innerHTML = `<option value="all">全部运营分组（${fmt(rawUsersById.size)}人）</option>` + operatorGroups.map(group => `<option value="${escapeHtml(group)}">${escapeHtml(group)}（${fmt([...rawUsersById.values()].filter(user => focusGroupText(user) === group).length)}人）</option>`).join("");
+      if (state.focusOperatorGroup !== "all" && !operatorGroups.includes(state.focusOperatorGroup)) state.focusOperatorGroup = "all";
+      groupSelect.value = state.focusOperatorGroup;
+      const visibleUserIds = new Set([...rawUsersById.values()].filter(user => state.focusOperatorGroup === "all" || focusGroupText(user) === state.focusOperatorGroup).map(user => String(user.userId)));
+      const businessRows = rawBusinessRows.filter(row => visibleUserIds.has(String(row.userId)));
+      const usersById = new Map([...rawUsersById.entries()].filter(([userId]) => visibleUserIds.has(String(userId))));
       const users = [...usersById.values()].sort((a, b) => {
         if (Boolean(a.pinned) !== Boolean(b.pinned)) return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
         if (a.pinned && b.pinned && a.pinnedAt !== b.pinnedAt) return String(b.pinnedAt || "").localeCompare(String(a.pinnedAt || ""));
         return userDisplayName(a).localeCompare(userDisplayName(b), "zh-CN");
       });
+      $$("#focusMetricTabs button").forEach(button => button.classList.toggle("active", button.dataset.focusMetric === state.focusMetric));
       const businessMap = new Map((data.businesses || []).map(business => [String(business.businessId), { key: String(business.businessId), name: business.businessName, count: business.count || 0, platform: business.platform }]));
       businessRows.forEach(row => {
         const key = String(row.businessId || "");
@@ -2167,11 +2231,12 @@
         ? businessRows.filter(row => String(row.businessId) === String(state.focusGroup))
         : businessRows.filter(row => String(row.userId) === String(state.focusSelectedUserId));
       if (keyword) rows = rows.filter(row => state.focusMode === "business" ? userSearchText(row).includes(keyword) : `${row.platform || ""}${row.businessName || ""}`.toLowerCase().includes(keyword));
-      rows = rows.slice().sort((a, b) => {
+      rows = rows.map(applyFocusMetric).sort((a, b) => {
         if (state.focusMode === "business" && Boolean(a.pinned) !== Boolean(b.pinned)) return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
         if (state.focusMode === "business" && a.pinned && b.pinned && a.pinnedAt !== b.pinnedAt) return String(b.pinnedAt || "").localeCompare(String(a.pinnedAt || ""));
         return Number(b.periodTotal || 0) - Number(a.periodTotal || 0);
       });
+      const metricMeta = focusMetricMeta();
       const dates = data.dates || [];
       const todaySum = rows.reduce((sum, row) => sum + Number(row.todayOrders || 0), 0);
       const periodSum = rows.reduce((sum, row) => sum + Number(row.periodTotal || 0), 0);
@@ -2190,10 +2255,10 @@
       const profile = $("#focusProfile");
       profile.classList.toggle("hidden", state.focusMode !== "user" || !selectedUser);
       if (state.focusMode === "user" && selectedUser) {
-        profile.innerHTML = `<div class="focus-profile-main"><strong>${escapeHtml(userDisplayName(selectedUser))}${aliasEditButton(selectedUser)}<button class="user-pin-icon ${selectedUser.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" data-pinned="${selectedUser.pinned ? "1" : "0"}" title="${selectedUser.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="从全部业务移除">−</button></strong><span>${copyUserIdButton(selectedUser)}｜${escapeHtml(selectedUser.phone || "-")}｜${escapeHtml(selectedUser.version || "-")}</span><div class="focus-profile-note"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="编辑观察备注">✎</button><span>${escapeHtml(focusNoteText(selectedUser) || "添加观察备注")}</span></div></div><div class="focus-profile-stats"><div class="focus-profile-stat"><label>有单业务</label><strong>${fmt(rows.length)}</strong></div><div class="focus-profile-stat"><label>今日总订单</label><strong>${fmt(todaySum)}</strong></div><div class="focus-profile-stat"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</strong></div><div class="focus-profile-stat"><label>净变化</label><strong class="${todaySum - yesterdaySum < 0 ? "down" : todaySum - yesterdaySum > 0 ? "up" : ""}">${yesterdayComparable.length ? `${todaySum - yesterdaySum > 0 ? "+" : ""}${fmt(todaySum - yesterdaySum)}` : "-"}</strong></div></div>`;
+        profile.innerHTML = `<div class="focus-profile-main"><strong>${escapeHtml(userDisplayName(selectedUser))}${aliasEditButton(selectedUser)}<button class="user-pin-icon ${selectedUser.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" data-pinned="${selectedUser.pinned ? "1" : "0"}" title="${selectedUser.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="从全部业务移除">−</button></strong><span>${copyUserIdButton(selectedUser)}｜${escapeHtml(selectedUser.phone || "-")}｜${escapeHtml(selectedUser.version || "-")}</span>${focusGroupBadge(selectedUser)}<div class="focus-profile-note"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="编辑观察备注">✎</button><span>${escapeHtml(focusNoteText(selectedUser) || "添加观察备注")}</span></div></div><div class="focus-profile-stats"><div class="focus-profile-stat"><label>有单业务</label><strong>${fmt(rows.length)}</strong></div><div class="focus-profile-stat"><label>${metricMeta.todayLabel}合计</label><strong>${metricMeta.formatter(todaySum)}</strong></div><div class="focus-profile-stat"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? metricMeta.formatter(yesterdaySum) : "-"}</strong></div><div class="focus-profile-stat"><label>净变化</label><strong class="${todaySum - yesterdaySum < 0 ? "down" : todaySum - yesterdaySum > 0 ? "up" : ""}">${yesterdayComparable.length ? `${todaySum - yesterdaySum > 0 ? "+" : ""}${metricMeta.formatter(todaySum - yesterdaySum)}` : "-"}</strong></div></div>`;
       }
       const firstColumns = state.focusMode === "business" ? `<th>序号</th><th class="focus-user-col">用户</th><th class="focus-note-col">观察备注</th>` : `<th>序号</th><th class="focus-business-col">业务</th>`;
-      $("#focusHead").innerHTML = `<tr>${firstColumns}<th class="focus-order-col">今日订单${majorityHeader("多数数据", currentMajority, currentMatched.length)}</th><th class="focus-order-col">昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>变化比例</th><th>影响订单</th><th>状态</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计影响订单</th></tr>`;
+      $("#focusHead").innerHTML = `<tr>${firstColumns}<th class="focus-order-col">${metricMeta.todayLabel}${majorityHeader("多数数据", currentMajority, currentMatched.length)}</th><th class="focus-order-col">昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>变化比例</th><th>${metricMeta.impactLabel}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计${metricMeta.impactLabel}</th></tr>`;
       const compareFocusRow = row => {
         if (row.yesterdaySameTime === null || row.yesterdaySameTime === undefined) return { level: "missing", label: "缺少基准" };
         const ratio = Number(row.ratio || 0);
@@ -2211,13 +2276,13 @@
         ? `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">正在更新重点用户，原有数据会在加载完成后替换...</td></tr>`
         : (rows.length ? rows.map((row, index) => `<tr ${state.focusMode === "business" ? `class="focus-user-drilldown" data-focus-user-detail="${escapeHtml(row.userId)}" tabindex="0" aria-label="查看${escapeHtml(userDisplayName(row))}的全部业务数据" title="点击查看该用户的全部业务数据"` : ""}>
           <td>${index + 1}</td>
-          ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从全部业务移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" data-full-note="${escapeHtml(focusNoteText(row) || "添加观察备注")}" tabindex="0" aria-label="完整观察备注：${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
-          <td class="focus-order-col">${fmt(row.todayOrders)}${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${fmtValue(row.impact)}</td>
+          ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从全部业务移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${focusGroupBadge(row)}${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" data-full-note="${escapeHtml(focusNoteText(row) || "添加观察备注")}" tabindex="0" aria-label="完整观察备注：${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
+          <td class="focus-order-col">${metricMeta.formatter(row.todayOrders)}${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, metricMeta.formatter, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${row.impact === null || row.impact === undefined ? "-" : metricMeta.formatter(row.impact)}</td>
           <td>${tag(compareFocusRow(row).level, compareFocusRow(row).label)}</td>
-          ${dates.map(date => `<td>${fmt(row.days?.[date])}</td>`).join("")}
-          <td><strong>${fmt(row.periodTotal)}</strong></td><td>${fmt(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${fmt(row.periodImpact)}</td>
+          ${dates.map(date => `<td>${metricMeta.formatter(row.days?.[date])}</td>`).join("")}
+          <td><strong>${metricMeta.formatter(row.periodTotal)}</strong></td><td>${metricMeta.formatter(row.previousPeriodTotal)}</td><td class="${Number(row.periodRatio) < 0 ? "down" : Number(row.periodRatio) > 0 ? "up" : ""}">${pctValue(row.periodRatio)}</td><td>${metricMeta.formatter(row.periodImpact)}</td>
         </tr>`).join("") : `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">${state.focusMode === "business" ? "当前业务暂无有单重点用户。" : "该用户当前没有匹配到有单业务。"}</td></tr>`);
-      $("#focusSummaryBody").innerHTML = rows.length ? `<tr><td colspan="${baseColumns}">当前列表合计（${fmt(rows.length)}项）</td><td class="focus-order-col">${fmt(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? fmt(yesterdaySum) : "-"}</td><td class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${yesterdaySum ? pctValue(todayDiff / yesterdaySum * 100) : "-"}</td><td>${todayDiff === null ? "-" : fmt(Math.abs(todayDiff))}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(periodSum)}</td><td>${fmt(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${fmt(Math.abs(periodDiff))}</td></tr>` : "";
+      $("#focusSummaryBody").innerHTML = rows.length ? `<tr><td colspan="${baseColumns}">当前列表合计（${fmt(rows.length)}项）</td><td class="focus-order-col">${metricMeta.formatter(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? metricMeta.formatter(yesterdaySum) : "-"}</td><td class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${yesterdaySum ? pctValue(todayDiff / yesterdaySum * 100) : "-"}</td><td>${todayDiff === null ? "-" : metricMeta.formatter(Math.abs(todayDiff))}</td><td>-</td>${dates.map(date => `<td>${metricMeta.formatter(dailySums[date])}</td>`).join("")}<td>${metricMeta.formatter(periodSum)}</td><td>${metricMeta.formatter(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${metricMeta.formatter(Math.abs(periodDiff))}</td></tr>` : "";
     }
 
     async function loadFocusUsers() {
@@ -2239,6 +2304,30 @@
       } finally {
         state.focusLoading = false;
         renderFocusUsers();
+      }
+    }
+
+    async function refreshFocusMetrics() {
+      if (state.publicMode || !isLocalSettings) {
+        await loadFocusUsers();
+        return toast("已更新到最新缓存");
+      }
+      const button = $("#refreshFocusBtn");
+      const days = Math.max(1, Math.min(65, state.focusData?.dates?.length || (state.focusRange === "30" ? 30 : 7)));
+      button.disabled = true;
+      button.textContent = `刷新近${days}天…`;
+      try {
+        const result = await requestJson(apiUrl("/api/focus-users/refresh-metrics"), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ days })
+        });
+        state.focusData = result.data || state.focusData;
+        await loadFocusUsers();
+        toast(`已刷新 ${result.refreshed || 0}/${result.total || 0} 条业务关系的佣金和 GMV`);
+      } finally {
+        button.disabled = false;
+        button.textContent = "刷新重点用户";
       }
     }
 
@@ -2863,6 +2952,22 @@
       if ($("#detailModal").classList.contains("open")) renderDetail(true);
       if ($("#globalUserModal").classList.contains("open")) renderGlobalUserSearch();
       toast(next.trim() ? (data.published ? "备注已保存并同步公网" : "备注已保存，公网同步失败") : (data.published ? "备注已删除并同步公网" : "备注已删除，公网同步失败"));
+    }
+
+    async function editFocusGroup(userId) {
+      if (state.publicMode || !isLocalSettings) return toast("游客只能查看运营分组");
+      const id = String(userId || "");
+      const row = (state.focusData?.users || state.focusData?.businessRows || state.focusData?.rows || []).find(item => String(item.userId) === id);
+      if (!row) return toast("未找到该重点用户");
+      const next = window.prompt("输入运营分组名称；留空并确定可设为未分组。", String(row.operatorGroup || ""));
+      if (next === null) return;
+      await requestJson(apiUrl("/api/focus-users/group"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: id, operatorGroup: next.trim() })
+      });
+      await loadFocusUsers();
+      toast(next.trim() ? `已分配到“${next.trim()}”` : "已设为未分组");
     }
 
     function render() {
@@ -4328,6 +4433,19 @@
       $("#focusSearch").value = "";
       renderFocusUsers();
     });
+    $("#focusMetricTabs").addEventListener("click", e => {
+      const btn = e.target.closest("[data-focus-metric]");
+      if (!btn) return;
+      state.focusMetric = btn.dataset.focusMetric;
+      localStorage.setItem("yunzhan_focus_metric_v1", state.focusMetric);
+      renderFocusUsers();
+    });
+    $("#focusGroupSelect").addEventListener("change", e => {
+      state.focusOperatorGroup = e.target.value;
+      localStorage.setItem("yunzhan_focus_operator_group_v1", state.focusOperatorGroup);
+      state.focusDefaultApplied = false;
+      renderFocusUsers();
+    });
     $("#focusEntitySelect").addEventListener("change", e => {
       if (state.focusMode === "business") state.focusGroup = e.target.value;
       else state.focusSelectedUserId = e.target.value;
@@ -4339,7 +4457,7 @@
       if (!state.focusStart || !state.focusEnd || state.focusStart > state.focusEnd) return toast("请选择正确的开始和结束日期");
       loadFocusUsers().catch(error => toast(error.message || "重点用户日期加载失败"));
     });
-    $("#refreshFocusBtn").addEventListener("click", () => loadFocusUsers().then(() => toast("重点用户已更新到最新缓存")).catch(error => toast(error.message || "重点用户刷新失败")));
+    $("#refreshFocusBtn").addEventListener("click", () => refreshFocusMetrics().catch(error => toast(error.message || "重点用户刷新失败")));
     $("#focusSearch").addEventListener("input", e => { state.focusSearch = e.target.value.trim(); renderFocusUsers(); });
     $("#focusSearchClear").addEventListener("click", () => { state.focusSearch = ""; $("#focusSearch").value = ""; renderFocusUsers(); $("#focusSearch").focus(); });
     $("#focusView").addEventListener("click", e => {
@@ -4351,6 +4469,11 @@
       const note = e.target.closest("[data-edit-focus-note]");
       if (note) {
         openFocusNote(note.dataset.userId);
+        return;
+      }
+      const group = e.target.closest("[data-edit-focus-group]");
+      if (group) {
+        editFocusGroup(group.dataset.userId).catch(error => toast(error.message || "分组保存失败"));
         return;
       }
       const copyId = e.target.closest("[data-copy-user-id]");
