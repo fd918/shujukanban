@@ -21,6 +21,7 @@ const USER_PHONE_INDEX_PATH = join(ROOT, "data/user-phone-index.json");
 const USER_DETAIL_CACHE_PATH = join(ROOT, "data/business-user-detail-cache.json");
 const FOCUS_USERS_PATH = join(ROOT, "data/business-focus-users.json");
 const FOCUS_USERS_BACKUP_PATH = join(ROOT, "data/business-focus-users.pre-global-backup.json");
+const MARKETING_COSTS_PATH = join(ROOT, "data/business-marketing-costs.json");
 const USER_ALIASES_PATH = join(ROOT, "data/business-user-aliases.json");
 const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.json");
 const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
@@ -2261,6 +2262,59 @@ async function writeFocusUsers(items) {
   return payload;
 }
 
+function normalizeMarketingCostItem(item = {}) {
+  const startDate = parseDay(item.startDate || item.start_date || dayKey());
+  const endDate = parseDay(item.endDate || item.end_date || startDate);
+  const status = item.status === "confirmed" ? "confirmed" : "draft";
+  return {
+    id: String(item.id || randomBytes(8).toString("hex")),
+    userId: String(item.userId || "").trim(),
+    userName: String(item.userName || "").trim().slice(0, 60),
+    businessId: String(item.businessId || "").trim(),
+    businessName: String(item.businessName || "").trim().slice(0, 100),
+    platform: String(item.platform || "").trim().slice(0, 30),
+    startDate: startDate <= endDate ? startDate : endDate,
+    endDate: startDate <= endDate ? endDate : startDate,
+    unitPrice: Math.max(0, Number(item.unitPrice || 0)),
+    note: String(item.note || "").trim().slice(0, 200),
+    status,
+    lockedOrders: status === "confirmed" && Number.isFinite(Number(item.lockedOrders)) ? Number(item.lockedOrders) : null,
+    lockedAmount: status === "confirmed" && Number.isFinite(Number(item.lockedAmount)) ? Number(item.lockedAmount) : null,
+    confirmedAt: status === "confirmed" ? String(item.confirmedAt || "") : "",
+    confirmedAtText: status === "confirmed" ? String(item.confirmedAtText || "") : "",
+    createdAt: String(item.createdAt || new Date().toISOString()),
+    createdAtText: String(item.createdAtText || nowText()),
+    updatedAt: String(item.updatedAt || new Date().toISOString()),
+    updatedAtText: String(item.updatedAtText || nowText())
+  };
+}
+
+async function readMarketingCosts() {
+  try {
+    const saved = JSON.parse(await readFile(MARKETING_COSTS_PATH, "utf8"));
+    return {
+      schemaVersion: 1,
+      items: (Array.isArray(saved.items) ? saved.items : []).map(normalizeMarketingCostItem).filter(item => item.userId && item.businessId),
+      updatedAt: saved.updatedAt || "",
+      updatedAtText: saved.updatedAtText || ""
+    };
+  } catch {
+    return { schemaVersion: 1, items: [], updatedAt: "", updatedAtText: "" };
+  }
+}
+
+async function writeMarketingCosts(items) {
+  const payload = {
+    schemaVersion: 1,
+    items: items.map(normalizeMarketingCostItem).filter(item => item.userId && item.businessId),
+    updatedAt: new Date().toISOString(),
+    updatedAtText: nowText()
+  };
+  await mkdir(join(ROOT, "data"), { recursive: true });
+  await writeFile(MARKETING_COSTS_PATH, JSON.stringify(payload, null, 2));
+  return payload;
+}
+
 async function readUserAliases() {
   try {
     const saved = JSON.parse(await readFile(USER_ALIASES_PATH, "utf8"));
@@ -2602,6 +2656,139 @@ async function buildFocusUsers(query = {}) {
   };
 }
 
+async function marketingCostContext() {
+  const focus = await readFocusUsers();
+  const aliases = (await readUserAliases()).aliases || {};
+  const catalog = await focusBusinessCatalog();
+  return {
+    focus,
+    aliases,
+    catalog,
+    catalogById: new Map(catalog.map(item => [String(item.businessId), item])),
+    cacheIndex: focusUserCacheIndex(focus.items.map(item => item.userId))
+  };
+}
+
+function calculateMarketingCostItem(item, context) {
+  const normalized = normalizeMarketingCostItem(item);
+  const user = context.focus.items.find(row => String(row.userId) === normalized.userId) || {};
+  const business = context.catalogById.get(normalized.businessId) || {
+    businessId: normalized.businessId,
+    businessName: normalized.businessName || "未命名业务",
+    platform: normalized.platform || "-"
+  };
+  const cached = context.cacheIndex.get(`${normalized.businessId}:${normalized.userId}`) || {};
+  const current = cachedFocusCurrentUser(normalized.businessId, normalized.userId);
+  const dates = dayList(normalized.startDate, normalized.endDate);
+  const dailyOrders = {};
+  const missingDates = [];
+  for (const date of dates) {
+    if (date === dayKey() && T1_USER_BUSINESS_IDS.has(normalized.businessId)) {
+      missingDates.push(date);
+      continue;
+    }
+    if (date === dayKey() && current) {
+      dailyOrders[date] = number(current.todayOrders);
+      continue;
+    }
+    if (cached.days && Object.prototype.hasOwnProperty.call(cached.days, date)) {
+      dailyOrders[date] = number(cached.days[date]);
+      continue;
+    }
+    missingDates.push(date);
+  }
+  const liveOrders = Object.values(dailyOrders).reduce((sum, value) => sum + number(value), 0);
+  const liveAmount = Math.round(liveOrders * normalized.unitPrice * 100) / 100;
+  const confirmed = normalized.status === "confirmed" && normalized.lockedOrders !== null && normalized.lockedAmount !== null;
+  const dataTimes = [current?.savedAtText, cached.cacheSavedAtText].filter(Boolean).sort();
+  return {
+    ...normalized,
+    userName: context.aliases[normalized.userId] || user.name || cached.name || normalized.userName || `用户 ${normalized.userId}`,
+    businessName: business.businessName || normalized.businessName || "未命名业务",
+    platform: business.platform || normalized.platform || "-",
+    orderCount: confirmed ? normalized.lockedOrders : liveOrders,
+    estimatedAmount: confirmed ? normalized.lockedAmount : liveAmount,
+    liveOrders,
+    liveAmount,
+    dailyOrders,
+    missingDates,
+    complete: missingDates.length === 0,
+    t1Pending: T1_USER_BUSINESS_IDS.has(normalized.businessId) && missingDates.includes(dayKey()),
+    dataTime: dataTimes.at(-1) || "-"
+  };
+}
+
+async function buildMarketingCostWorkspace() {
+  const saved = await readMarketingCosts();
+  const context = await marketingCostContext();
+  const items = saved.items.map(item => calculateMarketingCostItem(item, context)).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  const focusData = await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -64), end_date: dayKey() });
+  const relationships = (focusData.businessRows || []).map(row => ({
+    userId: String(row.userId),
+    userName: context.aliases[String(row.userId)] || row.name || `用户 ${row.userId}`,
+    businessId: String(row.businessId),
+    businessName: row.businessName || "未命名业务",
+    platform: row.platform || "-",
+    days: row.days || {},
+    dataTime: row.userDataTime || "-",
+    t1: T1_USER_BUSINESS_IDS.has(String(row.businessId))
+  }));
+  const summary = {
+    itemCount: items.length,
+    userCount: new Set(items.map(item => item.userId)).size,
+    orderCount: items.reduce((sum, item) => sum + number(item.orderCount), 0),
+    estimatedAmount: Math.round(items.reduce((sum, item) => sum + Number(item.estimatedAmount || 0), 0) * 100) / 100
+  };
+  return {
+    ok: true,
+    schemaVersion: 1,
+    updatedAt: saved.updatedAt,
+    updatedAtText: saved.updatedAtText,
+    latestDataTime: relationships.map(row => row.dataTime).filter(Boolean).sort().at(-1) || userDetailCacheSavedAtText || "-",
+    items,
+    summary,
+    users: focusData.users.map(user => ({ userId: String(user.userId), name: context.aliases[String(user.userId)] || user.name || `用户 ${user.userId}` })),
+    relationships,
+    range: { startDate: shiftDay(dayKey(), -64), endDate: dayKey() }
+  };
+}
+
+async function saveMarketingCost(body) {
+  const saved = await readMarketingCosts();
+  const existingIndex = saved.items.findIndex(item => String(item.id) === String(body.id || ""));
+  const existing = existingIndex >= 0 ? saved.items[existingIndex] : {};
+  const item = normalizeMarketingCostItem({ ...existing, ...body, updatedAt: new Date().toISOString(), updatedAtText: nowText() });
+  if (!item.userId) throw new Error("请选择重点用户。");
+  if (!item.businessId) throw new Error("请选择业务。");
+  if (!(item.unitPrice > 0)) throw new Error("单价必须大于0。");
+  if (dayList(item.startDate, item.endDate).length > 65) throw new Error("单个费用周期最多支持65天。");
+  const context = await marketingCostContext();
+  const calculated = calculateMarketingCostItem(item, context);
+  if (item.status === "confirmed") {
+    if (!calculated.complete) throw new Error(calculated.t1Pending ? "该T+1业务仍有日期待更新，暂不能确认费用。" : `缺少 ${calculated.missingDates.length} 天订单数据，暂不能确认费用。`);
+    item.lockedOrders = calculated.liveOrders;
+    item.lockedAmount = calculated.liveAmount;
+    item.confirmedAt = new Date().toISOString();
+    item.confirmedAtText = nowText();
+  } else {
+    item.lockedOrders = null;
+    item.lockedAmount = null;
+    item.confirmedAt = "";
+    item.confirmedAtText = "";
+  }
+  if (existingIndex >= 0) saved.items.splice(existingIndex, 1, item);
+  else saved.items.unshift(item);
+  await writeMarketingCosts(saved.items);
+  return buildMarketingCostWorkspace();
+}
+
+async function removeMarketingCost(body) {
+  const id = String(body.id || "");
+  const saved = await readMarketingCosts();
+  await writeMarketingCosts(saved.items.filter(item => String(item.id) !== id));
+  return buildMarketingCostWorkspace();
+}
+
 async function addFocusUser(body) {
   const userId = String(body.userId || "").trim();
   if (!userId) throw new Error("请填写用户ID。");
@@ -2879,7 +3066,8 @@ async function sanitizePublicDashboard(data) {
       month: await buildFocusUsers({ preset: "month" }),
       30: await buildFocusUsers({ preset: "30" }),
       65: await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -64), end_date: dayKey() })
-    }
+    },
+    marketingCosts: await buildMarketingCostWorkspace()
   };
 }
 
@@ -3177,6 +3365,19 @@ const server = createServer(async (req, res) => {
       publishPublicFocusNotes().catch(error => {
         console.error(`[${nowText()}] 重点用户置顶状态公网同步失败：${error.message}`);
       });
+      return;
+    }
+    if (url.pathname === "/api/marketing-costs" && req.method === "GET") return json(res, 200, await buildMarketingCostWorkspace());
+    if (url.pathname === "/api/marketing-costs" && req.method === "POST") {
+      const data = await saveMarketingCost(await readBody(req));
+      json(res, 200, { ...data, syncing: true });
+      publishLatestCachedDashboard().catch(error => console.error(`[${nowText()}] 营销费用公网同步失败：${error.message}`));
+      return;
+    }
+    if (url.pathname === "/api/marketing-costs/remove" && req.method === "POST") {
+      const data = await removeMarketingCost(await readBody(req));
+      json(res, 200, { ...data, syncing: true });
+      publishLatestCachedDashboard().catch(error => console.error(`[${nowText()}] 营销费用删除公网同步失败：${error.message}`));
       return;
     }
     if (url.pathname === "/api/user-aliases" && req.method === "GET") return json(res, 200, { ok: true, ...(await readUserAliases()) });
