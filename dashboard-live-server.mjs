@@ -40,6 +40,7 @@ const T1_USER_BUSINESS_IDS = new Set(["2410"]);
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
+let middlePlatformCookie = "";
 let snapshotTimer = null;
 let snapshotScheduleVersion = 0;
 let snapshotRecordQueue = Promise.resolve();
@@ -313,6 +314,14 @@ async function loginWithCredentials(user, pass) {
     },
     body: new URLSearchParams({ usrName: user, passWord: md5(`YZ_ADMIN_${pass}`) })
   }, 10000);
+  const cookieLines = typeof response.headers.getSetCookie === "function"
+    ? response.headers.getSetCookie()
+    : [response.headers.get("set-cookie") || ""];
+  middlePlatformCookie = cookieLines
+    .flatMap(line => String(line).split(/,(?=\s*[^;,=]+=[^;,]+)/))
+    .map(line => line.split(";")[0].trim())
+    .filter(Boolean)
+    .join("; ");
   const payload = await response.json().catch(() => ({}));
   if (payload.code !== 200 || !payload.data?.access_token) throw new Error(payload.message || "中台登录失败，请检查账号密码。");
   return payload.data.access_token;
@@ -414,6 +423,16 @@ async function login() {
   return token;
 }
 
+async function ensurePerformanceSession() {
+  if (token && middlePlatformCookie && Date.now() < tokenExpiresAt) return { token, cookie: middlePlatformCookie };
+  const user = process.env.YZ_DASHBOARD_USER || await readSecret(USER_SERVICE);
+  const pass = process.env.YZ_DASHBOARD_PASS || await readSecret(PASS_SERVICE);
+  if (!user || !pass) throw new Error("缺少中台账号密码，无法读取订单明细中的成交金额。");
+  token = await loginWithCredentials(user, pass);
+  tokenExpiresAt = Date.now() + 20 * 60 * 1000;
+  return { token, cookie: middlePlatformCookie };
+}
+
 async function apiCall(name, method, path, data, timeoutMs = 12000) {
   const startedAt = Date.now();
   recordApiRequest(name, path);
@@ -437,6 +456,36 @@ async function apiCall(name, method, path, data, timeoutMs = 12000) {
       options.body = JSON.stringify(data || {});
     }
     const response = await fetchWithTimeout(url, options, timeoutMs);
+    const payload = await response.json();
+    const ok = response.ok && payload.code === 200;
+    return { name, ok, status: response.status, code: payload.code, message: payload.message || (ok ? "成功" : "接口返回异常"), durationMs: Date.now() - startedAt, data: payload.data };
+  } catch (error) {
+    return { name, ok: false, message: error.name === "AbortError" ? "接口超时" : error.message, durationMs: Date.now() - startedAt, data: null };
+  }
+}
+
+async function performanceOrderCall(name, data, timeoutMs = 60000) {
+  const startedAt = Date.now();
+  const path = "/performance/order-list/index";
+  recordApiRequest(name, path);
+  try {
+    const session = await ensurePerformanceSession();
+    const body = new URLSearchParams();
+    Object.entries(data || {}).forEach(([key, value]) => {
+      if (Array.isArray(value)) value.forEach((item, index) => body.append(`${key}[${index}]`, String(item)));
+      else if (value !== undefined && value !== null) body.append(key, String(value));
+    });
+    const response = await fetchWithTimeout(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${session.token}`,
+        "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "origin": "https://adminpub.yunzhanxinxi.com",
+        "referer": "https://adminpub.yunzhanxinxi.com/",
+        "cookie": session.cookie
+      },
+      body
+    }, timeoutMs);
     const payload = await response.json();
     const ok = response.ok && payload.code === 200;
     return { name, ok, status: response.status, code: payload.code, message: payload.message || (ok ? "成功" : "接口返回异常"), durationMs: Date.now() - startedAt, data: payload.data };
@@ -837,15 +886,16 @@ async function fetchBusinessDaily(statuses, query = {}) {
 
   const dailyResults = await mapLimit(dates, 2, async date => {
     const payload = { platform: "", paid_date: [date, date] };
-    const [orders, commission] = await Promise.all([
+    const [orders, commission, amount] = await Promise.all([
       apiCall(`业务每日订单-${date}`, "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "order_valid" }, 20000),
-      apiCall(`业务每日佣金-${date}`, "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "settle_amount_valid" }, 20000)
+      apiCall(`业务每日佣金-${date}`, "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "settle_amount_valid" }, 20000),
+      apiCall(`业务每日成交金额-${date}`, "POST", "/api/v2/order-statistic/summary-new", { ...payload, filter_field: "amount_valid" }, 20000)
     ]);
-    statuses.push(orders, commission);
-    return { date, orders, commission };
+    statuses.push(orders, commission, amount);
+    return { date, orders, commission, amount };
   });
 
-  for (const { date, orders, commission } of dailyResults) {
+  for (const { date, orders, commission, amount } of dailyResults) {
     for (const row of pickArray(orders.data)) {
       const id = String(row.order_type || row.business_id || row.subtitle || "");
       rowsById[id] ||= {
@@ -855,7 +905,7 @@ async function fetchBusinessDaily(statuses, query = {}) {
         platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
         days: {}
       };
-      rowsById[id].days[date] ||= { orders: 0, commission: 0 };
+      rowsById[id].days[date] ||= { orders: 0, commission: 0, amount: 0 };
       rowsById[id].days[date].orders = number(row[date] ?? row.period_total ?? row.total);
     }
 
@@ -868,8 +918,21 @@ async function fetchBusinessDaily(statuses, query = {}) {
         platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
         days: {}
       };
-      rowsById[id].days[date] ||= { orders: 0, commission: 0 };
+      rowsById[id].days[date] ||= { orders: 0, commission: 0, amount: 0 };
       rowsById[id].days[date].commission = number(row[date] ?? row.period_total ?? row.total);
+    }
+
+    for (const row of pickArray(amount.data)) {
+      const id = String(row.order_type || row.business_id || row.subtitle || "");
+      rowsById[id] ||= {
+        platform: row.title || row.platform || "未分类",
+        name: row.subtitle || row.business_name || "未命名业务",
+        businessId: id,
+        platformBusinessId: String(row.order_category_id || row.platform_business_id || ""),
+        days: {}
+      };
+      rowsById[id].days[date] ||= { orders: 0, commission: 0, amount: 0 };
+      rowsById[id].days[date].amount = number(row[date] ?? row.period_total ?? row.total);
     }
   }
   return {
@@ -1405,27 +1468,87 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
   return { businesses: rows.length, users, newTop100 };
 }
 
+async function fetchFocusUserOrderMetrics(item, startDate, endDate) {
+  const phone = plainPhoneValue(item.userId, item.phone);
+  const performanceBusinessId = String(item.catalogBusinessId || "");
+  if (!/^1\d{10}$/.test(phone)) return { ok: false, message: "重点用户缺少完整手机号" };
+  if (!performanceBusinessId) return { ok: false, message: "业务缺少订单明细分类 ID" };
+  const pageSize = 5000;
+  const request = page => performanceOrderCall(`重点用户订单明细第${page}页`, {
+    page,
+    pageSize,
+    userKeyword: "",
+    accountKeyword: phone,
+    payStartTime: `${startDate} 00:00:00`,
+    payEndTime: `${endDate} 23:59:59`,
+    settleStartTime: "",
+    settleEndTime: "",
+    orderStatus: [2, 3],
+    orderNo: "",
+    allianceAffiliation: "",
+    rebateType: "",
+    commissionType: "",
+    category_id: "",
+    platform: performanceBusinessId,
+    package: ""
+  });
+  const first = await request(1);
+  if (!first.ok) return { ok: false, message: first.message || "订单明细加载失败" };
+  let rows = Array.isArray(first.data?.data) ? first.data.data : [];
+  const totalPages = Math.max(1, number(first.data?.pageCount) || Math.ceil(number(first.data?.total) / pageSize));
+  if (totalPages > 1) {
+    const rest = await mapLimit(Array.from({ length: totalPages - 1 }, (_, index) => index + 2), 3, request);
+    const failed = rest.filter(result => !result.ok);
+    if (failed.length) return { ok: false, message: `订单明细有 ${failed.length} 页加载失败` };
+    rows = rows.concat(...rest.map(result => Array.isArray(result.data?.data) ? result.data.data : []));
+  }
+  const commissionDays = {};
+  const gmvDays = {};
+  for (const row of rows) {
+    const date = String(row.paid_time || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < startDate || date > endDate) continue;
+    gmvDays[date] = number(gmvDays[date]) + number(row.paid_amount);
+    const commission = number(row.settle_amount) || number(row.estimate_amount);
+    commissionDays[date] = number(commissionDays[date]) + commission;
+  }
+  dayList(startDate, endDate).forEach(date => {
+    commissionDays[date] = Math.round(number(commissionDays[date]) * 100) / 100;
+    gmvDays[date] = Math.round(number(gmvDays[date]) * 100) / 100;
+  });
+  return { ok: true, rows: rows.length, commissionDays, gmvDays };
+}
+
 async function refreshFocusUserToday(item) {
   const today = dayKey();
-  const result = await apiCall("重点用户今日订单", "GET", "/api/v2/dashboard/business/user-order-statistics", {
+  const params = {
     order_type: item.businessId,
     page: 1,
     pre_page: 10,
     start_date: today,
     end_date: today,
-    filter_field: "order_valid",
     keyword: item.userId
-  }, 20000);
-  if (!result.ok) return false;
-  const matched = asList(result.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
-  const row = matched ? normalizeUser(matched, today) : {
+  };
+  const [ordersResult, orderMetrics] = await Promise.all([
+    apiCall("重点用户今日订单", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 20000),
+    fetchFocusUserOrderMetrics(item, today, today)
+  ]);
+  if (!ordersResult.ok && !orderMetrics.ok) return false;
+  const orderMatched = asList(ordersResult.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
+  const row = orderMatched ? normalizeUser(orderMatched, today) : {
     id: String(item.userId),
     name: item.name || `用户 ${item.userId}`,
     phone: item.phone || "-",
     version: item.version || "-",
-    todayOrders: 0,
-    days: { [today]: 0 }
+    todayOrders: 0
   };
+  row.todayOrders = number(orderMatched?.[today] ?? orderMatched?.period_total ?? orderMatched?.total);
+  row.days = { [today]: row.todayOrders };
+  if (orderMetrics.ok) {
+    row.todayCommission = number(orderMetrics.commissionDays[today]);
+    row.todayAmount = number(orderMetrics.gmvDays[today]);
+    row.commissionDays = { [today]: row.todayCommission };
+    row.gmvDays = { [today]: row.todayAmount };
+  }
   row.phone = plainPhoneValue(row.id, row.phone);
   const cacheKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: today });
   userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
@@ -1476,6 +1599,53 @@ function publicHistoryRange() {
   const today = new Date();
   const start = addDays(today, -64);
   return { startDate: dayKey(start), endDate: dayKey(today) };
+}
+
+async function refreshFocusUserMetricHistory(item, range = publicHistoryRange()) {
+  const result = await fetchFocusUserOrderMetrics(item, range.startDate, range.endDate);
+  if (!result.ok) return false;
+  const dates = dayList(range.startDate, range.endDate);
+  const row = {
+    id: String(item.userId),
+    name: item.name || `用户 ${item.userId}`,
+    phone: plainPhoneValue(item.userId, item.phone),
+    version: item.version || "-",
+    commissionDays: result.commissionDays,
+    gmvDays: result.gmvDays,
+    todayCommission: number(result.commissionDays[range.endDate]),
+    todayAmount: number(result.gmvDays[range.endDate])
+  };
+  const cacheKey = JSON.stringify({ type: "focus-metric-history", businessId: String(item.businessId), userId: String(item.userId), startDate: range.startDate, endDate: range.endDate });
+  userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, dates, rows: [row] });
+  scheduleUserDetailCacheSave();
+  return true;
+}
+
+async function refreshFocusUsersMetricHistories(days = 30) {
+  const safeDays = Math.max(1, Math.min(65, number(days) || 30));
+  const range = { startDate: shiftDay(dayKey(), -(safeDays - 1)), endDate: dayKey() };
+  const saved = await readFocusUsers();
+  const catalog = await focusBusinessCatalog();
+  const cacheIndex = focusUserCacheIndex(saved.items.map(item => item.userId));
+  const targets = [];
+  const seen = new Set();
+  for (const item of saved.items) {
+    const hinted = new Set((item.businessHints || []).flatMap(hint => [String(hint.businessId || ""), String(hint.catalogBusinessId || "")]).filter(Boolean));
+    for (const business of catalog) {
+      const cached = cacheIndex.get(`${business.businessId}:${item.userId}`);
+      const hasRelationship = Boolean(cached) || hinted.has(business.businessId) || hinted.has(business.catalogBusinessId);
+      const key = `${business.businessId}:${item.userId}`;
+      if (!hasRelationship || seen.has(key)) continue;
+      seen.add(key);
+      targets.push({ ...item, ...business });
+    }
+  }
+  let refreshed = 0;
+  await mapLimit(targets, 4, async item => {
+    if (await refreshFocusUserMetricHistory(item, range)) refreshed += 1;
+  });
+  console.log(`[${nowText()}] 已刷新重点用户近 ${safeDays} 天佣金与成交金额：${refreshed}/${targets.length} 条业务关系。`);
+  return { ok: true, refreshed, total: targets.length, days: safeDays };
 }
 
 async function warmBusinessUserHistories(businesses, { refresh = false } = {}) {
@@ -2025,6 +2195,7 @@ async function runScheduledUserRefresh(businesses, config) {
   if (userRefreshState.scheduledRuns[key]) return false;
   console.log(`[${nowText()}] 开始固定时段全量用户更新：${time}`);
   await warmBusinessUserHistories(businesses, { refresh: true });
+  await refreshFocusUsersMetricHistories(1);
   userRefreshState.scheduledRuns = Object.fromEntries(Object.entries(userRefreshState.scheduledRuns).filter(([item]) => item.startsWith(dayKey())));
   userRefreshState.scheduledRuns[key] = nowText();
   await saveUserRefreshState();
@@ -2183,6 +2354,7 @@ function mergeFocusUserRecords(items = []) {
       noteUpdatedAtText: "",
       pinned: false,
       pinnedAt: "",
+      operatorGroup: "",
       businessHints: []
     };
     const candidateName = String(source.name || "").trim();
@@ -2211,6 +2383,8 @@ function mergeFocusUserRecords(items = []) {
     }
     if (source.pinned) current.pinned = true;
     if (String(source.pinnedAt || "") > current.pinnedAt) current.pinnedAt = source.pinnedAt || "";
+    const operatorGroup = String(source.operatorGroup || source.operator_group || "").trim().slice(0, 40);
+    if (operatorGroup) current.operatorGroup = operatorGroup;
     const hints = Array.isArray(source.businessHints) ? source.businessHints : [];
     if (source.businessId || source.businessName) {
       hints.push({
@@ -2370,6 +2544,12 @@ function focusUserCacheIndex(userIds = []) {
       merged.days = incomingIsNewer
         ? { ...(current.days || {}), ...(row.days || {}) }
         : { ...(row.days || {}), ...(current.days || {}) };
+      merged.commissionDays = incomingIsNewer
+        ? { ...(current.commissionDays || {}), ...(row.commissionDays || {}) }
+        : { ...(row.commissionDays || {}), ...(current.commissionDays || {}) };
+      merged.gmvDays = incomingIsNewer
+        ? { ...(current.gmvDays || {}), ...(row.gmvDays || {}) }
+        : { ...(row.gmvDays || {}), ...(current.gmvDays || {}) };
       merged.cacheSavedAtText = incomingIsNewer ? (payload.savedAtText || current.cacheSavedAtText || "") : current.cacheSavedAtText;
       index.set(key, attachPlainPhone(merged));
     }
@@ -2518,15 +2698,6 @@ async function focusBusinessCatalog() {
 function focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex) {
     const cached = cacheIndex.get(`${business.businessId}:${item.userId}`) || {};
     const current = cachedFocusCurrentUser(business.businessId, item.userId);
-    const days = Object.fromEntries(dates.map(date => [date, number(cached.days?.[date])]));
-    if (dates.includes(dayKey())) {
-      const hasDailyToday = cached.days && Object.prototype.hasOwnProperty.call(cached.days, dayKey());
-      days[dayKey()] = current ? number(current.todayOrders) : (hasDailyToday ? number(cached.days[dayKey()]) : 0);
-    }
-    const total = Object.values(days).reduce((sum, value) => sum + number(value), 0);
-    const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(cached.days?.[date]), 0);
-    const periodDiff = total - previousPeriodTotal;
-    const periodRatio = previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null;
     const businessId = String(business.businessId);
     const userId = String(item.userId);
     const topState = userRefreshState.top100[businessId] || {};
@@ -2539,10 +2710,39 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
       userId
     );
     const yesterdayReference = snapshotReference(yesterdayMatch, yesterdayMatch?.quality);
-    const yesterdaySameTime = yesterdayMatch?.snapshot?.businessUsers?.[businessId]?.[userId]?.orders;
-    const todayOrders = current ? number(current.todayOrders) : number(days[dayKey()]);
-    const diff = yesterdaySameTime === undefined ? null : todayOrders - number(yesterdaySameTime);
-    const ratio = yesterdaySameTime === undefined ? null : (number(yesterdaySameTime) ? diff / number(yesterdaySameTime) * 100 : (todayOrders ? 100 : 0));
+    const snapshotUser = yesterdayMatch?.snapshot?.businessUsers?.[businessId]?.[userId] || {};
+    const buildMetric = ({ daysField, currentField, snapshotField }) => {
+      const sourceDays = cached[daysField] || {};
+      const metricDays = Object.fromEntries(dates.map(date => [date, number(sourceDays?.[date])]));
+      if (dates.includes(dayKey())) {
+        const hasDailyToday = Object.prototype.hasOwnProperty.call(sourceDays, dayKey());
+        metricDays[dayKey()] = current ? number(current[currentField]) : (hasDailyToday ? number(sourceDays[dayKey()]) : 0);
+      }
+      const periodTotal = Object.values(metricDays).reduce((sum, value) => sum + number(value), 0);
+      const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(sourceDays?.[date]), 0);
+      const periodDiff = periodTotal - previousPeriodTotal;
+      const todayValue = current ? number(current[currentField]) : number(metricDays[dayKey()]);
+      const rawYesterday = snapshotField && Object.prototype.hasOwnProperty.call(snapshotUser, snapshotField) ? snapshotUser[snapshotField] : undefined;
+      const yesterdaySameTime = rawYesterday === undefined ? null : number(rawYesterday);
+      const diff = yesterdaySameTime === null ? null : todayValue - yesterdaySameTime;
+      return {
+        days: metricDays,
+        today: todayValue,
+        yesterdaySameTime,
+        ratio: yesterdaySameTime === null ? null : (yesterdaySameTime ? diff / yesterdaySameTime * 100 : (todayValue ? 100 : 0)),
+        impact: diff === null ? null : Math.abs(diff),
+        periodTotal,
+        previousPeriodTotal,
+        periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null,
+        periodImpact: Math.abs(periodDiff)
+      };
+    };
+    const metrics = {
+      orders: buildMetric({ daysField: "days", currentField: "todayOrders", snapshotField: "orders" }),
+      commission: buildMetric({ daysField: "commissionDays", currentField: "todayCommission", snapshotField: null }),
+      gmv: buildMetric({ daysField: "gmvDays", currentField: "todayAmount", snapshotField: null })
+    };
+    const orders = metrics.orders;
     const row = {
       ...item,
       platform: business.platform,
@@ -2553,28 +2753,29 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
       phone: plainPhoneValue(item.userId, current?.phone, cached.phone, item.phone),
       version: current?.version || cached.version || item.version || "-",
       pendingProfile: !(current?.name || cached.name),
-      days,
-      periodTotal: total,
-      previousPeriodTotal,
-      periodRatio,
-      periodImpact: Math.abs(periodDiff),
-      todayOrders,
-      yesterdaySameTime: yesterdaySameTime === undefined ? null : number(yesterdaySameTime),
+      metrics,
+      days: orders.days,
+      periodTotal: orders.periodTotal,
+      previousPeriodTotal: orders.previousPeriodTotal,
+      periodRatio: orders.periodRatio,
+      periodImpact: orders.periodImpact,
+      todayOrders: orders.today,
+      yesterdaySameTime: orders.yesterdaySameTime,
       sameTime: {
-        yesterday: yesterdaySameTime === undefined ? null : { orders: number(yesterdaySameTime) },
+        yesterday: yesterdayMatch ? { orders: metrics.orders.yesterdaySameTime, commission: metrics.commission.yesterdaySameTime, amount: metrics.gmv.yesterdaySameTime } : null,
         ...yesterdayReference,
         yesterdayReference
       },
       ...yesterdayReference,
-      ratio,
-      impact: diff === null ? null : Math.abs(diff),
+      ratio: orders.ratio,
+      impact: orders.impact,
       newTop100At: topState.entered?.[String(item.userId)] || "",
       realtimeToday: Boolean(current),
       userDataTime: userDataTime || userDetailCacheSavedAtText || "-"
     };
     const hinted = (item.businessHints || []).some(hint => String(hint.businessId || hint.catalogBusinessId) === businessId);
-    const hasOrders = todayOrders > 0 || previousPeriodTotal > 0 || total > 0 || number(yesterdaySameTime) > 0;
-    return hasOrders || hinted ? row : null;
+    const hasMetricData = Object.values(metrics).some(metric => metric.today > 0 || metric.previousPeriodTotal > 0 || metric.periodTotal > 0 || number(metric.yesterdaySameTime) > 0);
+    return hasMetricData || hinted ? row : null;
 }
 
 async function buildFocusUsers(query = {}) {
@@ -2606,13 +2807,29 @@ async function buildFocusUsers(query = {}) {
   const users = saved.items.map(item => {
     const rows = rowsByUser.get(String(item.userId)) || [];
     const profile = rows.find(row => row.name && !String(row.name).startsWith("用户 ")) || rows[0] || {};
-    const days = Object.fromEntries(dates.map(date => [date, rows.reduce((sum, row) => sum + number(row.days?.[date]), 0)]));
-    const periodTotal = rows.reduce((sum, row) => sum + number(row.periodTotal), 0);
-    const previousPeriodTotal = rows.reduce((sum, row) => sum + number(row.previousPeriodTotal), 0);
-    const todayOrders = rows.reduce((sum, row) => sum + number(row.todayOrders), 0);
-    const comparable = rows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
-    const yesterdaySameTime = comparable.length ? comparable.reduce((sum, row) => sum + number(row.yesterdaySameTime), 0) : null;
-    const diff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
+    const aggregateMetric = metricName => {
+      const metricRows = rows.map(row => row.metrics?.[metricName]).filter(Boolean);
+      const daysByMetric = Object.fromEntries(dates.map(date => [date, metricRows.reduce((sum, metric) => sum + number(metric.days?.[date]), 0)]));
+      const periodTotal = metricRows.reduce((sum, metric) => sum + number(metric.periodTotal), 0);
+      const previousPeriodTotal = metricRows.reduce((sum, metric) => sum + number(metric.previousPeriodTotal), 0);
+      const today = metricRows.reduce((sum, metric) => sum + number(metric.today), 0);
+      const comparable = metricRows.filter(metric => metric.yesterdaySameTime !== null && metric.yesterdaySameTime !== undefined);
+      const yesterdaySameTime = comparable.length ? comparable.reduce((sum, metric) => sum + number(metric.yesterdaySameTime), 0) : null;
+      const diff = yesterdaySameTime === null ? null : today - yesterdaySameTime;
+      return {
+        days: daysByMetric,
+        today,
+        yesterdaySameTime,
+        ratio: yesterdaySameTime === null ? null : (yesterdaySameTime ? diff / yesterdaySameTime * 100 : (today ? 100 : 0)),
+        impact: diff === null ? null : Math.abs(diff),
+        periodTotal,
+        previousPeriodTotal,
+        periodRatio: previousPeriodTotal ? (periodTotal - previousPeriodTotal) / previousPeriodTotal * 100 : null,
+        periodImpact: Math.abs(periodTotal - previousPeriodTotal)
+      };
+    };
+    const metrics = { orders: aggregateMetric("orders"), commission: aggregateMetric("commission"), gmv: aggregateMetric("gmv") };
+    const orders = metrics.orders;
     return {
       ...item,
       name: profile.name || userProfileCache.get(String(item.userId))?.name || item.name || `用户 ${item.userId}`,
@@ -2620,15 +2837,16 @@ async function buildFocusUsers(query = {}) {
       version: profile.version || item.version || "-",
       pendingProfile: !(profile.name || item.name || userProfileCache.get(String(item.userId))?.name),
       businessCount: rows.length,
-      days,
-      periodTotal,
-      previousPeriodTotal,
-      periodRatio: previousPeriodTotal ? (periodTotal - previousPeriodTotal) / previousPeriodTotal * 100 : null,
-      periodImpact: Math.abs(periodTotal - previousPeriodTotal),
-      todayOrders,
-      yesterdaySameTime,
-      ratio: yesterdaySameTime === null ? null : (yesterdaySameTime ? diff / yesterdaySameTime * 100 : (todayOrders ? 100 : 0)),
-      impact: diff === null ? null : Math.abs(diff),
+      metrics,
+      days: orders.days,
+      periodTotal: orders.periodTotal,
+      previousPeriodTotal: orders.previousPeriodTotal,
+      periodRatio: orders.periodRatio,
+      periodImpact: orders.periodImpact,
+      todayOrders: orders.today,
+      yesterdaySameTime: orders.yesterdaySameTime,
+      ratio: orders.ratio,
+      impact: orders.impact,
       userDataTime: rows.map(row => row.userDataTime).filter(Boolean).sort().at(-1) || "-"
     };
   });
@@ -2815,6 +3033,7 @@ async function addFocusUser(body) {
     phone: plainPhoneValue(userId, user.phone),
     version: user.version || "-",
     pendingProfile: !user.name,
+    operatorGroup: String(body.operatorGroup || body.operator_group || "").trim().slice(0, 40),
     businessHints: business ? [business] : [],
     addedAt: new Date().toISOString(),
     addedAtText: nowText()
@@ -2863,6 +3082,17 @@ async function saveFocusUserPin(body) {
     pinned,
     pinnedAt: pinned ? new Date().toISOString() : ""
   };
+  return writeFocusUsers(saved.items);
+}
+
+async function saveFocusUserGroup(body) {
+  const userId = String(body.userId || "");
+  if (!userId) throw new Error("缺少用户ID。");
+  const saved = await readFocusUsers();
+  const index = saved.items.findIndex(item => String(item.userId) === userId);
+  if (index < 0) throw new Error("重点用户不存在，请刷新后重试。");
+  const operatorGroup = String(body.operatorGroup || body.operator_group || "").trim().slice(0, 40);
+  saved.items[index] = { ...saved.items[index], operatorGroup };
   return writeFocusUsers(saved.items);
 }
 
