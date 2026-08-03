@@ -2427,26 +2427,77 @@ function mergeFocusUserRecords(items = []) {
   return [...users.values()];
 }
 
+const DEFAULT_FOCUS_GROUP_NAME = "默认分组";
+
+function focusGroupId(name = DEFAULT_FOCUS_GROUP_NAME) {
+  const normalized = String(name || DEFAULT_FOCUS_GROUP_NAME).trim().toLowerCase();
+  const digest = createHash("sha256").update(normalized).digest("hex").slice(0, 10);
+  return `group-${digest}`;
+}
+
+function normalizeFocusGroups(groups = [], items = []) {
+  const validUserIds = new Set(items.map(item => String(item.userId)));
+  const normalized = [];
+  const usedIds = new Set();
+  const usedNames = new Set();
+  for (const source of Array.isArray(groups) ? groups : []) {
+    const name = String(source?.name || "").trim().slice(0, 40);
+    if (!name || usedNames.has(name)) continue;
+    let id = String(source?.id || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64) || focusGroupId(name);
+    while (usedIds.has(id)) id = `${id}-${normalized.length + 1}`;
+    const userIds = [...new Set((Array.isArray(source?.userIds) ? source.userIds : []).map(String).filter(userId => validUserIds.has(userId)))];
+    normalized.push({ id, name, userIds, createdAt: String(source?.createdAt || ""), createdAtText: String(source?.createdAtText || "") });
+    usedIds.add(id);
+    usedNames.add(name);
+  }
+  if (!normalized.length && items.length) {
+    const legacyGroups = new Map();
+    items.forEach(item => {
+      const name = String(item.operatorGroup || "").trim() || DEFAULT_FOCUS_GROUP_NAME;
+      const userIds = legacyGroups.get(name) || [];
+      userIds.push(String(item.userId));
+      legacyGroups.set(name, userIds);
+    });
+    legacyGroups.forEach((userIds, name) => normalized.push({ id: focusGroupId(name), name, userIds: [...new Set(userIds)], createdAt: "", createdAtText: "" }));
+  }
+  return normalized;
+}
+
+function focusGroupMembership(groups = [], userId = "") {
+  const id = String(userId);
+  return groups.filter(group => group.userIds.includes(id)).map(group => group.id);
+}
+
 async function readFocusUsers() {
   try {
     const saved = JSON.parse(await readFile(FOCUS_USERS_PATH, "utf8"));
     const sourceItems = Array.isArray(saved.items) ? saved.items : [];
     const items = mergeFocusUserRecords(sourceItems);
-    if (saved.schemaVersion !== 2 || items.length !== sourceItems.length) {
+    const operatorGroups = normalizeFocusGroups(saved.operatorGroups, items);
+    if (saved.schemaVersion !== 3 || items.length !== sourceItems.length || JSON.stringify(operatorGroups) !== JSON.stringify(saved.operatorGroups || [])) {
       if (!existsSync(FOCUS_USERS_BACKUP_PATH)) await copyFile(FOCUS_USERS_PATH, FOCUS_USERS_BACKUP_PATH);
-      const payload = { schemaVersion: 2, items, updatedAt: saved.updatedAt || new Date().toISOString(), updatedAtText: saved.updatedAtText || nowText() };
+      const payload = { schemaVersion: 3, items, operatorGroups, updatedAt: saved.updatedAt || new Date().toISOString(), updatedAtText: saved.updatedAtText || nowText() };
       await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
-      console.log(`[${nowText()}] 重点用户已迁移为全局用户：${sourceItems.length} 条业务记录合并为 ${items.length} 位用户。`);
+      console.log(`[${nowText()}] 重点用户已迁移为独立运营标签：${items.length} 位用户，${operatorGroups.length} 个标签。`);
       return payload;
     }
-    return { schemaVersion: 2, items, updatedAt: saved.updatedAt || "", updatedAtText: saved.updatedAtText || "" };
+    return { schemaVersion: 3, items, operatorGroups, updatedAt: saved.updatedAt || "", updatedAtText: saved.updatedAtText || "" };
   } catch {
-    return { schemaVersion: 2, items: [], updatedAt: "", updatedAtText: "" };
+    return { schemaVersion: 3, items: [], operatorGroups: [], updatedAt: "", updatedAtText: "" };
   }
 }
 
-async function writeFocusUsers(items) {
-  const payload = { schemaVersion: 2, items: mergeFocusUserRecords(items), updatedAt: new Date().toISOString(), updatedAtText: nowText() };
+async function writeFocusUsers(items, operatorGroups = null) {
+  const mergedItems = mergeFocusUserRecords(items);
+  let sourceGroups = operatorGroups;
+  if (!sourceGroups) {
+    try {
+      sourceGroups = JSON.parse(await readFile(FOCUS_USERS_PATH, "utf8")).operatorGroups;
+    } catch {
+      sourceGroups = [];
+    }
+  }
+  const payload = { schemaVersion: 3, items: mergedItems, operatorGroups: normalizeFocusGroups(sourceGroups, mergedItems), updatedAt: new Date().toISOString(), updatedAtText: nowText() };
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
   return payload;
@@ -2875,13 +2926,14 @@ async function buildFocusUsers(query = {}) {
   const currentTimes = businessRows.map(row => row.userDataTime).filter(Boolean).sort();
   return {
     ok: true,
-    schemaVersion: 2,
+    schemaVersion: 3,
     focusUpdatedAt: saved.updatedAt || "",
     range,
     dates,
-    users,
-    businessRows,
-    rows: businessRows,
+    operatorGroups: saved.operatorGroups.map(group => ({ ...group, count: group.userIds.length })),
+    users: users.map(user => ({ ...user, operatorGroupIds: focusGroupMembership(saved.operatorGroups, user.userId) })),
+    businessRows: businessRows.map(row => ({ ...row, operatorGroupIds: focusGroupMembership(saved.operatorGroups, row.userId) })),
+    rows: businessRows.map(row => ({ ...row, operatorGroupIds: focusGroupMembership(saved.operatorGroups, row.userId) })),
     businesses: [...businessMap.values()].sort((a, b) => a.businessName.localeCompare(b.businessName, "zh-CN")),
     total: users.length,
     relationshipTotal: businessRows.length,
@@ -2975,12 +3027,13 @@ async function buildMarketingCostWorkspace() {
   };
   return {
     ok: true,
-    schemaVersion: 1,
+    schemaVersion: 2,
     updatedAt: saved.updatedAt,
     updatedAtText: saved.updatedAtText,
     latestDataTime: relationships.map(row => row.dataTime).filter(Boolean).sort().at(-1) || userDetailCacheSavedAtText || "-",
     items,
     summary,
+    operatorGroups: focusData.operatorGroups || [],
     users: focusData.users.map(user => ({ userId: String(user.userId), name: context.aliases[String(user.userId)] || user.name || `用户 ${user.userId}` })),
     relationships,
     range: { startDate: shiftDay(dayKey(), -64), endDate: dayKey() }
@@ -3038,10 +3091,19 @@ async function addFocusUser(body) {
   }
   user = user || userProfileCache.get(userId) || {};
   const saved = await readFocusUsers();
+  const groupId = String(body.groupId || body.operatorGroupId || saved.operatorGroups[0]?.id || "");
+  let operatorGroups = saved.operatorGroups;
+  if (!operatorGroups.length) {
+    const createdAt = new Date().toISOString();
+    operatorGroups = [{ id: focusGroupId(DEFAULT_FOCUS_GROUP_NAME), name: DEFAULT_FOCUS_GROUP_NAME, userIds: [], createdAt, createdAtText: nowText() }];
+  }
+  const targetGroup = operatorGroups.find(group => group.id === groupId) || operatorGroups[0];
+  if (!targetGroup) throw new Error("请先新增一个运营标签。");
   const existing = saved.items.find(item => String(item.userId) === userId);
   if (existing) {
     if (business && !(existing.businessHints || []).some(hint => String(hint.businessId) === business.businessId)) existing.businessHints = [...(existing.businessHints || []), business];
-    return writeFocusUsers(saved.items);
+    operatorGroups = operatorGroups.map(group => group.id === targetGroup.id ? { ...group, userIds: [...new Set([...group.userIds, userId])] } : group);
+    return writeFocusUsers(saved.items, operatorGroups);
   }
   saved.items.push({
     userId,
@@ -3049,18 +3111,22 @@ async function addFocusUser(body) {
     phone: plainPhoneValue(userId, user.phone),
     version: user.version || "-",
     pendingProfile: !user.name,
-    operatorGroup: String(body.operatorGroup || body.operator_group || "").trim().slice(0, 40),
     businessHints: business ? [business] : [],
     addedAt: new Date().toISOString(),
     addedAtText: nowText()
   });
-  return writeFocusUsers(saved.items);
+  operatorGroups = operatorGroups.map(group => group.id === targetGroup.id ? { ...group, userIds: [...new Set([...group.userIds, userId])] } : group);
+  return writeFocusUsers(saved.items, operatorGroups);
 }
 
 async function removeFocusUser(body) {
   const userId = String(body.userId || "");
   const saved = await readFocusUsers();
-  return writeFocusUsers(saved.items.filter(item => String(item.userId) !== userId));
+  const groupId = String(body.groupId || body.operatorGroupId || "");
+  if (!groupId) return writeFocusUsers(saved.items.filter(item => String(item.userId) !== userId), saved.operatorGroups.map(group => ({ ...group, userIds: group.userIds.filter(id => id !== userId) })));
+  const operatorGroups = saved.operatorGroups.map(group => group.id === groupId ? { ...group, userIds: group.userIds.filter(id => id !== userId) } : group);
+  const stillAssigned = operatorGroups.some(group => group.userIds.includes(userId));
+  return writeFocusUsers(stillAssigned ? saved.items : saved.items.filter(item => String(item.userId) !== userId), operatorGroups);
 }
 
 async function saveFocusUserNote(body) {
@@ -3101,15 +3167,34 @@ async function saveFocusUserPin(body) {
   return writeFocusUsers(saved.items);
 }
 
-async function saveFocusUserGroup(body) {
-  const userId = String(body.userId || "");
-  if (!userId) throw new Error("缺少用户ID。");
+async function mutateFocusGroup(body) {
   const saved = await readFocusUsers();
-  const index = saved.items.findIndex(item => String(item.userId) === userId);
-  if (index < 0) throw new Error("重点用户不存在，请刷新后重试。");
-  const operatorGroup = String(body.operatorGroup || body.operator_group || "").trim().slice(0, 40);
-  saved.items[index] = { ...saved.items[index], operatorGroup };
-  return writeFocusUsers(saved.items);
+  const action = String(body.action || "");
+  if (action === "create") {
+    const name = String(body.name || "").trim().slice(0, 40);
+    if (!name) throw new Error("请填写运营标签名称。");
+    if (saved.operatorGroups.some(group => group.name === name)) throw new Error("该运营标签已经存在。");
+    const createdAt = new Date().toISOString();
+    let id = focusGroupId(`${name}-${createdAt}-${randomBytes(4).toString("hex")}`);
+    while (saved.operatorGroups.some(group => group.id === id)) id = focusGroupId(`${name}-${randomBytes(8).toString("hex")}`);
+    const result = await writeFocusUsers(saved.items, [...saved.operatorGroups, { id, name, userIds: [], createdAt, createdAtText: nowText() }]);
+    return { ...result, selectedGroupId: id };
+  }
+  const groupId = String(body.groupId || "");
+  const group = saved.operatorGroups.find(item => item.id === groupId);
+  if (!group) throw new Error("运营标签不存在，请刷新后重试。");
+  if (action === "rename") {
+    const name = String(body.name || "").trim().slice(0, 40);
+    if (!name) throw new Error("请填写运营标签名称。");
+    if (saved.operatorGroups.some(item => item.id !== groupId && item.name === name)) throw new Error("该运营标签已经存在。");
+    return writeFocusUsers(saved.items, saved.operatorGroups.map(item => item.id === groupId ? { ...item, name } : item));
+  }
+  if (action === "remove") {
+    const operatorGroups = saved.operatorGroups.filter(item => item.id !== groupId);
+    const remainingIds = new Set(operatorGroups.flatMap(item => item.userIds));
+    return writeFocusUsers(saved.items.filter(item => remainingIds.has(String(item.userId))), operatorGroups);
+  }
+  throw new Error("不支持的运营标签操作。");
 }
 
 async function testFeishu() {
@@ -3613,14 +3698,14 @@ const server = createServer(async (req, res) => {
       });
       return;
     }
-    if (url.pathname === "/api/focus-users/group" && req.method === "POST") {
-      const saved = await saveFocusUserGroup(await readBody(req));
+    if (url.pathname === "/api/focus-groups" && req.method === "POST") {
+      const saved = await mutateFocusGroup(await readBody(req));
       const data = await buildFocusUsers({ preset: "7" });
       const published = await publishLatestCachedDashboard().catch(error => {
-        console.error(`[${nowText()}] 重点用户运营分组公网同步失败：${error.message}`);
+        console.error(`[${nowText()}] 重点用户运营标签公网同步失败：${error.message}`);
         return false;
       });
-      return json(res, 200, { ok: true, saved: { updatedAt: saved.updatedAt, updatedAtText: saved.updatedAtText }, data, published });
+      return json(res, 200, { ok: true, saved: { updatedAt: saved.updatedAt, updatedAtText: saved.updatedAtText }, selectedGroupId: saved.selectedGroupId || "", data, published });
     }
     if (url.pathname === "/api/focus-users/refresh-metrics" && req.method === "POST") {
       const body = await readBody(req);
