@@ -1609,7 +1609,7 @@ function publicHistoryRange() {
 
 async function refreshFocusUserMetricHistory(item, range = publicHistoryRange()) {
   const result = await fetchFocusUserOrderMetrics(item, range.startDate, range.endDate);
-  if (!result.ok) return false;
+  if (!result.ok) return { ok: false, message: result.message || "订单明细加载失败" };
   const dates = dayList(range.startDate, range.endDate);
   const row = {
     id: String(item.userId),
@@ -1624,7 +1624,7 @@ async function refreshFocusUserMetricHistory(item, range = publicHistoryRange())
   const cacheKey = JSON.stringify({ type: "focus-metric-history", businessId: String(item.businessId), userId: String(item.userId), startDate: range.startDate, endDate: range.endDate });
   userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, dates, rows: [row] });
   scheduleUserDetailCacheSave();
-  return true;
+  return { ok: true };
 }
 
 async function refreshFocusUsersMetricHistories(days = 30) {
@@ -1639,7 +1639,8 @@ async function refreshFocusUsersMetricHistories(days = 30) {
     const hinted = new Set((item.businessHints || []).flatMap(hint => [String(hint.businessId || ""), String(hint.catalogBusinessId || "")]).filter(Boolean));
     for (const business of catalog) {
       const cached = cacheIndex.get(`${business.businessId}:${item.userId}`);
-      const hasRelationship = Boolean(cached) || hinted.has(business.businessId) || hinted.has(business.catalogBusinessId);
+      const hasRecentOrders = Boolean(cached) && (number(cached.todayOrders) > 0 || Object.entries(cached.days || {}).some(([date, value]) => date >= shiftDay(dayKey(), -65) && number(value) > 0));
+      const hasRelationship = hasRecentOrders || hinted.has(business.businessId) || hinted.has(business.catalogBusinessId);
       const key = `${business.businessId}:${item.userId}`;
       if (!hasRelationship || seen.has(key)) continue;
       seen.add(key);
@@ -1647,11 +1648,14 @@ async function refreshFocusUsersMetricHistories(days = 30) {
     }
   }
   let refreshed = 0;
+  const failureCounts = new Map();
   await mapLimit(targets, 4, async item => {
-    if (await refreshFocusUserMetricHistory(item, range)) refreshed += 1;
+    const result = await refreshFocusUserMetricHistory(item, range);
+    if (result.ok) refreshed += 1;
+    else failureCounts.set(result.message, number(failureCounts.get(result.message)) + 1);
   });
   console.log(`[${nowText()}] 已刷新重点用户近 ${safeDays} 天佣金与成交金额：${refreshed}/${targets.length} 条业务关系。`);
-  return { ok: true, refreshed, total: targets.length, days: safeDays };
+  return { ok: true, refreshed, total: targets.length, days: safeDays, failures: Object.fromEntries(failureCounts) };
 }
 
 async function warmBusinessUserHistories(businesses, { refresh = false } = {}) {
