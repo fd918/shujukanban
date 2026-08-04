@@ -51,6 +51,7 @@ let lastSnapshotSlotKey = "";
 let lastSnapshotPruneDay = "";
 let lastGood = { businesses: [], users: [], summary: null, hourlyTrend: [] };
 const userDetailCache = new Map();
+const userHistoryRequests = new Map();
 let userDetailCacheSavedAtText = "";
 const userPhoneCache = new Map();
 const userProfileCache = new Map();
@@ -1048,7 +1049,29 @@ async function fetchBusinessHourlyTrend({ platformBusinessId = "", currentDate =
   };
 }
 
-async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
+async function fetchBusinessUserHistory(options = {}, statuses = []) {
+  const requestKey = JSON.stringify({
+    businessId: String(options.businessId || ""),
+    startDate: options.startDate,
+    endDate: options.endDate,
+    pageSize: number(options.pageSize) || 5000,
+    refresh: Boolean(options.refresh),
+    enrichPhones: options.enrichPhones !== false
+  });
+  if (userHistoryRequests.has(requestKey)) {
+    statuses.push({ name: "业务用户历史合并请求", ok: true, message: "复用正在进行的相同业务历史请求", durationMs: 0 });
+    return userHistoryRequests.get(requestKey);
+  }
+  const request = fetchBusinessUserHistoryRequest(options, statuses);
+  userHistoryRequests.set(requestKey, request);
+  try {
+    return await request;
+  } finally {
+    if (userHistoryRequests.get(requestKey) === request) userHistoryRequests.delete(requestKey);
+  }
+}
+
+async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
   const exactCache = userDetailCache.get(cacheKey);
   const covering = exactCache ? { key: { startDate, endDate }, payload: exactCache } : [...userDetailCache.entries()]
