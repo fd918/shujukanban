@@ -1229,6 +1229,23 @@ function mergeFocusOrderHistoryRows(businessId, baseRows = []) {
   return { rows: [...rowsById.values()], latestDataTime };
 }
 
+function latestFocusCurrentRows(businessId, date = dayKey()) {
+  const rowsById = new Map();
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    let key;
+    try { key = JSON.parse(cacheKey); } catch { continue; }
+    if (key.type !== "focus-current" || String(key.businessId) !== String(businessId) || key.date !== date) continue;
+    for (const row of payload.rows || []) {
+      const id = String(row.id || "");
+      if (!id) continue;
+      const current = rowsById.get(id);
+      const incomingAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      if (!current || incomingAt >= current.savedAt) rowsById.set(id, { row: { ...row, currentDataTime: payload.savedAtText || "", realtimeToday: true }, savedAt: incomingAt });
+    }
+  }
+  return [...rowsById.values()].map(item => item.row);
+}
+
 async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
   const isT1Business = T1_USER_BUSINESS_IDS.has(String(businessId));
   const history = await fetchBusinessUserHistory({
@@ -1282,6 +1299,11 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   const fastById = new Map(fastRows.map(row => [String(row.id || ""), row]));
   const currentById = new Map(fullById);
   fastById.forEach((row, id) => currentById.set(id, row));
+  latestFocusCurrentRows(businessId, endDate).forEach(row => {
+    const id = String(row.id || "");
+    const existing = currentById.get(id);
+    if (!existing || timeValue(row.currentDataTime) >= timeValue(existing.currentDataTime)) currentById.set(id, row);
+  });
   const todayRows = historyRows.map(row => {
     const current = currentById.get(String(row.id || ""));
     return {
@@ -1616,6 +1638,10 @@ async function refreshFocusUserOrderHistory(item, range) {
   const savedAtText = nowText();
   const cacheKey = JSON.stringify({ type: "focus-order-history", businessId: String(item.businessId), userId: String(item.userId), startDate: range.startDate, endDate: range.endDate });
   userDetailCache.set(cacheKey, { ok: true, savedAtText, total: 1, dates, rows: [row] });
+  if (range.endDate === dayKey()) {
+    const currentKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: range.endDate });
+    userDetailCache.set(currentKey, { ok: true, savedAtText, total: 1, rows: [{ ...row, days: { [range.endDate]: row.todayOrders }, realtimeToday: true }] });
+  }
   scheduleUserDetailCacheSave();
   return { ok: true, savedAtText };
 }
