@@ -434,10 +434,12 @@ function sessionExpired(payload = {}) {
   return /登录超时|登陆超时|重新登录|其他地方登录|其它地方登录/.test(String(payload.message || ""));
 }
 
-function clearMiddlePlatformSession() {
+function clearMiddlePlatformSession(expectedToken = "") {
+  if (expectedToken && token && token !== expectedToken) return false;
   token = "";
   middlePlatformCookie = "";
   tokenExpiresAt = 0;
+  return true;
 }
 
 async function ensurePerformanceSession() {
@@ -481,7 +483,7 @@ async function apiCall(name, method, path, data, timeoutMs = 12000) {
       const response = await fetchWithTimeout(url, options, timeoutMs);
       const payload = await response.json();
       if (attempt === 0 && sessionExpired(payload)) {
-        clearMiddlePlatformSession();
+        clearMiddlePlatformSession(auth);
         continue;
       }
       const ok = response.ok && payload.code === 200;
@@ -518,7 +520,7 @@ async function performanceOrderCall(name, data, timeoutMs = 60000) {
       }, timeoutMs);
       const payload = await response.json();
       if (attempt === 0 && sessionExpired(payload)) {
-        clearMiddlePlatformSession();
+        clearMiddlePlatformSession(session.token);
         continue;
       }
       const ok = response.ok && payload.code === 200;
