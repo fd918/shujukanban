@@ -897,6 +897,16 @@ async function mapLimit(items, limit, task) {
   return results;
 }
 
+async function retryApiCall(name, path, params, timeoutMs, attempts = 3) {
+  let result = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    result = await apiCall(attempt === 1 ? name : `${name}（重试${attempt - 1}）`, "GET", path, params, timeoutMs);
+    if (result.ok) return result;
+    if (attempt < attempts) await new Promise(resolveWait => setTimeout(resolveWait, attempt * 200));
+  }
+  return result;
+}
+
 async function fetchBusinessPages(statuses) {
   const first = await apiCall("业务列表", "GET", "/api/v2/dashboard/business/list", { page: 1, pre_page: 100, order_type: "" }, 15000);
   statuses.push(first);
@@ -1129,7 +1139,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
   let pageLoadFailed = false;
   if (totalPages > 1) {
     const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
-    const rest = await mapLimit(restPages, 8, currentPage => apiCall(`业务用户历史第${currentPage}页`, "GET", "/api/v2/dashboard/business/user-order-statistics", {
+    const rest = await mapLimit(restPages, 1, currentPage => retryApiCall(`业务用户历史第${currentPage}页`, "/api/v2/dashboard/business/user-order-statistics", {
       ...params,
       page: currentPage
     }, 30000));
@@ -1319,6 +1329,24 @@ function mergeFocusOrderHistoryRows(businessId, baseRows = []) {
   return { rows: [...rowsById.values()], latestDataTime };
 }
 
+function latestKnownPositiveOrder(businessId, userId, date = dayKey()) {
+  let latest = null;
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    let key;
+    try { key = JSON.parse(cacheKey); } catch { continue; }
+    if (String(key.businessId || "") !== String(businessId)) continue;
+    const row = (payload.rows || []).find(item => String(item.id || item.userId || "") === String(userId));
+    if (!row) continue;
+    const hasDateValue = Object.prototype.hasOwnProperty.call(row.days || {}, date);
+    const isCurrentRange = key.startDate === date && key.endDate === date;
+    const value = hasDateValue ? number(row.days[date]) : (isCurrentRange ? number(row.todayOrders) : 0);
+    if (value <= 0) continue;
+    const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+    if (!latest || savedAt >= latest.savedAt) latest = { value, savedAt };
+  }
+  return latest?.value || 0;
+}
+
 function latestFocusCurrentRows(businessId, date = dayKey()) {
   const rowsById = new Map();
   for (const [cacheKey, payload] of userDetailCache.entries()) {
@@ -1328,9 +1356,14 @@ function latestFocusCurrentRows(businessId, date = dayKey()) {
     for (const row of payload.rows || []) {
       const id = String(row.id || "");
       if (!id) continue;
+      const storedOrders = number(row.todayOrders ?? row.days?.[date]);
+      const preservedOrders = storedOrders > 0 ? storedOrders : latestKnownPositiveOrder(businessId, id, date);
+      const safeRow = preservedOrders > storedOrders
+        ? { ...row, todayOrders: preservedOrders, days: { ...(row.days || {}), [date]: preservedOrders }, orderPreserved: true }
+        : row;
       const current = rowsById.get(id);
       const incomingAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
-      if (!current || incomingAt >= current.savedAt) rowsById.set(id, { row: { ...row, currentDataTime: payload.savedAtText || "", realtimeToday: true }, savedAt: incomingAt });
+      if (!current || incomingAt >= current.savedAt) rowsById.set(id, { row: { ...safeRow, currentDataTime: payload.savedAtText || "", realtimeToday: true }, savedAt: incomingAt });
     }
   }
   return [...rowsById.values()].map(item => item.row);
@@ -1369,7 +1402,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     };
   }
   const snapshots = await readSnapshots();
-  const refreshedFull = refresh && endDate === dayKey() ? await fetchBusinessUsers({
+  const refreshedCandidate = refresh && endDate === dayKey() ? await fetchBusinessUsers({
     businessId,
     startDate: endDate,
     endDate,
@@ -1380,6 +1413,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     refresh: true,
     includePrevious: false
   }, statuses) : null;
+  const refreshedFull = refreshedCandidate?.ok ? refreshedCandidate : null;
   const full = refreshedFull || (endDate === dayKey() ? latestFullBusinessUsers(businessId, endDate) : null);
   const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
   const fullRows = deduplicateBusinessUsers(full?.rows || []).map(row => ({ ...row, currentDataTime: full?.savedAtText || "" }));
@@ -1479,8 +1513,15 @@ function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
 
 async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 1, pageSize = 100, sortField = "", sortOrder = "", refresh = false, includePrevious = true }, statuses = []) {
   const cacheKey = JSON.stringify({ businessId, startDate, endDate, page, pageSize, sortField, sortOrder, includePrevious, filterField: "order_valid" });
-  if (!refresh && userDetailCache.has(cacheKey)) {
-    const cached = userDetailCache.get(cacheKey);
+  const exactCache = userDetailCache.get(cacheKey);
+  const cachedFallback = () => {
+    const cached = exactCache || (includePrevious === false && startDate === endDate && pageSize >= 5000
+      ? latestFullBusinessUsers(businessId, endDate)
+      : null);
+    return cached?.rows?.length ? { ...cached, rows: cached.rows.map(attachPlainPhone), cached: true, cacheFallback: true } : null;
+  };
+  if (!refresh && exactCache) {
+    const cached = exactCache;
     statuses.push({ name: "业务用户缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
     return { ...cached, rows: cached.rows.map(attachPlainPhone), cached: true };
   }
@@ -1491,6 +1532,14 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   }
   const result = await apiCall("业务用户下钻", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 25000);
   statuses.push(result);
+  if (!result.ok) {
+    const fallback = cachedFallback();
+    if (fallback) {
+      statuses.push({ name: "业务用户刷新保护", ok: true, message: "中台首屏请求失败，已保留并返回上一次完整用户缓存", durationMs: 0 });
+      return fallback;
+    }
+    return { ok: false, savedAtText: nowText(), total: 0, page, pageSize, columns: [], rows: [] };
+  }
   const firstRows = asList(result.data);
   const total = number(result.data?.total);
   const perPage = Math.max(1, number(result.data?.per_page) || firstRows.length || 10);
@@ -1499,12 +1548,20 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   let allRows = firstRows;
   if (result.ok && needPages > 1) {
     const restPages = Array.from({ length: needPages - 1 }, (_, index) => index + 2);
-    const rest = await mapLimit(restPages, 8, currentPage => apiCall(`业务用户下钻第${currentPage}页`, "GET", "/api/v2/dashboard/business/user-order-statistics", {
+    const rest = await mapLimit(restPages, 1, currentPage => retryApiCall(`业务用户下钻第${currentPage}页`, "/api/v2/dashboard/business/user-order-statistics", {
       ...params,
       page: currentPage
     }, 25000));
     const failed = rest.filter(item => !item.ok).length;
     statuses.push({ name: "业务用户下钻翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${needPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
+    if (failed) {
+      const fallback = cachedFallback();
+      if (fallback) {
+        statuses.push({ name: "业务用户刷新保护", ok: true, message: "中台分页不完整，已保留并返回上一次完整用户缓存", durationMs: 0 });
+        return fallback;
+      }
+      return { ok: false, savedAtText: nowText(), total: 0, page, pageSize, columns: [], rows: [] };
+    }
     allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
   }
   let previousById = {};
@@ -1546,6 +1603,13 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     });
   }
   const rows = allRows.slice(0, pageSize).map(row => normalizeUser(row, startDate === endDate ? endDate : "period_total"));
+  if (!rows.length) {
+    const fallback = cachedFallback();
+    if (fallback?.rows?.some(row => number(row.todayOrders) > 0)) {
+      statuses.push({ name: "业务用户刷新保护", ok: true, message: "中台返回空用户列表，已保留并返回上一次完整用户缓存", durationMs: 0 });
+      return fallback;
+    }
+  }
   rows.forEach(row => {
     row.yesterdayOrders = previousById[row.id] || 0;
   });
@@ -1751,7 +1815,8 @@ async function refreshFocusUserToday(item) {
     pre_page: 10,
     start_date: today,
     end_date: today,
-    keyword: item.userId
+    keyword: item.userId,
+    filter_field: "order_valid"
   };
   const [ordersResult, orderMetrics] = await Promise.all([
     apiCall("重点用户今日订单", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 20000),
@@ -1759,6 +1824,11 @@ async function refreshFocusUserToday(item) {
   ]);
   if (!ordersResult.ok && !orderMetrics.ok) return false;
   const orderMatched = asList(ordersResult.data).find(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
+  const rawOrders = orderMatched?.[today] ?? orderMatched?.period_total ?? orderMatched?.today_order_num ?? orderMatched?.order_valid ?? orderMatched?.total;
+  const cachedOrders = latestKnownPositiveOrder(item.businessId, item.userId, today);
+  const resolvedOrders = rawOrders === undefined || rawOrders === null || rawOrders === ""
+    ? cachedOrders
+    : Math.max(number(rawOrders), cachedOrders);
   const row = orderMatched ? normalizeUser(orderMatched, today) : {
     id: String(item.userId),
     name: item.name || `用户 ${item.userId}`,
@@ -1766,8 +1836,9 @@ async function refreshFocusUserToday(item) {
     version: item.version || "-",
     todayOrders: 0
   };
-  row.todayOrders = number(orderMatched?.[today] ?? orderMatched?.period_total ?? orderMatched?.total);
+  row.todayOrders = resolvedOrders;
   row.days = { [today]: row.todayOrders };
+  row.orderPreserved = !orderMatched && cachedOrders > 0;
   if (orderMetrics.ok) {
     row.todayCommission = number(orderMetrics.commissionDays[today]);
     row.todayAmount = number(orderMetrics.gmvDays[today]);
@@ -1876,7 +1947,7 @@ async function refreshFocusUsersMetricHistories(days = 30, includeMetrics = true
     if (orderResult.ok) orderRefreshed += 1;
     else {
       failureCounts.set(orderResult.message, number(failureCounts.get(orderResult.message)) + 1);
-      if (/登录超时|登陆超时|重新登录|其他地方登录|其它地方登录|登录状态失效|中台登录失败|接口超时|接口未返回已知有单重点用户/.test(String(orderResult.message || ""))) abortedMessage = orderResult.message;
+      if (/登录超时|登陆超时|重新登录|其他地方登录|其它地方登录|登录状态失效|中台登录失败|接口超时/.test(String(orderResult.message || ""))) abortedMessage = orderResult.message;
     }
   });
   if (includeMetrics && !abortedMessage) {
@@ -2907,10 +2978,15 @@ function focusUserCacheIndex(userIds = []) {
   currentByRelation.forEach(({ row, savedAtText }, relationKey) => {
     const current = index.get(relationKey) || {};
     const today = dayKey();
+    const [businessId, userId] = relationKey.split(":");
+    const storedOrders = number(row.todayOrders ?? row.days?.[today]);
+    const resolvedOrders = storedOrders > 0 ? storedOrders : latestKnownPositiveOrder(businessId, userId, today);
     index.set(relationKey, attachPlainPhone({
       ...current,
       ...row,
-      days: { ...(current.days || {}), [today]: number(row.todayOrders ?? row.days?.[today]) },
+      todayOrders: resolvedOrders,
+      days: { ...(current.days || {}), [today]: resolvedOrders },
+      orderPreserved: resolvedOrders > storedOrders,
       cacheSavedAtText: savedAtText || current.cacheSavedAtText || ""
     }));
   });
@@ -3004,7 +3080,17 @@ function cachedFocusCurrentUser(businessId, userId) {
   const key = JSON.stringify({ type: "focus-current", businessId: String(businessId), userId: String(userId), date: dayKey() });
   const payload = userDetailCache.get(key);
   const row = payload?.rows?.[0];
-  return row ? { ...attachPlainPhone(row), savedAtText: payload.savedAtText || "-" } : null;
+  if (!row) return null;
+  const today = dayKey();
+  const storedOrders = number(row.todayOrders ?? row.days?.[today]);
+  const resolvedOrders = storedOrders > 0 ? storedOrders : latestKnownPositiveOrder(businessId, userId, today);
+  return {
+    ...attachPlainPhone(row),
+    todayOrders: resolvedOrders,
+    days: { ...(row.days || {}), [today]: resolvedOrders },
+    orderPreserved: resolvedOrders > storedOrders,
+    savedAtText: payload.savedAtText || "-"
+  };
 }
 
 function focusRange(query = {}) {
