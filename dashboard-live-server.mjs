@@ -734,7 +734,8 @@ function userDetailCacheRetentionRank(cacheKey, payload = {}) {
   const rangeDays = Array.isArray(payload.dates) ? payload.dates.length : 0;
   const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
   const rows = Array.isArray(payload.rows) ? payload.rows.length : 0;
-  return [endDate, rangeDays, savedAt, rows];
+  const usable = rows > 0 ? 1 : 0;
+  return [endDate, rangeDays, usable, savedAt, rows];
 }
 
 function retainedUserDetailCacheEntries(sourceEntries) {
@@ -901,6 +902,26 @@ async function retryApiCall(name, path, params, timeoutMs, attempts = 3) {
   let result = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     result = await apiCall(attempt === 1 ? name : `${name}（重试${attempt - 1}）`, "GET", path, params, timeoutMs);
+    if (result.ok) return result;
+    if (attempt < attempts) await new Promise(resolveWait => setTimeout(resolveWait, attempt * 200));
+  }
+  return result;
+}
+
+async function businessUserStatisticsCall(name, params, timeoutMs) {
+  const path = "/api/v2/dashboard/business/user-order-statistics";
+  const result = await apiCall(name, "GET", path, params, timeoutMs);
+  if (result.ok || result.code !== 100100 || !Object.prototype.hasOwnProperty.call(params || {}, "filter_field")) return result;
+  const officialParams = { ...(params || {}) };
+  delete officialParams.filter_field;
+  const fallback = await apiCall(`${name}（官方参数兼容）`, "GET", path, officialParams, timeoutMs);
+  return fallback.ok ? { ...fallback, filterFieldFallback: true } : fallback;
+}
+
+async function retryBusinessUserStatisticsCall(name, params, timeoutMs, attempts = 3) {
+  let result = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    result = await businessUserStatisticsCall(attempt === 1 ? name : `${name}（重试${attempt - 1}）`, params, timeoutMs);
     if (result.ok) return result;
     if (attempt < attempts) await new Promise(resolveWait => setTimeout(resolveWait, attempt * 200));
   }
@@ -1121,7 +1142,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
   }
   const dates = dayList(startDate, endDate);
   const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate, filter_field: "order_valid" };
-  const result = await apiCall("业务用户历史", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);
+  const result = await businessUserStatisticsCall("业务用户历史", params, 30000);
   statuses.push(result);
   if (!result.ok) {
     const fallback = cachedSlice();
@@ -1139,7 +1160,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
   let pageLoadFailed = false;
   if (totalPages > 1) {
     const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
-    const rest = await mapLimit(restPages, 1, currentPage => retryApiCall(`业务用户历史第${currentPage}页`, "/api/v2/dashboard/business/user-order-statistics", {
+    const rest = await mapLimit(restPages, 1, currentPage => retryBusinessUserStatisticsCall(`业务用户历史第${currentPage}页`, {
       ...params,
       page: currentPage
     }, 30000));
@@ -1154,7 +1175,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
       statuses.push({ name: "业务用户历史保护", ok: true, message: "中台分页不完整，已保留并返回旧缓存", durationMs: 0 });
       return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
     }
-    return { ok: false, savedAtText: nowText(), total: 0, dates, rows: [] };
+    statuses.push({ name: "业务用户历史部分结果", ok: true, message: "没有完整旧缓存，先返回已成功加载的用户页，后续刷新继续补齐", durationMs: 0 });
   }
   const rows = allRows.map(row => {
     const normalized = normalizeUser(row, startDate === endDate ? endDate : "period_total");
@@ -1173,7 +1194,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
     statuses.push({ name: "业务用户历史保护", ok: true, message: "中台返回空历史，已保留并返回旧缓存", durationMs: 0 });
     return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
   }
-  const payload = { ok: result.ok, savedAtText: nowText(), total, dates, rows };
+  const payload = { ok: true, upstreamOk: !pageLoadFailed, partial: pageLoadFailed, filterFieldFallback: Boolean(result.filterFieldFallback), savedAtText: nowText(), total, dates, rows };
   userDetailCache.set(cacheKey, payload);
   scheduleUserDetailCacheSave();
   return payload;
@@ -1530,7 +1551,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     params.sort_field = sortField;
     params.sort_order = sortOrder;
   }
-  const result = await apiCall("业务用户下钻", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 25000);
+  const result = await businessUserStatisticsCall("业务用户下钻", params, 25000);
   statuses.push(result);
   if (!result.ok) {
     const fallback = cachedFallback();
@@ -1546,13 +1567,15 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   const totalPages = Math.max(1, number(result.data?.total_pages) || Math.ceil(total / perPage));
   const needPages = Math.min(totalPages, Math.ceil(Math.max(pageSize, firstRows.length) / perPage));
   let allRows = firstRows;
+  let pageLoadFailed = false;
   if (result.ok && needPages > 1) {
     const restPages = Array.from({ length: needPages - 1 }, (_, index) => index + 2);
-    const rest = await mapLimit(restPages, 1, currentPage => retryApiCall(`业务用户下钻第${currentPage}页`, "/api/v2/dashboard/business/user-order-statistics", {
+    const rest = await mapLimit(restPages, 1, currentPage => retryBusinessUserStatisticsCall(`业务用户下钻第${currentPage}页`, {
       ...params,
       page: currentPage
     }, 25000));
     const failed = rest.filter(item => !item.ok).length;
+    pageLoadFailed = failed > 0;
     statuses.push({ name: "业务用户下钻翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${needPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
     if (failed) {
       const fallback = cachedFallback();
@@ -1560,7 +1583,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
         statuses.push({ name: "业务用户刷新保护", ok: true, message: "中台分页不完整，已保留并返回上一次完整用户缓存", durationMs: 0 });
         return fallback;
       }
-      return { ok: false, savedAtText: nowText(), total: 0, page, pageSize, columns: [], rows: [] };
+      statuses.push({ name: "业务用户下钻部分结果", ok: true, message: "没有完整旧缓存，先展示已成功加载的用户页，后续刷新继续补齐", durationMs: 0 });
     }
     allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
   }
@@ -1570,7 +1593,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     const previousEnd = shiftDay(startDate, -1);
     const previousStart = shiftDay(previousEnd, -(periodDays - 1));
     const previousKey = previousStart === previousEnd ? previousEnd : "period_total";
-    const previous = await apiCall("业务用户前一周期基准", "GET", "/api/v2/dashboard/business/user-order-statistics", {
+    const previous = await businessUserStatisticsCall("业务用户前一周期基准", {
       order_type: businessId,
       page: 1,
       pre_page: pageSize,
@@ -1586,7 +1609,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     const previousNeedPages = Math.min(previousTotalPages, Math.ceil(Math.max(pageSize, previousRows.length) / previousPerPage));
     if (previous.ok && previousNeedPages > 1) {
       const previousRestPages = Array.from({ length: previousNeedPages - 1 }, (_, index) => index + 2);
-      const previousRest = await mapLimit(previousRestPages, 8, currentPage => apiCall(`业务用户前一周期基准第${currentPage}页`, "GET", "/api/v2/dashboard/business/user-order-statistics", {
+      const previousRest = await mapLimit(previousRestPages, 4, currentPage => businessUserStatisticsCall(`业务用户前一周期基准第${currentPage}页`, {
         order_type: businessId,
         page: currentPage,
         pre_page: pageSize,
@@ -1609,6 +1632,8 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
       statuses.push({ name: "业务用户刷新保护", ok: true, message: "中台返回空用户列表，已保留并返回上一次完整用户缓存", durationMs: 0 });
       return fallback;
     }
+    statuses.push({ name: "业务用户空结果保护", ok: false, message: "中台返回空用户列表，本次不写入缓存", durationMs: 0 });
+    return { ok: false, savedAtText: nowText(), total: 0, page, pageSize, columns: result.data?.columns || [], rows: [] };
   }
   rows.forEach(row => {
     row.yesterdayOrders = previousById[row.id] || 0;
@@ -1618,7 +1643,10 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     row.phone = plainPhoneValue(row.id, plainPhone, row.phone);
   });
   const payload = {
-    ok: result.ok,
+    ok: true,
+    upstreamOk: !pageLoadFailed,
+    partial: pageLoadFailed,
+    filterFieldFallback: Boolean(result.filterFieldFallback),
     savedAtText: nowText(),
     total,
     page: number(result.data?.page || page),
@@ -1686,18 +1714,23 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
       page: 1,
-      pageSize: 100,
+      pageSize: 5000,
       sortField: dateRange.endDate,
       sortOrder: "desc",
       refresh: true,
       includePrevious: false
     }, statuses);
+    if (!result.ok || !(result.rows || []).length) {
+      console.error(`[${nowText()}] 高频业务完整用户刷新失败：${row.name}；已保留旧缓存`);
+      return;
+    }
+    const topRows = (result.rows || []).slice(0, 100);
     const previousIds = new Set(userRefreshState.top100[businessId]?.ids || []);
-    const entered = (result.rows || []).filter(user => !previousIds.has(String(user.id))).map(user => String(user.id));
+    const entered = topRows.filter(user => !previousIds.has(String(user.id))).map(user => String(user.id));
     const enteredToday = { ...(userRefreshState.top100[businessId]?.entered || {}) };
     entered.forEach(id => { enteredToday[id] = nowText(); });
     userRefreshState.top100[businessId] = {
-      ids: (result.rows || []).map(user => String(user.id)),
+      ids: topRows.map(user => String(user.id)),
       entered: enteredToday,
       updatedAt: new Date().toISOString(),
       updatedAtText: nowText()
@@ -1706,7 +1739,7 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
     newTop100 += previousIds.size ? entered.length : 0;
   });
   await saveUserRefreshState();
-  console.log(`[${nowText()}] 已刷新高频业务用户前100：${rows.length} 个业务，${users} 个用户，新进 ${newTop100} 人。`);
+  console.log(`[${nowText()}] 已刷新高频业务完整用户：${rows.length} 个业务，${users} 个用户；前100新进 ${newTop100} 人。`);
   return { businesses: rows.length, users, newTop100 };
 }
 
@@ -1771,7 +1804,7 @@ async function refreshFocusUserOrderHistory(item, range) {
     keyword: item.userId,
     filter_field: "order_valid"
   };
-  const result = await apiCall("重点用户近30天订单", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);
+  const result = await businessUserStatisticsCall("重点用户近30天订单", params, 30000);
   if (!result.ok) return { ok: false, message: result.message || "用户订单历史加载失败" };
   const matched = asList(result.data).filter(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
   if (!matched.length) {
@@ -1819,7 +1852,7 @@ async function refreshFocusUserToday(item) {
     filter_field: "order_valid"
   };
   const [ordersResult, orderMetrics] = await Promise.all([
-    apiCall("重点用户今日订单", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 20000),
+    businessUserStatisticsCall("重点用户今日订单", params, 20000),
     fetchFocusUserOrderMetrics(item, today, today)
   ]);
   if (!ordersResult.ok && !orderMetrics.ok) return false;
@@ -2110,6 +2143,17 @@ function comparisonMinuteFromText(value) {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
+function snapshotCacheMatches(savedAtText, targetDate, targetMinute, actualMinute = targetMinute) {
+  const match = String(savedAtText || "").match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  if (!match) return false;
+  const savedDate = `${match[1]}-${String(match[2]).padStart(2, "0")}-${String(match[3]).padStart(2, "0")}`;
+  if (savedDate !== targetDate) return false;
+  const savedMinute = Number(match[4]) * 60 + Number(match[5]);
+  const startMinute = Number(targetMinute);
+  const endMinute = Math.max(startMinute, Number(actualMinute));
+  return savedMinute >= startMinute && savedMinute <= endMinute;
+}
+
 function exactSnapshot(snapshots, targetDay, targetMinute) {
   if (!Number.isFinite(Number(targetMinute))) return null;
   const candidates = snapshots.filter(item => item.day === targetDay && number(item.minuteOfDay) === number(targetMinute));
@@ -2282,7 +2326,7 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
   });
 }
 
-function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
+function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), actualMinute = targetMinute) {
   const targetDate = dateRange.endDate;
   const candidates = new Map();
   const focusCurrent = new Map();
@@ -2291,15 +2335,15 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
       const key = JSON.parse(cacheKey);
       const businessId = String(key.businessId);
       if (!businessId || !Array.isArray(payload.rows)) continue;
-      const payloadMinute = comparisonMinuteFromText(payload.savedAtText);
       if (key.type === "focus-current") {
-        if (key.date === targetDate && payloadMinute === Number(targetMinute)) {
+        if (key.date === targetDate && snapshotCacheMatches(payload.savedAtText, targetDate, targetMinute, actualMinute)) {
           const rows = focusCurrent.get(businessId) || [];
           rows.push(...payload.rows);
           focusCurrent.set(businessId, rows);
         }
         continue;
       }
+      if (key.type && key.type !== "history") continue;
       const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
       const group = candidates.get(businessId) || { history: null, exact: null };
       if (key.type === "history" && key.startDate <= targetDate && key.endDate >= targetDate) {
@@ -2322,8 +2366,8 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
     const full = latestFullBusinessUsers(businessId, targetDate);
     if (full) {
       const fast = latestFastBusinessUsers(businessId, targetDate);
-      const fullMatchesSlot = comparisonMinuteFromText(full.savedAtText) === Number(targetMinute);
-      const fastMatchesSlot = comparisonMinuteFromText(fast?.savedAtText) === Number(targetMinute);
+      const fullMatchesSlot = snapshotCacheMatches(full.savedAtText, targetDate, targetMinute, actualMinute);
+      const fastMatchesSlot = snapshotCacheMatches(fast?.savedAtText, targetDate, targetMinute, actualMinute);
       const currentById = new Map((fullMatchesSlot ? deduplicateBusinessUsers(full.rows || []) : []).map(row => [String(row.id || ""), row]));
       if (fastMatchesSlot) {
         for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), row);
@@ -2338,7 +2382,7 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
       }]));
       continue;
     }
-    const historyRows = (comparisonMinuteFromText(group.history?.payload.savedAtText) === Number(targetMinute) ? group.history?.payload.rows || [] : []).map(row => ({
+    const historyRows = (snapshotCacheMatches(group.history?.payload.savedAtText, targetDate, targetMinute, actualMinute) ? group.history?.payload.rows || [] : []).map(row => ({
       ...row,
       todayOrders: number(row.days?.[targetDate]),
       todayCommission: 0
@@ -2349,7 +2393,7 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay()) {
       if (!userId) continue;
       byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission), amount: number(row.todayAmount) };
     }
-    if (comparisonMinuteFromText(group.exact?.payload.savedAtText) === Number(targetMinute)) {
+    if (snapshotCacheMatches(group.exact?.payload.savedAtText, targetDate, targetMinute, actualMinute)) {
       for (const row of deduplicateBusinessUsers(group.exact?.payload.rows || [])) {
         const userId = String(row.id || "");
         if (!userId) continue;
@@ -2501,7 +2545,7 @@ async function recordSnapshot(businesses, users, force = false, businessDaily = 
     userDataStrict: true,
     business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: row.todayCommission, amount: row.todayAmount }])),
     users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission, amount: row.todayAmount }])),
-    businessUsers: cachedBusinessUsersSnapshot(dateRange, slot.minuteOfDay)
+    businessUsers: cachedBusinessUsersSnapshot(dateRange, slot.minuteOfDay, minuteOfDay())
   };
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
@@ -3703,6 +3747,7 @@ async function encryptedPublicUserDetails(dateRange) {
         };
         continue;
       }
+      if (key.type || !(payload.rows || []).length) continue;
       if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
       const rank = [timeValue(payload.savedAtText), (payload.rows || []).length];
       const previous = detailRanks.get(id);
@@ -3744,7 +3789,35 @@ async function encryptedPublicUserDetails(dateRange) {
     }
     if (dateRange.endDate !== dayKey()) continue;
     const full = latestFullBusinessUsers(businessId, dateRange.endDate);
-    if (!full) continue;
+    const historyRows = detail.history?.rows || [];
+    if (!full) {
+      const currentRows = deduplicateBusinessUsers(detail.rows || []);
+      const currentById = new Map(currentRows.map(row => [String(row.id || ""), row]));
+      const historyLatestDataTime = detail.history?.latestDataTime || "";
+      const mergedRows = historyRows.map(row => {
+        const current = currentById.get(String(row.id || ""));
+        return {
+          ...row,
+          ...(current || {}),
+          currentDataTime: current?.currentDataTime || historyLatestDataTime,
+          days: { ...(row.days || {}), ...(current ? { [dateRange.endDate]: number(current.todayOrders) } : {}) },
+          todayOrders: current ? number(current.todayOrders) : number(row.days?.[dateRange.endDate]),
+          realtimeToday: Boolean(current)
+        };
+      });
+      const historyIds = new Set(historyRows.map(row => String(row.id || "")));
+      for (const row of currentRows) {
+        if (!historyIds.has(String(row.id || ""))) mergedRows.push({ ...row, days: { [dateRange.endDate]: number(row.todayOrders) }, realtimeToday: true });
+      }
+      const currentLatestDataTime = currentRows.length ? (detail.currentLatestDataTime || detail.latestDataTime || historyLatestDataTime) : historyLatestDataTime;
+      detail.rows = enrichBusinessUsersWithSnapshots(mergedRows, snapshots, businessId, dateRange, comparisonMinuteFromText(currentLatestDataTime));
+      detail.total = Math.max(number(detail.history?.total), detail.rows.length);
+      detail.latestDataTime = currentLatestDataTime || "-";
+      detail.currentLatestDataTime = detail.latestDataTime;
+      detail.fullCurrentLatestDataTime = "-";
+      detail.realtimeUserCount = currentRows.length;
+      continue;
+    }
     const fast = latestFastBusinessUsers(businessId, dateRange.endDate);
     const fullTime = timeValue(full.savedAtText);
     const fastIsNewer = timeValue(fast?.savedAtText) > fullTime;
@@ -3752,7 +3825,6 @@ async function encryptedPublicUserDetails(dateRange) {
     if (fastIsNewer) {
       for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), { ...row, currentDataTime: fast.savedAtText || "" });
     }
-    const historyRows = detail.history?.rows || [];
     const mergedRows = historyRows.map(row => {
       const current = currentById.get(String(row.id || ""));
       return {
