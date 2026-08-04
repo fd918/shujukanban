@@ -1907,10 +1907,11 @@ async function warmBusinessUserHistories(businesses, { refresh = false } = {}) {
     if (!rows.length) return;
     const range = publicHistoryRange();
     let warmed = 0;
-    await mapLimit(rows, 4, async row => {
+    let failed = 0;
+    await mapLimit(rows, 1, async row => {
       const statuses = [];
       try {
-        await fetchBusinessUserHistory({
+        const history = await fetchBusinessUserHistory({
           businessId: row.platformBusinessId || row.businessId || "",
           startDate: range.startDate,
           endDate: range.endDate,
@@ -1918,12 +1919,19 @@ async function warmBusinessUserHistories(businesses, { refresh = false } = {}) {
           enrichPhones: false,
           refresh
         }, statuses);
-        warmed += 1;
+        if (history?.ok) warmed += 1;
+        else {
+          failed += 1;
+          const status = [...statuses].reverse().find(item => !item.ok);
+          console.error(`[${nowText()}] 预热业务用户历史未取得有效数据：${row.name}${status ? `；${status.name}：${status.message}` : ""}`);
+        }
       } catch (error) {
+        failed += 1;
         console.error(`[${nowText()}] 预热业务用户历史失败：${row.name} ${error.message}`);
       }
     });
-    console.log(`[${nowText()}] 已预热公网业务用户历史：${warmed}/${rows.length}`);
+    if (warmed) await writeUserDetailCacheToDisk();
+    console.log(`[${nowText()}] 已预热公网业务用户历史：${warmed}/${rows.length}${failed ? `；失败 ${failed}` : ""}`);
   } finally {
     publicHistoryWarmupRunning = false;
   }
@@ -3048,20 +3056,12 @@ async function focusBusinessCatalog() {
 async function focusRelatedBusinessCatalog() {
   const catalog = await focusBusinessCatalog();
   const saved = await readFocusUsers();
-  const userIds = new Set((saved.items || []).map(item => String(item.userId || "")).filter(Boolean));
   const relatedIds = new Set();
   for (const item of saved.items || []) {
     for (const hint of item.businessHints || []) {
       if (hint.businessId) relatedIds.add(String(hint.businessId));
       if (hint.catalogBusinessId) relatedIds.add(String(hint.catalogBusinessId));
     }
-  }
-  for (const cacheKey of userDetailCache.keys()) {
-    try {
-      const key = JSON.parse(cacheKey);
-      if (!String(key.type || "").startsWith("focus-") || !userIds.has(String(key.userId || ""))) continue;
-      if (key.businessId) relatedIds.add(String(key.businessId));
-    } catch {}
   }
   return catalog.filter(business => relatedIds.has(String(business.businessId)) || relatedIds.has(String(business.catalogBusinessId)));
 }
