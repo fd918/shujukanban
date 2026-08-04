@@ -47,6 +47,7 @@ let snapshotTimer = null;
 let snapshotScheduleVersion = 0;
 let snapshotRecordQueue = Promise.resolve();
 let marketingCostMutationQueue = Promise.resolve();
+let businessUserStatisticsQueue = Promise.resolve();
 let lastSnapshotAt = 0;
 let lastSnapshotSlotKey = "";
 let lastSnapshotPruneDay = "";
@@ -63,6 +64,7 @@ let userPhoneIndexTotal = 0;
 let lastOperationalAlert = { key: "", at: 0 };
 let startupWarmupRunning = false;
 let publicHistoryWarmupRunning = false;
+let highFrequencyUserWarmupPromise = null;
 let detailCacheSaveTimer = null;
 let requestStatsSaveTimer = null;
 let requestStats = { day: dayKey(), total: 0, byPath: {}, byName: {}, updatedAt: "" };
@@ -734,8 +736,9 @@ function userDetailCacheRetentionRank(cacheKey, payload = {}) {
   const rangeDays = Array.isArray(payload.dates) ? payload.dates.length : 0;
   const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
   const rows = Array.isArray(payload.rows) ? payload.rows.length : 0;
+  const complete = payload.partial === true || payload.complete === false ? 0 : 1;
   const usable = rows > 0 ? 1 : 0;
-  return [endDate, rangeDays, usable, savedAt, rows];
+  return [endDate, rangeDays, complete, usable, savedAt, rows];
 }
 
 function retainedUserDetailCacheEntries(sourceEntries) {
@@ -909,19 +912,23 @@ async function retryApiCall(name, path, params, timeoutMs, attempts = 3) {
 }
 
 async function businessUserStatisticsCall(name, params, timeoutMs) {
-  const path = "/api/v2/dashboard/business/user-order-statistics";
-  const requestParams = {
-    ...(params || {}),
-    // The official dashboard currently requests this endpoint in fixed 10-row pages.
-    // Sending our desired merged size (for example 5000) as pre_page causes code 100100.
-    pre_page: Math.min(10, Math.max(1, number(params?.pre_page) || 10))
-  };
-  const result = await apiCall(name, "GET", path, requestParams, timeoutMs);
-  if (result.ok || result.code !== 100100 || !Object.prototype.hasOwnProperty.call(requestParams, "filter_field")) return result;
-  const officialParams = { ...requestParams };
-  delete officialParams.filter_field;
-  const fallback = await apiCall(`${name}（官方参数兼容）`, "GET", path, officialParams, timeoutMs);
-  return fallback.ok ? { ...fallback, filterFieldFallback: true } : fallback;
+  const run = businessUserStatisticsQueue.catch(() => {}).then(async () => {
+    const path = "/api/v2/dashboard/business/user-order-statistics";
+    const requestParams = {
+      ...(params || {}),
+      // The official dashboard currently requests this endpoint in fixed 10-row pages.
+      // Sending our desired merged size (for example 5000) as pre_page causes code 100100.
+      pre_page: Math.min(10, Math.max(1, number(params?.pre_page) || 10))
+    };
+    const result = await apiCall(name, "GET", path, requestParams, timeoutMs);
+    if (result.ok || result.code !== 100100 || !Object.prototype.hasOwnProperty.call(requestParams, "filter_field")) return result;
+    const officialParams = { ...requestParams };
+    delete officialParams.filter_field;
+    const fallback = await apiCall(`${name}（官方参数兼容）`, "GET", path, officialParams, timeoutMs);
+    return fallback.ok ? { ...fallback, filterFieldFallback: true } : fallback;
+  });
+  businessUserStatisticsQueue = run.catch(() => {});
+  return run;
 }
 
 async function retryBusinessUserStatisticsCall(name, params, timeoutMs, attempts = 3) {
@@ -1200,7 +1207,8 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
     statuses.push({ name: "业务用户历史保护", ok: true, message: "中台返回空历史，已保留并返回旧缓存", durationMs: 0 });
     return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
   }
-  const payload = { ok: true, upstreamOk: !pageLoadFailed, partial: pageLoadFailed, filterFieldFallback: Boolean(result.filterFieldFallback), savedAtText: nowText(), total, dates, rows };
+  const payload = { ok: true, complete: !pageLoadFailed, upstreamOk: !pageLoadFailed, partial: pageLoadFailed, filterFieldFallback: Boolean(result.filterFieldFallback), savedAtText: nowText(), total, dates, rows };
+  if (pageLoadFailed) return payload;
   userDetailCache.set(cacheKey, payload);
   scheduleUserDetailCacheSave();
   return payload;
@@ -1298,6 +1306,7 @@ function latestFastBusinessUsers(businessId, date = dayKey()) {
       if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
       if (key.filterField !== "order_valid") continue;
       if (number(key.pageSize) > 100) continue;
+      if (payload.partial === true || payload.complete === false) continue;
       const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
       if (!latest || savedAt > latestAt) {
         latest = payload;
@@ -1318,6 +1327,7 @@ function latestFullBusinessUsers(businessId, date = dayKey()) {
       if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
       if (key.filterField !== "order_valid") continue;
       if (number(key.pageSize) < 5000) continue;
+      if (payload.partial === true || payload.complete === false) continue;
       const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
       if (!latest || savedAt > latestAt) {
         latest = payload;
@@ -1440,7 +1450,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     refresh: true,
     includePrevious: false
   }, statuses) : null;
-  const refreshedFull = refreshedCandidate?.ok ? refreshedCandidate : null;
+  const refreshedFull = refreshedCandidate?.ok && refreshedCandidate.complete !== false && refreshedCandidate.partial !== true ? refreshedCandidate : null;
   const full = refreshedFull || (endDate === dayKey() ? latestFullBusinessUsers(businessId, endDate) : null);
   const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
   const fullRows = deduplicateBusinessUsers(full?.rows || []).map(row => ({ ...row, currentDataTime: full?.savedAtText || "" }));
@@ -1650,6 +1660,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   });
   const payload = {
     ok: true,
+    complete: !pageLoadFailed,
     upstreamOk: !pageLoadFailed,
     partial: pageLoadFailed,
     filterFieldFallback: Boolean(result.filterFieldFallback),
@@ -1660,6 +1671,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     columns: result.data?.columns || [],
     rows
   };
+  if (pageLoadFailed) return payload;
   userDetailCache.set(cacheKey, payload);
   scheduleUserDetailCacheSave();
   return payload;
@@ -1706,7 +1718,7 @@ async function saveUserRefreshState() {
   await writeFile(USER_REFRESH_STATE_PATH, JSON.stringify(userRefreshState, null, 2));
 }
 
-async function warmTopBusinessUsers(businesses, dateRange, config) {
+async function warmTopBusinessUsersRun(businesses, dateRange, config) {
   const enabled = new Set((config.fastUserBusinessIds || []).map(String));
   const rows = (businesses || []).filter(row => enabled.has(String(row.platformBusinessId || row.businessId || "")));
   if (!rows.length) return { businesses: 0, users: 0, newTop100: 0 };
@@ -1726,7 +1738,7 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
       refresh: true,
       includePrevious: false
     }, statuses);
-    if (!result.ok || !(result.rows || []).length) {
+    if (!result.ok || result.complete === false || result.partial === true || !(result.rows || []).length) {
       console.error(`[${nowText()}] 高频业务完整用户刷新失败：${row.name}；已保留旧缓存`);
       return;
     }
@@ -1747,6 +1759,16 @@ async function warmTopBusinessUsers(businesses, dateRange, config) {
   await saveUserRefreshState();
   console.log(`[${nowText()}] 已刷新高频业务完整用户：${rows.length} 个业务，${users} 个用户；前100新进 ${newTop100} 人。`);
   return { businesses: rows.length, users, newTop100 };
+}
+
+async function warmTopBusinessUsers(businesses, dateRange, config) {
+  if (highFrequencyUserWarmupPromise) return highFrequencyUserWarmupPromise;
+  highFrequencyUserWarmupPromise = warmTopBusinessUsersRun(businesses, dateRange, config);
+  try {
+    return await highFrequencyUserWarmupPromise;
+  } finally {
+    highFrequencyUserWarmupPromise = null;
+  }
 }
 
 async function fetchFocusUserOrderMetrics(item, startDate, endDate) {
@@ -2053,19 +2075,13 @@ async function warmStartupData() {
   if (startupWarmupRunning) return;
   startupWarmupRunning = true;
   try {
-    console.log(`[${nowText()}] 开始启动预热：用户索引、今日业务和本地用户缓存`);
+    console.log(`[${nowText()}] 开始启动缓存恢复：只读取磁盘，不请求中台`);
     const loadedDetailCache = await loadUserDetailCacheFromDisk();
     if (loadedDetailCache) console.log(`[${nowText()}] 已加载本地用户明细缓存：${userDetailCache.size} 条`);
     await loadUserRefreshState();
     await loadRequestStats();
-    await ensureUserPhoneIndex();
-    const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
-    const data = await liveDashboard({ recordSnapshot: false, query: { preset: "today", start_date: dateRange.startDate, end_date: dateRange.endDate, force: "1" } });
-    const config = await readConfig();
-    await warmTopBusinessUsers(data.businesses, dateRange, config);
-    await refreshFocusUsersToday();
-    await warmBusinessUserHistories(await focusRelatedBusinessCatalog());
-    console.log(`[${nowText()}] 启动预热完成`);
+    await loadUserPhoneIndexFromDisk();
+    console.log(`[${nowText()}] 启动缓存恢复完成；中台刷新等待下一个自然时间槽`);
   } catch (error) {
     console.error(`[${nowText()}] 启动预热失败：${error.message}`);
     readConfig()
@@ -2341,6 +2357,7 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), ac
       const key = JSON.parse(cacheKey);
       const businessId = String(key.businessId);
       if (!businessId || !Array.isArray(payload.rows)) continue;
+      if (payload.partial === true || payload.complete === false) continue;
       if (key.type === "focus-current") {
         if (key.date === targetDate && snapshotCacheMatches(payload.savedAtText, targetDate, targetMinute, actualMinute)) {
           const rows = focusCurrent.get(businessId) || [];
@@ -3755,7 +3772,7 @@ async function encryptedPublicUserDetails(dateRange) {
         };
         continue;
       }
-      if (key.type || !(payload.rows || []).length) continue;
+      if (key.type || payload.partial === true || payload.complete === false || !(payload.rows || []).length) continue;
       if (key.startDate !== dateRange.startDate || key.endDate !== dateRange.endDate) continue;
       const rank = [timeValue(payload.savedAtText), (payload.rows || []).length];
       const previous = detailRanks.get(id);
