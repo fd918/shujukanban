@@ -473,6 +473,9 @@
     .cost-multi-head { display:flex; align-items:center; gap:6px; padding:7px 9px; border-bottom:1px solid var(--line); background:#f8fafc; }
     .cost-multi-head strong { margin-right:auto; color:#475569; font-size:12px; }
     .cost-multi-head button { min-height:30px; padding:3px 8px; border:1px solid var(--line); border-radius:5px; background:#fff; color:#475569; cursor:pointer; }
+    .cost-multi-search { position:relative; padding:7px 9px; border-bottom:1px solid var(--line); background:#fff; }
+    .cost-multi-search .field { width:100%; min-height:34px; padding-right:32px; }
+    .cost-multi-search .search-clear { right:14px; }
     .cost-check-list { height:170px; overflow:auto; padding:5px; }
     .cost-check-option { display:grid !important; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:8px !important; min-height:42px; padding:6px 8px; border-radius:5px; color:var(--text) !important; cursor:pointer; touch-action:manipulation; }
     .cost-check-option:hover { background:#f8fafc; }
@@ -482,6 +485,14 @@
     .cost-check-option strong { font-size:13px; }
     .cost-check-option small { margin-top:2px; color:var(--muted); font-size:11px; }
     .cost-check-empty { padding:30px 12px; color:var(--muted); font-size:12px; text-align:center; }
+    .cost-date-section { grid-column:1/-1; padding:10px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
+    .cost-date-fields { display:grid; grid-template-columns:1fr 1fr auto; align-items:end; gap:10px; }
+    .cost-date-add { min-height:38px; white-space:nowrap; }
+    .cost-date-ranges { display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-height:30px; margin-top:9px; }
+    .cost-date-range { display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:3px 5px 3px 9px; border:1px solid #bfdbfe; border-radius:999px; background:#eff6ff; color:#1e3a8a; font-size:12px; }
+    .cost-date-range button { width:24px; height:24px; border:0; border-radius:50%; background:transparent; color:#64748b; cursor:pointer; }
+    .cost-date-range button:hover { background:#dbeafe; color:#1d4ed8; }
+    .cost-date-help { color:var(--muted); font-size:12px; }
     .cost-preview { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:12px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:6px; }
     .cost-preview div { color:var(--muted); font-size:12px; }
     .cost-preview strong { display:block; margin-top:4px; color:var(--text); font-size:18px; }
@@ -513,6 +524,28 @@
         flex-direction: column;
         min-height: 0;
         overflow: hidden;
+      }
+      .focus-table-active #marketingCostWorkspace:not(.hidden) {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .focus-table-active #marketingCostWorkspace > .table-wrap {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        max-height: none;
+        overflow: auto;
+        background: #fff;
+      }
+      .focus-table-active .cost-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        background: #f8fafc;
+        box-shadow: 0 1px 0 #d9e0e8;
       }
       .focus-table-active .focus-shell {
         flex: 1 1 auto;
@@ -626,6 +659,8 @@
       .cost-form .full,.cost-preview,.cost-selector-grid { grid-column:auto; }
       .cost-selector-grid { grid-template-columns:1fr; }
       .cost-check-list { height:150px; }
+      .cost-date-fields { grid-template-columns:1fr; }
+      .cost-date-add { width:100%; min-height:44px; }
       .mobile-matrix-status { padding:8px 10px; border-bottom:1px solid var(--line); background:#f8fafc; color:var(--muted); font-size:11px; line-height:1.45; }
       .mobile-matrix-scroll { width:100%; overflow-x:auto; overflow-y:visible; overscroll-behavior-x:contain; scrollbar-gutter:stable; background:#fff; }
       .mobile-matrix-scroll::-webkit-scrollbar { height:8px; }
@@ -896,7 +931,7 @@
               <button class="btn" id="refreshMarketingCostBtn">刷新费用</button>
             </div>
             <div class="cost-summary" id="marketingCostSummary"></div>
-            <div class="table-wrap"><table class="cost-table"><thead><tr><th>序号</th><th>用户</th><th>业务</th><th>开始日期</th><th>结束日期</th><th>周期订单</th><th>单价（元/单）</th><th>预估费用</th><th>状态</th><th>备注</th><th>操作</th></tr></thead><tbody id="marketingCostBody"></tbody></table></div>
+            <div class="table-wrap cost-table-scroll"><table class="cost-table"><thead><tr><th>序号</th><th>用户</th><th>业务</th><th>开始日期</th><th>结束日期</th><th>周期订单</th><th>单价（元/单）</th><th>预估费用</th><th>状态</th><th>备注</th><th>操作</th></tr></thead><tbody id="marketingCostBody"></tbody></table></div>
           </div>
         </section>
       </div>
@@ -931,11 +966,13 @@
     <div class="modal-body">
       <div class="cost-form">
         <div class="cost-selector-grid">
-          <fieldset class="cost-multi-field"><legend>用户（可多选）</legend><div class="cost-multi-head"><strong id="marketingCostUserCount">已选 0 人</strong><button type="button" data-cost-select-all="users">全选</button><button type="button" data-cost-clear="users">清空</button></div><div class="cost-check-list" id="marketingCostUsers" role="group" aria-label="选择计费用户"></div></fieldset>
+          <fieldset class="cost-multi-field"><legend>用户（可多选）</legend><div class="cost-multi-head"><strong id="marketingCostUserCount">已选 0 人</strong><button type="button" data-cost-select-all="users">全选结果</button><button type="button" data-cost-clear="users">清空</button></div><div class="cost-multi-search search-with-clear"><input class="field" id="marketingCostUserSearch" placeholder="搜索用户 ID 或备注名" aria-label="搜索计费用户"><button class="search-clear" id="marketingCostUserSearchClear" type="button" title="清空用户搜索" aria-label="清空用户搜索">×</button></div><div class="cost-check-list" id="marketingCostUsers" role="group" aria-label="选择计费用户"></div></fieldset>
           <fieldset class="cost-multi-field"><legend>业务（可多选）</legend><div class="cost-multi-head"><strong id="marketingCostBusinessCount">已选 0 项</strong><button type="button" data-cost-select-all="businesses">全选</button><button type="button" data-cost-clear="businesses">清空</button></div><div class="cost-check-list" id="marketingCostBusinesses" role="group" aria-label="选择计费业务"></div></fieldset>
         </div>
-        <label>开始日期<input class="field" type="date" id="marketingCostStart"></label>
-        <label>结束日期<input class="field" type="date" id="marketingCostEnd"></label>
+        <div class="cost-date-section full">
+          <div class="cost-date-fields"><label>开始日期<input class="field" type="date" id="marketingCostStart"></label><label>结束日期<input class="field" type="date" id="marketingCostEnd"></label><button class="btn cost-date-add" id="addMarketingCostRange" type="button">＋ 加入并继续选择</button></div>
+          <div class="cost-date-ranges" id="marketingCostRanges" aria-live="polite"></div>
+        </div>
         <label class="full">单价（元/单）<input class="field" type="number" id="marketingCostUnitPrice" min="0.01" step="0.01" placeholder="例如 0.30"></label>
         <label class="full">备注（选填）<textarea class="field" id="marketingCostNote" rows="3" maxlength="200" placeholder="记录投放说明或核对事项"></textarea></label>
         <div class="cost-preview"><div>将生成费用项<strong id="marketingCostPreviewItems">0</strong></div><div>当前计费订单<strong id="marketingCostPreviewOrders">0</strong></div><div class="total">预估费用<strong id="marketingCostPreviewAmount">¥0.00</strong></div></div>
@@ -1243,7 +1280,7 @@
       return times.join("、") || "未配置";
     }
 
-    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostEditId: "", marketingCostSelectedUserIds: [], marketingCostSelectedBusinessIds: [], marketingCostSubmitting: false, marketingCostBatchId: "" });
+    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostEditId: "", marketingCostSelectedUserIds: [], marketingCostSelectedBusinessIds: [], marketingCostUserSearch: "", marketingCostDateRanges: [], marketingCostSubmitting: false, marketingCostBatchId: "" });
 
     function isFastUserBusiness(row = state.detailRow) {
       const ids = new Set((state.config?.fastUserBusinessIds || []).map(String));
@@ -2479,11 +2516,17 @@
       return (state.marketingCosts?.relationships || []).find(row => String(row.userId) === String(userId) && String(row.businessId) === String(businessId));
     }
 
-    function marketingCostVisibleUsers() {
+    function marketingCostAvailableUsers() {
       const visibleUserIds = new Set((activeFocusOperatorGroup(state.focusData)?.userIds || []).map(String));
       return (state.marketingCosts?.users || [])
         .filter(user => visibleUserIds.has(String(user.userId)))
         .sort((a, b) => userDisplayName({ id:a.userId, name:a.name }).localeCompare(userDisplayName({ id:b.userId, name:b.name }), "zh-CN"));
+    }
+
+    function marketingCostVisibleUsers() {
+      const keyword = state.marketingCostUserSearch.trim().toLowerCase();
+      if (!keyword) return marketingCostAvailableUsers();
+      return marketingCostAvailableUsers().filter(user => `${user.userId || ""} ${user.name || ""} ${userDisplayName({ id:user.userId, name:user.name })}`.toLowerCase().includes(keyword));
     }
 
     function marketingCostBusinessOptions() {
@@ -2506,16 +2549,17 @@
     }
 
     function renderMarketingCostSelectors({ chooseDefaultBusiness = false } = {}) {
+      const availableUsers = marketingCostAvailableUsers();
       const users = marketingCostVisibleUsers();
-      const availableUserIds = new Set(users.map(user => String(user.userId)));
+      const availableUserIds = new Set(availableUsers.map(user => String(user.userId)));
       state.marketingCostSelectedUserIds = state.marketingCostSelectedUserIds.filter(id => availableUserIds.has(String(id)));
       const single = Boolean(state.marketingCostEditId);
       $("#marketingCostUsers").innerHTML = users.length ? users.map(user => {
         const userId = String(user.userId);
         const checked = state.marketingCostSelectedUserIds.includes(userId);
         return `<label class="cost-check-option"><input type="${single ? "radio" : "checkbox"}" ${single ? 'name="marketingCostUserChoice"' : ""} data-marketing-cost-user="${escapeHtml(userId)}" ${checked ? "checked" : ""}><span><strong>${escapeHtml(userDisplayName({ id:user.userId, name:user.name }))}</strong><small>ID ${escapeHtml(userId)}</small></span></label>`;
-      }).join("") : '<div class="cost-check-empty">当前运营工作区没有重点用户</div>';
-      $("#marketingCostUserCount").textContent = `已选 ${state.marketingCostSelectedUserIds.length} 人`;
+      }).join("") : `<div class="cost-check-empty">${state.marketingCostUserSearch ? "没有匹配的用户 ID 或备注名" : "当前运营工作区没有重点用户"}</div>`;
+      $("#marketingCostUserCount").textContent = `已选 ${state.marketingCostSelectedUserIds.length} 人${state.marketingCostUserSearch ? ` · 找到 ${users.length} 人` : ""}`;
       const businesses = marketingCostBusinessOptions();
       const availableBusinessIds = new Set(businesses.map(row => String(row.businessId)));
       state.marketingCostSelectedBusinessIds = state.marketingCostSelectedBusinessIds.filter(id => availableBusinessIds.has(String(id)));
@@ -2531,26 +2575,76 @@
       marketingCostPreview();
     }
 
-    function marketingCostPreview() {
+    function currentMarketingCostRange() {
       const startDate = $("#marketingCostStart").value;
       const endDate = $("#marketingCostEnd").value;
+      return startDate && endDate && startDate <= endDate ? { startDate, endDate } : null;
+    }
+
+    function marketingCostFormRanges() {
+      const ranges = [...state.marketingCostDateRanges];
+      const current = currentMarketingCostRange();
+      if (current) ranges.push(current);
+      const seen = new Set();
+      return ranges.filter(range => {
+        const key = `${range.startDate}|${range.endDate}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function renderMarketingCostRanges() {
+      const editing = Boolean(state.marketingCostEditId);
+      $("#addMarketingCostRange").classList.toggle("hidden", editing);
+      $("#addMarketingCostRange").disabled = editing || state.marketingCostSubmitting || !currentMarketingCostRange();
+      $("#marketingCostRanges").innerHTML = state.marketingCostDateRanges.length
+        ? state.marketingCostDateRanges.map((range, index) => `<span class="cost-date-range"><span>时间段 ${index + 1}：${escapeHtml(range.startDate.replaceAll("-", "/"))} 至 ${escapeHtml(range.endDate.replaceAll("-", "/"))}</span>${editing ? "" : `<button type="button" data-remove-marketing-cost-range="${index}" aria-label="删除时间段 ${index + 1}">×</button>`}</span>`).join("")
+        : `<span class="cost-date-help">${editing ? "编辑当前费用项的时间段。" : "当前输入的日期会作为第 1 个时间段；需要继续添加时点击“加入并继续选择”。"}</span>`;
+    }
+
+    function showNativeDatePicker(input) {
+      input.focus({ preventScroll:true });
+      if (typeof input.showPicker === "function") {
+        try { input.showPicker(); } catch {}
+      }
+    }
+
+    function addMarketingCostRange() {
+      const range = currentMarketingCostRange();
+      if (!range) throw new Error("请先选择正确的开始和结束日期。");
+      if (dateTextList(range.startDate, range.endDate).length > 65) throw new Error("单个费用周期最多支持65天。");
+      if (!state.marketingCostDateRanges.some(item => item.startDate === range.startDate && item.endDate === range.endDate)) state.marketingCostDateRanges.push(range);
+      $("#marketingCostStart").value = "";
+      $("#marketingCostEnd").value = "";
+      renderMarketingCostRanges();
+      marketingCostPreview();
+      showNativeDatePicker($("#marketingCostStart"));
+    }
+
+    function marketingCostPreview() {
       const unitPrice = Number($("#marketingCostUnitPrice").value || 0);
-      const dates = startDate && endDate && startDate <= endDate ? dateTextList(startDate, endDate) : [];
+      const ranges = marketingCostFormRanges();
       const today = dayText(new Date());
       const relationships = marketingCostSelectedRelationships();
-      const orderCount = relationships.reduce((total, relationship) => total + dates.reduce((sum, date) => relationship.t1 && date === today ? sum : sum + Number(relationship.days?.[date] || 0), 0), 0);
+      const orderCount = ranges.reduce((rangeTotal, range) => {
+        const dates = dateTextList(range.startDate, range.endDate);
+        return rangeTotal + relationships.reduce((total, relationship) => total + dates.reduce((sum, date) => relationship.t1 && date === today ? sum : sum + Number(relationship.days?.[date] || 0), 0), 0);
+      }, 0);
       const amount = Math.round(orderCount * unitPrice * 100) / 100;
       const requestedPairs = state.marketingCostSelectedUserIds.length * state.marketingCostSelectedBusinessIds.length;
-      const skippedPairs = Math.max(0, requestedPairs - relationships.length);
-      const futureDates = dates.filter(date => date > today);
-      $("#marketingCostPreviewItems").textContent = fmt(relationships.length);
+      const skippedPairs = Math.max(0, requestedPairs - relationships.length) * ranges.length;
+      const futureDates = [...new Set(ranges.flatMap(range => dateTextList(range.startDate, range.endDate)).filter(date => date > today))];
+      const itemCount = relationships.length * ranges.length;
+      $("#marketingCostPreviewItems").textContent = fmt(itemCount);
       $("#marketingCostPreviewOrders").textContent = fmt(orderCount);
       $("#marketingCostPreviewAmount").textContent = `¥${costMoney(amount)}`;
       const futureHint = futureDates.length ? `包含 ${futureDates.length} 个未来日期；保持草稿时，未来订单会在每日缓存更新后自动加入，数据完整后才能确认。` : "";
-      $("#marketingCostFormHint").textContent = relationships.length
-        ? `${state.marketingCostEditId ? "当前编辑 1 个费用项" : `将批量生成 ${relationships.length} 个费用项`}${skippedPairs ? `，跳过 ${skippedPairs} 个无对应有单关系的组合` : ""}。${futureHint}`
-        : "请至少选择一位用户和一项有单业务。";
-      return { orderCount, amount, relationships, futureDates, skippedPairs };
+      $("#marketingCostFormHint").textContent = relationships.length && ranges.length
+        ? `${state.marketingCostEditId ? "当前编辑 1 个费用项" : `${ranges.length} 个时间段将批量生成 ${itemCount} 个费用项`}${skippedPairs ? `，跳过 ${skippedPairs} 个无对应有单关系的组合` : ""}。${futureHint}`
+        : !relationships.length ? "请至少选择一位用户和一项有单业务。" : "请选择至少一个正确的时间段。";
+      renderMarketingCostRanges();
+      return { orderCount, amount, relationships, ranges, futureDates, skippedPairs, itemCount };
     }
 
     function newMarketingCostBatchId() {
@@ -2566,14 +2660,19 @@
       $("#closeMarketingCostModal").disabled = submitting;
       $("#saveMarketingCost").textContent = submitting ? `正在保存 ${itemCount} 项…` : (state.marketingCostEditId ? "保存修改" : "批量加入计算");
       $$('[data-cost-select-all],[data-cost-clear]').forEach(button => { button.disabled = submitting || Boolean(state.marketingCostEditId); });
+      $("#marketingCostUserSearch").disabled = submitting;
+      renderMarketingCostRanges();
     }
 
     function openMarketingCostModal(item = null) {
-      const users = marketingCostVisibleUsers();
+      const users = marketingCostAvailableUsers();
       state.marketingCostEditId = item?.id || "";
       state.marketingCostBatchId = item ? "" : newMarketingCostBatchId();
       state.marketingCostSelectedUserIds = item?.userId ? [String(item.userId)] : (users[0] ? [String(users[0].userId)] : []);
       state.marketingCostSelectedBusinessIds = item?.businessId ? [String(item.businessId)] : [];
+      state.marketingCostUserSearch = "";
+      state.marketingCostDateRanges = [];
+      $("#marketingCostUserSearch").value = "";
       $("#marketingCostModalTitle").textContent = item ? "编辑费用项" : "新增费用项";
       const month = costMonthBounds(0);
       $("#marketingCostStart").value = item?.startDate || month.start;
@@ -2594,6 +2693,8 @@
       state.marketingCostBatchId = "";
       state.marketingCostSelectedUserIds = [];
       state.marketingCostSelectedBusinessIds = [];
+      state.marketingCostUserSearch = "";
+      state.marketingCostDateRanges = [];
     }
 
     function clientMarketingCostItem(payload, existing = {}) {
@@ -2655,14 +2756,14 @@
       const unitPrice = Number($("#marketingCostUnitPrice").value || 0);
       if (!preview.relationships.length) throw new Error("请至少选择一位用户和一项有单业务。");
       if (!unitPrice || unitPrice <= 0) throw new Error("请输入大于0的单价。");
-      const startDate = $("#marketingCostStart").value;
-      const endDate = $("#marketingCostEnd").value;
-      if (!startDate || !endDate || startDate > endDate) throw new Error("请选择正确的开始和结束日期。");
-      if (dateTextList(startDate, endDate).length > 65) throw new Error("单个费用周期最多支持65天。");
+      if (!preview.ranges.length) throw new Error("请至少选择一个正确的时间段。");
+      if (preview.ranges.some(range => dateTextList(range.startDate, range.endDate).length > 65)) throw new Error("单个费用周期最多支持65天。");
       const editing = Boolean(state.marketingCostEditId);
       const existing = (state.marketingCosts?.items || []).find(item => String(item.id) === String(state.marketingCostEditId || ""));
       const relationships = editing ? preview.relationships.slice(0, 1) : preview.relationships;
-      const payloads = relationships.map(relationship => ({ id:state.marketingCostEditId || undefined, userId:String(relationship.userId), userName:relationship.userName || "", businessId:String(relationship.businessId), businessName:relationship.businessName || "", platform:relationship.platform || "", startDate, endDate, unitPrice, note:$("#marketingCostNote").value.trim(), status:existing?.status || "draft" }));
+      const ranges = editing ? preview.ranges.slice(0, 1) : preview.ranges;
+      const payloads = ranges.flatMap(range => relationships.map(relationship => ({ id:state.marketingCostEditId || undefined, userId:String(relationship.userId), userName:relationship.userName || "", businessId:String(relationship.businessId), businessName:relationship.businessName || "", platform:relationship.platform || "", startDate:range.startDate, endDate:range.endDate, unitPrice, note:$("#marketingCostNote").value.trim(), status:existing?.status || "draft" })));
+      if (payloads.length > 500) throw new Error("单次最多新增500个费用项，请减少用户、业务或时间段。");
       setMarketingCostSubmitting(true, payloads.length);
       try {
         await persistMarketingCosts(payloads, state.marketingCostBatchId);
@@ -4733,6 +4834,13 @@
       }
     });
     $("#marketingCostModal").addEventListener("click", e => {
+      const removeRange = e.target.closest("[data-remove-marketing-cost-range]");
+      if (removeRange) {
+        state.marketingCostDateRanges.splice(Number(removeRange.dataset.removeMarketingCostRange), 1);
+        renderMarketingCostRanges();
+        marketingCostPreview();
+        return;
+      }
       const selectAll = e.target.closest("[data-cost-select-all]");
       const clear = e.target.closest("[data-cost-clear]");
       if (!selectAll && !clear) return;
@@ -4741,6 +4849,14 @@
       if (target === "businesses") state.marketingCostSelectedBusinessIds = selectAll ? marketingCostBusinessOptions().map(row => String(row.businessId)) : [];
       renderMarketingCostSelectors({ chooseDefaultBusiness:Boolean(selectAll && target === "users") });
     });
+    $("#marketingCostUserSearch").addEventListener("input", e => { state.marketingCostUserSearch = e.target.value; renderMarketingCostSelectors(); });
+    $("#marketingCostUserSearchClear").addEventListener("click", () => { state.marketingCostUserSearch = ""; $("#marketingCostUserSearch").value = ""; renderMarketingCostSelectors(); $("#marketingCostUserSearch").focus(); });
+    $("#marketingCostStart").addEventListener("change", () => {
+      if ($("#marketingCostEnd").value && $("#marketingCostStart").value > $("#marketingCostEnd").value) $("#marketingCostEnd").value = "";
+      marketingCostPreview();
+      showNativeDatePicker($("#marketingCostEnd"));
+    });
+    $("#addMarketingCostRange").addEventListener("click", () => { try { addMarketingCostRange(); } catch (error) { toast(error.message || "时间段添加失败"); } });
     ["#marketingCostStart", "#marketingCostEnd", "#marketingCostUnitPrice"].forEach(selector => $(selector).addEventListener("input", marketingCostPreview));
     $("#closeMarketingCostModal").addEventListener("click", closeMarketingCostModal);
     $("#cancelMarketingCost").addEventListener("click", closeMarketingCostModal);

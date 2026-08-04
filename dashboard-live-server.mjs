@@ -3352,8 +3352,8 @@ function enqueueMarketingCostMutation(task) {
   return next;
 }
 
-function marketingCostBatchItemId(batchId, userId, businessId) {
-  const digest = createHash("sha256").update(`${batchId}|${userId}|${businessId}`).digest("hex").slice(0, 24);
+function marketingCostBatchItemId(batchId, userId, businessId, startDate, endDate) {
+  const digest = createHash("sha256").update(`${batchId}|${userId}|${businessId}|${startDate}|${endDate}`).digest("hex").slice(0, 24);
   return `cost-${digest}`;
 }
 
@@ -3365,7 +3365,7 @@ async function saveMarketingCost(body) {
   const uniqueItems = [];
   const seen = new Set();
   rawItems.forEach(source => {
-    const key = String(source?.id || "") || `${String(source?.userId || "")}:${String(source?.businessId || "")}`;
+    const key = String(source?.id || "") || `${String(source?.userId || "")}:${String(source?.businessId || "")}:${String(source?.startDate || "")}:${String(source?.endDate || "")}`;
     if (!seen.has(key)) uniqueItems.push(source || {});
     seen.add(key);
   });
@@ -3375,7 +3375,7 @@ async function saveMarketingCost(body) {
   let createdCount = 0;
   let updatedCount = 0;
   for (const source of uniqueItems) {
-    const requestedId = String(source.id || "") || (batchId && source.userId && source.businessId ? marketingCostBatchItemId(batchId, source.userId, source.businessId) : "");
+    const requestedId = String(source.id || "") || (batchId && source.userId && source.businessId ? marketingCostBatchItemId(batchId, source.userId, source.businessId, source.startDate, source.endDate) : "");
     const existingIndex = saved.items.findIndex(item => String(item.id) === requestedId);
     const existing = existingIndex >= 0 ? saved.items[existingIndex] : {};
     const item = normalizeMarketingCostItem({ ...existing, ...source, ...(requestedId ? { id:requestedId } : {}), batchId:batchId || existing.batchId || "", updatedAt:new Date().toISOString(), updatedAtText:nowText() });
