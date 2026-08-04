@@ -1944,7 +1944,7 @@ async function warmStartupData() {
     const config = await readConfig();
     await warmTopBusinessUsers(data.businesses, dateRange, config);
     await refreshFocusUsersToday();
-    await warmBusinessUserHistories(await focusBusinessCatalog());
+    await warmBusinessUserHistories(await focusRelatedBusinessCatalog());
     console.log(`[${nowText()}] 启动预热完成`);
   } catch (error) {
     console.error(`[${nowText()}] 启动预热失败：${error.message}`);
@@ -3043,6 +3043,27 @@ async function focusBusinessCatalog() {
     });
   });
   return [...byId.values()];
+}
+
+async function focusRelatedBusinessCatalog() {
+  const catalog = await focusBusinessCatalog();
+  const saved = await readFocusUsers();
+  const userIds = new Set((saved.items || []).map(item => String(item.userId || "")).filter(Boolean));
+  const relatedIds = new Set();
+  for (const item of saved.items || []) {
+    for (const hint of item.businessHints || []) {
+      if (hint.businessId) relatedIds.add(String(hint.businessId));
+      if (hint.catalogBusinessId) relatedIds.add(String(hint.catalogBusinessId));
+    }
+  }
+  for (const cacheKey of userDetailCache.keys()) {
+    try {
+      const key = JSON.parse(cacheKey);
+      if (!String(key.type || "").startsWith("focus-") || !userIds.has(String(key.userId || ""))) continue;
+      if (key.businessId) relatedIds.add(String(key.businessId));
+    } catch {}
+  }
+  return catalog.filter(business => relatedIds.has(String(business.businessId)) || relatedIds.has(String(business.catalogBusinessId)));
 }
 
 function focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex) {
