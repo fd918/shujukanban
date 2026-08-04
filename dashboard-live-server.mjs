@@ -1723,7 +1723,7 @@ async function refreshFocusUserMetricHistory(item, range = publicHistoryRange())
   return { ok: true };
 }
 
-async function refreshFocusUsersMetricHistories(days = 30) {
+async function refreshFocusUsersMetricHistories(days = 30, includeMetrics = true) {
   const safeDays = Math.max(1, Math.min(65, number(days) || 30));
   const range = { startDate: shiftDay(dayKey(), -(safeDays - 1)), endDate: dayKey() };
   const saved = await readFocusUsers();
@@ -1748,14 +1748,18 @@ async function refreshFocusUsersMetricHistories(days = 30) {
   const failureCounts = new Map();
   await mapLimit(targets, 4, async item => {
     const orderResult = await refreshFocusUserOrderHistory(item, range);
-    const metricResult = await refreshFocusUserMetricHistory(item, range);
     if (orderResult.ok) orderRefreshed += 1;
     else failureCounts.set(orderResult.message, number(failureCounts.get(orderResult.message)) + 1);
-    if (metricResult.ok) metricRefreshed += 1;
-    else failureCounts.set(metricResult.message, number(failureCounts.get(metricResult.message)) + 1);
   });
+  if (includeMetrics) {
+    await mapLimit(targets, 4, async item => {
+      const metricResult = await refreshFocusUserMetricHistory(item, range);
+      if (metricResult.ok) metricRefreshed += 1;
+      else failureCounts.set(metricResult.message, number(failureCounts.get(metricResult.message)) + 1);
+    });
+  }
   await writeUserDetailCacheToDisk();
-  console.log(`[${nowText()}] 已刷新重点用户近 ${safeDays} 天数据：订单 ${orderRefreshed}/${targets.length}，佣金与成交金额 ${metricRefreshed}/${targets.length} 条业务关系。`);
+  console.log(`[${nowText()}] 已刷新重点用户近 ${safeDays} 天订单：${orderRefreshed}/${targets.length} 条业务关系${includeMetrics ? `；佣金与成交金额 ${metricRefreshed}/${targets.length}` : ""}。`);
   return {
     ok: orderRefreshed > 0 || metricRefreshed > 0 || targets.length === 0,
     refreshed: orderRefreshed,
@@ -3818,7 +3822,7 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/focus-users/refresh-metrics" && req.method === "POST") {
       const body = await readBody(req);
-      const result = await refreshFocusUsersMetricHistories(body.days);
+      const result = await refreshFocusUsersMetricHistories(body.days, body.includeMetrics !== false);
       const data = await buildFocusUsers({ preset: "7" });
       const published = await publishLatestCachedDashboard().catch(error => {
         console.error(`[${nowText()}] 重点用户指标公网同步失败：${error.message}`);
