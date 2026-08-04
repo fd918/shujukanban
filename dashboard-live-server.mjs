@@ -41,6 +41,7 @@ const T1_USER_BUSINESS_IDS = new Set(["2410"]);
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
 let middlePlatformCookie = "";
+let loginPromise = null;
 let performanceSessionPromise = null;
 let snapshotTimer = null;
 let snapshotScheduleVersion = 0;
@@ -416,12 +417,27 @@ async function fetchWithTimeout(url, options = {}, ms = 12000) {
 
 async function login() {
   if (token && Date.now() < tokenExpiresAt) return token;
-  const user = process.env.YZ_DASHBOARD_USER || await readSecret(USER_SERVICE);
-  const pass = process.env.YZ_DASHBOARD_PASS || await readSecret(PASS_SERVICE);
-  if (!user || !pass) throw new Error("本地服务缺少中台账号密码，请在桌面入口写入钥匙串账号。");
-  token = await loginWithCredentials(user, pass);
-  tokenExpiresAt = Date.now() + 20 * 60 * 1000;
-  return token;
+  if (!loginPromise) {
+    loginPromise = (async () => {
+      const user = process.env.YZ_DASHBOARD_USER || await readSecret(USER_SERVICE);
+      const pass = process.env.YZ_DASHBOARD_PASS || await readSecret(PASS_SERVICE);
+      if (!user || !pass) throw new Error("本地服务缺少中台账号密码，请在桌面入口写入钥匙串账号。");
+      token = await loginWithCredentials(user, pass);
+      tokenExpiresAt = Date.now() + 20 * 60 * 1000;
+      return token;
+    })().finally(() => { loginPromise = null; });
+  }
+  return loginPromise;
+}
+
+function sessionExpired(payload = {}) {
+  return /登录超时|登陆超时|重新登录|其他地方登录|其它地方登录/.test(String(payload.message || ""));
+}
+
+function clearMiddlePlatformSession() {
+  token = "";
+  middlePlatformCookie = "";
+  tokenExpiresAt = 0;
 }
 
 async function ensurePerformanceSession() {
@@ -443,31 +459,38 @@ async function apiCall(name, method, path, data, timeoutMs = 12000) {
   const startedAt = Date.now();
   recordApiRequest(name, path);
   try {
-    const auth = await login();
-    const url = new URL(`${BASE_URL}${path}`);
-    const options = {
-      method,
-      headers: {
-        "authorization": `Bearer ${auth}`,
-        "origin": "https://adminpub.yunzhanxinxi.com",
-        "referer": "https://adminpub.yunzhanxinxi.com/"
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const auth = await login();
+      const url = new URL(`${BASE_URL}${path}`);
+      const options = {
+        method,
+        headers: {
+          "authorization": `Bearer ${auth}`,
+          "origin": "https://adminpub.yunzhanxinxi.com",
+          "referer": "https://adminpub.yunzhanxinxi.com/"
+        }
+      };
+      if (method === "GET") {
+        Object.entries(data || {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, value);
+        });
+      } else {
+        options.headers["content-type"] = "application/json;charset=UTF-8";
+        options.body = JSON.stringify(data || {});
       }
-    };
-    if (method === "GET") {
-      Object.entries(data || {}).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, value);
-      });
-    } else {
-      options.headers["content-type"] = "application/json;charset=UTF-8";
-      options.body = JSON.stringify(data || {});
+      const response = await fetchWithTimeout(url, options, timeoutMs);
+      const payload = await response.json();
+      if (attempt === 0 && sessionExpired(payload)) {
+        clearMiddlePlatformSession();
+        continue;
+      }
+      const ok = response.ok && payload.code === 200;
+      return { name, ok, status: response.status, code: payload.code, message: payload.message || (ok ? "成功" : "接口返回异常"), durationMs: Date.now() - startedAt, data: payload.data };
     }
-    const response = await fetchWithTimeout(url, options, timeoutMs);
-    const payload = await response.json();
-    const ok = response.ok && payload.code === 200;
-    return { name, ok, status: response.status, code: payload.code, message: payload.message || (ok ? "成功" : "接口返回异常"), durationMs: Date.now() - startedAt, data: payload.data };
   } catch (error) {
     return { name, ok: false, message: error.name === "AbortError" ? "接口超时" : error.message, durationMs: Date.now() - startedAt, data: null };
   }
+  return { name, ok: false, message: "中台登录状态失效", durationMs: Date.now() - startedAt, data: null };
 }
 
 async function performanceOrderCall(name, data, timeoutMs = 60000) {
@@ -475,29 +498,36 @@ async function performanceOrderCall(name, data, timeoutMs = 60000) {
   const path = "/performance/order-list/index";
   recordApiRequest(name, path);
   try {
-    const session = await ensurePerformanceSession();
     const body = new URLSearchParams();
     Object.entries(data || {}).forEach(([key, value]) => {
       if (Array.isArray(value)) value.forEach((item, index) => body.append(`${key}[${index}]`, String(item)));
       else if (value !== undefined && value !== null) body.append(key, String(value));
     });
-    const response = await fetchWithTimeout(`${BASE_URL}${path}`, {
-      method: "POST",
-      headers: {
-        "authorization": `Bearer ${session.token}`,
-        "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
-        "origin": "https://adminpub.yunzhanxinxi.com",
-        "referer": "https://adminpub.yunzhanxinxi.com/",
-        "cookie": session.cookie
-      },
-      body
-    }, timeoutMs);
-    const payload = await response.json();
-    const ok = response.ok && payload.code === 200;
-    return { name, ok, status: response.status, code: payload.code, message: payload.message || (ok ? "成功" : "接口返回异常"), durationMs: Date.now() - startedAt, data: payload.data };
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const session = await ensurePerformanceSession();
+      const response = await fetchWithTimeout(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: {
+          "authorization": `Bearer ${session.token}`,
+          "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "origin": "https://adminpub.yunzhanxinxi.com",
+          "referer": "https://adminpub.yunzhanxinxi.com/",
+          "cookie": session.cookie
+        },
+        body
+      }, timeoutMs);
+      const payload = await response.json();
+      if (attempt === 0 && sessionExpired(payload)) {
+        clearMiddlePlatformSession();
+        continue;
+      }
+      const ok = response.ok && payload.code === 200;
+      return { name, ok, status: response.status, code: payload.code, message: payload.message || (ok ? "成功" : "接口返回异常"), durationMs: Date.now() - startedAt, data: payload.data };
+    }
   } catch (error) {
     return { name, ok: false, message: error.name === "AbortError" ? "接口超时" : error.message, durationMs: Date.now() - startedAt, data: null };
   }
+  return { name, ok: false, message: "中台登录状态失效", durationMs: Date.now() - startedAt, data: null };
 }
 
 function normalizeBusiness(row) {
@@ -1717,10 +1747,8 @@ async function refreshFocusUsersMetricHistories(days = 30) {
   let metricRefreshed = 0;
   const failureCounts = new Map();
   await mapLimit(targets, 4, async item => {
-    const [orderResult, metricResult] = await Promise.all([
-      refreshFocusUserOrderHistory(item, range),
-      refreshFocusUserMetricHistory(item, range)
-    ]);
+    const orderResult = await refreshFocusUserOrderHistory(item, range);
+    const metricResult = await refreshFocusUserMetricHistory(item, range);
     if (orderResult.ok) orderRefreshed += 1;
     else failureCounts.set(orderResult.message, number(failureCounts.get(orderResult.message)) + 1);
     if (metricResult.ok) metricRefreshed += 1;
