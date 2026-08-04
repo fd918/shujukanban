@@ -3793,7 +3793,11 @@
         state.detailHistoryEnd = state.detailCurrentBusinessDate;
         state.detailHistoryStart = shiftDayText(state.detailCurrentBusinessDate, -6);
       }
-      const historyRows = data.history?.rows || [];
+      const sameTimeUsers = data.sameTimeUsers || {};
+      const historyRows = (data.history?.rows || []).map(user => ({
+        ...user,
+        sameTime: user.sameTime || sameTimeUsers[String(user.id || "")] || undefined
+      }));
       const historyById = new Map(historyRows.map(user => [String(user.id || ""), user]));
       const synchronizedById = new Map();
       (data.users || []).forEach(user => synchronizedById.set(String(user.id || ""), user));
@@ -3876,6 +3880,7 @@
         applySynchronizedUserData({
           users: detail.rows || [],
           history: detail.history || { rows: [], dates: [] },
+          sameTimeUsers: detail.sameTimeUsers || {},
           total: detail.total || detail.rows?.length || 0,
           reportingMode: detail.reportingMode || "realtime",
           currentBusinessDate: detail.currentBusinessDate || "",

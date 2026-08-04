@@ -910,9 +910,15 @@ async function retryApiCall(name, path, params, timeoutMs, attempts = 3) {
 
 async function businessUserStatisticsCall(name, params, timeoutMs) {
   const path = "/api/v2/dashboard/business/user-order-statistics";
-  const result = await apiCall(name, "GET", path, params, timeoutMs);
-  if (result.ok || result.code !== 100100 || !Object.prototype.hasOwnProperty.call(params || {}, "filter_field")) return result;
-  const officialParams = { ...(params || {}) };
+  const requestParams = {
+    ...(params || {}),
+    // The official dashboard currently requests this endpoint in fixed 10-row pages.
+    // Sending our desired merged size (for example 5000) as pre_page causes code 100100.
+    pre_page: Math.min(10, Math.max(1, number(params?.pre_page) || 10))
+  };
+  const result = await apiCall(name, "GET", path, requestParams, timeoutMs);
+  if (result.ok || result.code !== 100100 || !Object.prototype.hasOwnProperty.call(requestParams, "filter_field")) return result;
+  const officialParams = { ...requestParams };
   delete officialParams.filter_field;
   const fallback = await apiCall(`${name}（官方参数兼容）`, "GET", path, officialParams, timeoutMs);
   return fallback.ok ? { ...fallback, filterFieldFallback: true } : fallback;
@@ -3721,6 +3727,8 @@ async function runCommand(command, args) {
 
 async function encryptedPublicUserDetails(dateRange) {
   const snapshots = await readSnapshots();
+  const publicDetailConfig = await readConfig();
+  const fastBusinessIds = new Set((publicDetailConfig.fastUserBusinessIds || []).map(String));
   const details = {};
   const historyRanks = new Map();
   const detailRanks = new Map();
@@ -3791,27 +3799,36 @@ async function encryptedPublicUserDetails(dateRange) {
     const full = latestFullBusinessUsers(businessId, dateRange.endDate);
     const historyRows = detail.history?.rows || [];
     if (!full) {
+      if (!fastBusinessIds.has(String(businessId))) continue;
       const currentRows = deduplicateBusinessUsers(detail.rows || []);
       const currentById = new Map(currentRows.map(row => [String(row.id || ""), row]));
       const historyLatestDataTime = detail.history?.latestDataTime || "";
-      const mergedRows = historyRows.map(row => {
-        const current = currentById.get(String(row.id || ""));
-        return {
-          ...row,
-          ...(current || {}),
-          currentDataTime: current?.currentDataTime || historyLatestDataTime,
-          days: { ...(row.days || {}), ...(current ? { [dateRange.endDate]: number(current.todayOrders) } : {}) },
-          todayOrders: current ? number(current.todayOrders) : number(row.days?.[dateRange.endDate]),
-          realtimeToday: Boolean(current)
-        };
-      });
-      const historyIds = new Set(historyRows.map(row => String(row.id || "")));
-      for (const row of currentRows) {
-        if (!historyIds.has(String(row.id || ""))) mergedRows.push({ ...row, days: { [dateRange.endDate]: number(row.todayOrders) }, realtimeToday: true });
-      }
+      const historyById = new Map(historyRows.map(row => [String(row.id || ""), row]));
       const currentLatestDataTime = currentRows.length ? (detail.currentLatestDataTime || detail.latestDataTime || historyLatestDataTime) : historyLatestDataTime;
-      detail.rows = enrichBusinessUsersWithSnapshots(mergedRows, snapshots, businessId, dateRange, comparisonMinuteFromText(currentLatestDataTime));
-      detail.total = Math.max(number(detail.history?.total), detail.rows.length);
+      const targetMinutes = new Set([historyLatestDataTime, ...currentRows.map(row => row.currentDataTime)].map(comparisonMinuteFromText).filter(Number.isFinite));
+      const referenceDays = new Set(Array.from({ length: 7 }, (_, index) => shiftDay(dateRange.endDate, -(index + 1))));
+      const comparisonUserIds = new Set(currentRows.map(row => String(row.id || "")));
+      for (const snapshot of snapshots) {
+        if (!referenceDays.has(snapshot.day)) continue;
+        if (![...targetMinutes].some(targetMinute => Math.abs(number(snapshot.minuteOfDay) - targetMinute) <= 20)) continue;
+        Object.keys(snapshot.businessUsers?.[businessId] || {}).forEach(userId => comparisonUserIds.add(String(userId)));
+      }
+      const comparisonRows = [...comparisonUserIds].map(userId => {
+        const current = currentById.get(userId);
+        const history = historyById.get(userId);
+        if (!current && !history) return null;
+        return {
+          ...(history || {}),
+          ...(current || {}),
+          id: userId,
+          currentDataTime: current?.currentDataTime || historyLatestDataTime,
+          todayOrders: current ? number(current.todayOrders) : number(history?.days?.[dateRange.endDate])
+        };
+      }).filter(Boolean);
+      const comparisons = enrichBusinessUsersWithSnapshots(comparisonRows, snapshots, businessId, dateRange, comparisonMinuteFromText(currentLatestDataTime));
+      detail.sameTimeUsers = Object.fromEntries(comparisons.filter(row => row.sameTime?.hasSnapshot).map(row => [String(row.id || ""), row.sameTime]));
+      detail.rows = currentRows;
+      detail.total = Math.max(number(detail.history?.total), historyRows.length, currentRows.length);
       detail.latestDataTime = currentLatestDataTime || "-";
       detail.currentLatestDataTime = detail.latestDataTime;
       detail.fullCurrentLatestDataTime = "-";
