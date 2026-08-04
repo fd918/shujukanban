@@ -1120,8 +1120,7 @@ async function fetchBusinessUserHistory(options = {}, statuses = []) {
 
 async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
-  const exactCache = userDetailCache.get(cacheKey);
-  const covering = exactCache ? { key: { startDate, endDate }, payload: exactCache } : [...userDetailCache.entries()]
+  const covering = [...userDetailCache.entries()]
     .map(([key, payload]) => {
         try {
           return { key: JSON.parse(key), payload };
@@ -1134,6 +1133,12 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
       && item.key.startDate <= startDate
       && item.key.endDate >= endDate)
     .sort((a, b) => {
+      const completeA = a.payload.partial === true || a.payload.complete === false ? 0 : 1;
+      const completeB = b.payload.partial === true || b.payload.complete === false ? 0 : 1;
+      if (completeA !== completeB) return completeB - completeA;
+      const usableA = (a.payload.rows || []).length ? 1 : 0;
+      const usableB = (b.payload.rows || []).length ? 1 : 0;
+      if (usableA !== usableB) return usableB - usableA;
       const timeA = Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0;
       const timeB = Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0;
       return timeB - timeA || (b.payload.dates?.length || 0) - (a.payload.dates?.length || 0);
@@ -1208,7 +1213,6 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
     return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
   }
   const payload = { ok: true, complete: !pageLoadFailed, upstreamOk: !pageLoadFailed, partial: pageLoadFailed, filterFieldFallback: Boolean(result.filterFieldFallback), savedAtText: nowText(), total, dates, rows };
-  if (pageLoadFailed) return payload;
   userDetailCache.set(cacheKey, payload);
   scheduleUserDetailCacheSave();
   return payload;
@@ -1671,7 +1675,6 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     columns: result.data?.columns || [],
     rows
   };
-  if (pageLoadFailed) return payload;
   userDetailCache.set(cacheKey, payload);
   scheduleUserDetailCacheSave();
   return payload;
