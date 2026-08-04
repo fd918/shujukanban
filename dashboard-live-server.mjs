@@ -700,13 +700,52 @@ async function loadUserDetailCacheFromDisk() {
 
 async function writeUserDetailCacheToDisk() {
   await mkdir(join(ROOT, "data"), { recursive: true });
-  const entries = Array.from(userDetailCache.entries()).slice(-300);
+  const entries = retainedUserDetailCacheEntries(userDetailCache.entries());
   userDetailCacheSavedAtText = nowText();
   await writeFile(USER_DETAIL_CACHE_PATH, JSON.stringify({
     savedAt: new Date().toISOString(),
     savedAtText: userDetailCacheSavedAtText,
     items: Object.fromEntries(entries)
   }, null, 2));
+}
+
+function userDetailCacheRetentionId(cacheKey) {
+  try {
+    const key = JSON.parse(cacheKey);
+    const businessId = String(key.businessId || "");
+    const userId = String(key.userId || "");
+    if (key.type === "history" && businessId) return `history:${businessId}`;
+    if (["focus-order-history", "focus-current", "focus-metric-history"].includes(key.type) && businessId && userId) {
+      return `${key.type}:${businessId}:${userId}`;
+    }
+    if (businessId) return `business-detail:${businessId}:${key.includePrevious === false ? "current" : "comparison"}`;
+  } catch {}
+  return `legacy:${cacheKey}`;
+}
+
+function userDetailCacheRetentionRank(cacheKey, payload = {}) {
+  let key = {};
+  try { key = JSON.parse(cacheKey); } catch {}
+  const endDate = String(key.endDate || key.date || "");
+  const rangeDays = Array.isArray(payload.dates) ? payload.dates.length : 0;
+  const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+  const rows = Array.isArray(payload.rows) ? payload.rows.length : 0;
+  return [endDate, rangeDays, savedAt, rows];
+}
+
+function retainedUserDetailCacheEntries(sourceEntries) {
+  const retained = new Map();
+  const ranks = new Map();
+  for (const [cacheKey, payload] of sourceEntries) {
+    const retentionId = userDetailCacheRetentionId(cacheKey);
+    const rank = userDetailCacheRetentionRank(cacheKey, payload);
+    const currentRank = ranks.get(retentionId);
+    const shouldReplace = !currentRank || rank.some((value, index) => value > currentRank[index] && rank.slice(0, index).every((item, prefix) => item === currentRank[prefix]));
+    if (!shouldReplace) continue;
+    ranks.set(retentionId, rank);
+    retained.set(retentionId, [cacheKey, payload]);
+  }
+  return [...retained.values()];
 }
 
 function scheduleUserDetailCacheSave() {
@@ -1011,58 +1050,75 @@ async function fetchBusinessHourlyTrend({ platformBusinessId = "", currentDate =
 
 async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
-  if (!refresh && userDetailCache.has(cacheKey)) {
-    const cached = userDetailCache.get(cacheKey);
-    statuses.push({ name: "业务用户历史缓存", ok: true, message: `使用缓存：${cached.rows.length} 个用户`, durationMs: 0 });
-    return { ...cached, rows: cached.rows.map(attachPlainPhone), cached: true };
-  }
-  if (!refresh) {
-    const covering = [...userDetailCache.entries()]
-      .map(([key, payload]) => {
+  const exactCache = userDetailCache.get(cacheKey);
+  const covering = exactCache ? { key: { startDate, endDate }, payload: exactCache } : [...userDetailCache.entries()]
+    .map(([key, payload]) => {
         try {
           return { key: JSON.parse(key), payload };
         } catch {
           return null;
         }
       })
-      .filter(item => item?.key?.type === "history"
-        && String(item.key.businessId) === String(businessId)
-        && item.key.startDate <= startDate
-        && item.key.endDate >= endDate)
-      .sort((a, b) => {
-        const timeA = Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0;
-        const timeB = Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0;
-        return timeB - timeA || (a.payload.dates?.length || 0) - (b.payload.dates?.length || 0);
-      })[0];
-    if (covering) {
+    .filter(item => item?.key?.type === "history"
+      && String(item.key.businessId) === String(businessId)
+      && item.key.startDate <= startDate
+      && item.key.endDate >= endDate)
+    .sort((a, b) => {
+      const timeA = Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      const timeB = Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      return timeB - timeA || (b.payload.dates?.length || 0) - (a.payload.dates?.length || 0);
+    })[0];
+  const cachedSlice = () => {
+    if (!covering) return null;
       const dates = (covering.payload.dates || []).filter(date => date >= startDate && date <= endDate);
       const rows = (covering.payload.rows || []).map(row => attachPlainPhone({
         ...row,
         days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
         todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
       }));
-      statuses.push({ name: "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${rows.length} 个用户、${dates.length} 天`, durationMs: 0 });
-      return { ...covering.payload, dates, rows, total: rows.length, cached: true };
-    }
+    return { ...covering.payload, dates, rows, total: rows.length, cached: true };
+  };
+  if (!refresh && covering) {
+    const cached = cachedSlice();
+    statuses.push({ name: "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${cached.rows.length} 个用户、${cached.dates.length} 天`, durationMs: 0 });
+    return cached;
   }
   const dates = dayList(startDate, endDate);
   const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate, filter_field: "order_valid" };
   const result = await apiCall("业务用户历史", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);
   statuses.push(result);
+  if (!result.ok) {
+    const fallback = cachedSlice();
+    if (fallback) {
+      statuses.push({ name: "业务用户历史保护", ok: true, message: "中台请求失败，已保留并返回旧缓存", durationMs: 0 });
+      return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
+    }
+    return { ok: false, savedAtText: nowText(), total: 0, dates, rows: [] };
+  }
   const firstRows = asList(result.data);
   const total = number(result.data?.total);
   const perPage = Math.max(1, number(result.data?.per_page) || firstRows.length || 10);
   const totalPages = Math.max(1, number(result.data?.total_pages) || Math.ceil(total / perPage));
   let allRows = firstRows;
-  if (result.ok && totalPages > 1) {
+  let pageLoadFailed = false;
+  if (totalPages > 1) {
     const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
     const rest = await mapLimit(restPages, 8, currentPage => apiCall(`业务用户历史第${currentPage}页`, "GET", "/api/v2/dashboard/business/user-order-statistics", {
       ...params,
       page: currentPage
     }, 30000));
     const failed = rest.filter(item => !item.ok).length;
+    pageLoadFailed = failed > 0;
     statuses.push({ name: "业务用户历史翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${totalPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
     allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
+  }
+  if (pageLoadFailed) {
+    const fallback = cachedSlice();
+    if (fallback) {
+      statuses.push({ name: "业务用户历史保护", ok: true, message: "中台分页不完整，已保留并返回旧缓存", durationMs: 0 });
+      return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
+    }
+    return { ok: false, savedAtText: nowText(), total: 0, dates, rows: [] };
   }
   const rows = allRows.map(row => {
     const normalized = normalizeUser(row, startDate === endDate ? endDate : "period_total");
@@ -1074,6 +1130,12 @@ async function fetchBusinessUserHistory({ businessId = "", startDate, endDate, p
       const plainPhone = await fetchPlainPhone(row.id);
       if (plainPhone) row.phone = plainPhone;
     });
+  }
+  const fallback = cachedSlice();
+  const fallbackHasOrders = fallback?.rows?.some(row => dates.some(date => number(row.days?.[date]) > 0));
+  if (!rows.length && fallbackHasOrders) {
+    statuses.push({ name: "业务用户历史保护", ok: true, message: "中台返回空历史，已保留并返回旧缓存", durationMs: 0 });
+    return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
   }
   const payload = { ok: result.ok, savedAtText: nowText(), total, dates, rows };
   userDetailCache.set(cacheKey, payload);
@@ -1622,6 +1684,13 @@ async function refreshFocusUserOrderHistory(item, range) {
   const result = await apiCall("重点用户近30天订单", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);
   if (!result.ok) return { ok: false, message: result.message || "用户订单历史加载失败" };
   const matched = asList(result.data).filter(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
+  if (!matched.length) {
+    const cached = focusUserCacheIndex([item.userId]).get(`${item.businessId}:${item.userId}`);
+    const hasKnownOrders = dates.some(date => number(cached?.days?.[date]) > 0);
+    if (hasKnownOrders) {
+      return { ok: false, preserved: true, message: "接口未返回已知有单重点用户，已保留旧缓存" };
+    }
+  }
   const merged = deduplicateBusinessUsers(matched.map(source => {
     const row = normalizeUser(source, "period_total");
     row.days = Object.fromEntries(dates.map(date => [date, number(source[date])]));
@@ -1781,7 +1850,7 @@ async function refreshFocusUsersMetricHistories(days = 30, includeMetrics = true
     if (orderResult.ok) orderRefreshed += 1;
     else {
       failureCounts.set(orderResult.message, number(failureCounts.get(orderResult.message)) + 1);
-      if (/登录超时|登陆超时|重新登录|其他地方登录|其它地方登录|登录状态失效|中台登录失败|接口超时/.test(String(orderResult.message || ""))) abortedMessage = orderResult.message;
+      if (/登录超时|登陆超时|重新登录|其他地方登录|其它地方登录|登录状态失效|中台登录失败|接口超时|接口未返回已知有单重点用户/.test(String(orderResult.message || ""))) abortedMessage = orderResult.message;
     }
   });
   if (includeMetrics && !abortedMessage) {
