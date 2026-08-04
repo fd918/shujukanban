@@ -12340,5 +12340,22 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 0,
     "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1304",
+    "title": "【美团闪购】伊利奶粉供给及激励政策-6.24-7.5",
+    "metric": "amount",
+    "date": "2026-08-04",
+    "hour": 10,
+    "slotMinute": 10,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-04 10:10",
+    "recordedAt": "2026/8/4 10:19:06",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 0,
+    "cumulativeRedemptionAmount": 0
   }
 ]
