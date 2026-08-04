@@ -467,11 +467,26 @@
     .cost-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .cost-form .full { grid-column:1/-1; }
     .cost-form label { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:12px; }
-    .cost-preview { grid-column:1/-1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:12px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:6px; }
+    .cost-selector-grid { grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .cost-multi-field { min-width:0; margin:0; padding:0; border:1px solid var(--line); border-radius:7px; background:#fff; }
+    .cost-multi-field legend { margin-left:10px; padding:0 4px; color:var(--text); font-size:12px; font-weight:700; }
+    .cost-multi-head { display:flex; align-items:center; gap:6px; padding:7px 9px; border-bottom:1px solid var(--line); background:#f8fafc; }
+    .cost-multi-head strong { margin-right:auto; color:#475569; font-size:12px; }
+    .cost-multi-head button { min-height:30px; padding:3px 8px; border:1px solid var(--line); border-radius:5px; background:#fff; color:#475569; cursor:pointer; }
+    .cost-check-list { height:170px; overflow:auto; padding:5px; }
+    .cost-check-option { display:grid !important; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:8px !important; min-height:42px; padding:6px 8px; border-radius:5px; color:var(--text) !important; cursor:pointer; touch-action:manipulation; }
+    .cost-check-option:hover { background:#f8fafc; }
+    .cost-check-option input { width:17px; height:17px; margin:0; accent-color:var(--brand); }
+    .cost-check-option span { min-width:0; }
+    .cost-check-option strong,.cost-check-option small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cost-check-option strong { font-size:13px; }
+    .cost-check-option small { margin-top:2px; color:var(--muted); font-size:11px; }
+    .cost-check-empty { padding:30px 12px; color:var(--muted); font-size:12px; text-align:center; }
+    .cost-preview { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:12px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:6px; }
     .cost-preview div { color:var(--muted); font-size:12px; }
     .cost-preview strong { display:block; margin-top:4px; color:var(--text); font-size:18px; }
     .cost-preview .total strong { color:#d97706; }
-    .cost-modal { width:min(620px,calc(100vw - 28px)); }
+    .cost-modal { width:min(760px,calc(100vw - 28px)); }
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
     .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
@@ -608,7 +623,9 @@
       .cost-summary-item:nth-child(n+3) { border-top:1px solid var(--line); }
       .cost-summary-item strong { font-size:18px; }
       .cost-form { grid-template-columns:1fr; }
-      .cost-form .full,.cost-preview { grid-column:auto; }
+      .cost-form .full,.cost-preview,.cost-selector-grid { grid-column:auto; }
+      .cost-selector-grid { grid-template-columns:1fr; }
+      .cost-check-list { height:150px; }
       .mobile-matrix-status { padding:8px 10px; border-bottom:1px solid var(--line); background:#f8fafc; color:var(--muted); font-size:11px; line-height:1.45; }
       .mobile-matrix-scroll { width:100%; overflow-x:auto; overflow-y:visible; overscroll-behavior-x:contain; scrollbar-gutter:stable; background:#fff; }
       .mobile-matrix-scroll::-webkit-scrollbar { height:8px; }
@@ -908,18 +925,20 @@
 
   <section class="modal cost-modal" id="marketingCostModal">
     <div class="modal-head">
-      <div><h2 id="marketingCostModalTitle">新增费用项</h2><small>订单数来自重点用户对应业务的每日订单缓存</small></div>
+      <div><h2 id="marketingCostModalTitle">新增费用项</h2><small>可批量选择用户和业务；草稿会随每日订单缓存自动重算</small></div>
       <button class="icon-btn" id="closeMarketingCostModal">×</button>
     </div>
     <div class="modal-body">
       <div class="cost-form">
-        <label class="full">用户<select class="field" id="marketingCostUser"></select></label>
-        <label class="full">业务<select class="field" id="marketingCostBusiness"></select></label>
+        <div class="cost-selector-grid">
+          <fieldset class="cost-multi-field"><legend>用户（可多选）</legend><div class="cost-multi-head"><strong id="marketingCostUserCount">已选 0 人</strong><button type="button" data-cost-select-all="users">全选</button><button type="button" data-cost-clear="users">清空</button></div><div class="cost-check-list" id="marketingCostUsers" role="group" aria-label="选择计费用户"></div></fieldset>
+          <fieldset class="cost-multi-field"><legend>业务（可多选）</legend><div class="cost-multi-head"><strong id="marketingCostBusinessCount">已选 0 项</strong><button type="button" data-cost-select-all="businesses">全选</button><button type="button" data-cost-clear="businesses">清空</button></div><div class="cost-check-list" id="marketingCostBusinesses" role="group" aria-label="选择计费业务"></div></fieldset>
+        </div>
         <label>开始日期<input class="field" type="date" id="marketingCostStart"></label>
         <label>结束日期<input class="field" type="date" id="marketingCostEnd"></label>
         <label class="full">单价（元/单）<input class="field" type="number" id="marketingCostUnitPrice" min="0.01" step="0.01" placeholder="例如 0.30"></label>
         <label class="full">备注（选填）<textarea class="field" id="marketingCostNote" rows="3" maxlength="200" placeholder="记录投放说明或核对事项"></textarea></label>
-        <div class="cost-preview"><div>计费订单<strong id="marketingCostPreviewOrders">0</strong></div><div class="total">预估费用<strong id="marketingCostPreviewAmount">¥0.00</strong></div></div>
+        <div class="cost-preview"><div>将生成费用项<strong id="marketingCostPreviewItems">0</strong></div><div>当前计费订单<strong id="marketingCostPreviewOrders">0</strong></div><div class="total">预估费用<strong id="marketingCostPreviewAmount">¥0.00</strong></div></div>
         <div class="full muted" id="marketingCostFormHint"></div>
       </div>
     </div>
@@ -1224,7 +1243,7 @@
       return times.join("、") || "未配置";
     }
 
-    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostEditId: "" });
+    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostEditId: "", marketingCostSelectedUserIds: [], marketingCostSelectedBusinessIds: [], marketingCostSubmitting: false, marketingCostBatchId: "" });
 
     function isFastUserBusiness(row = state.detailRow) {
       const ids = new Set((state.config?.fastUserBusinessIds || []).map(String));
@@ -2387,7 +2406,7 @@
       const changes = readPublicMarketingCostChanges();
       const removed = new Set(changes.removed.map(String));
       const byId = new Map((base.items || []).filter(item => !removed.has(String(item.id))).map(item => [String(item.id), item]));
-      Object.values(changes.upserts).forEach(item => byId.set(String(item.id), item));
+      Object.values(changes.upserts).forEach(item => byId.set(String(item.id), item.status === "draft" ? clientMarketingCostItem(item, item) : item));
       const items = [...byId.values()].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
       return { ...base, items, summary: marketingCostSummary(items) };
     }
@@ -2460,102 +2479,200 @@
       return (state.marketingCosts?.relationships || []).find(row => String(row.userId) === String(userId) && String(row.businessId) === String(businessId));
     }
 
-    function marketingCostPreview() {
-      const userId = $("#marketingCostUser").value;
-      const businessId = $("#marketingCostBusiness").value;
-      const startDate = $("#marketingCostStart").value;
-      const endDate = $("#marketingCostEnd").value;
-      const unitPrice = Number($("#marketingCostUnitPrice").value || 0);
-      const relationship = marketingCostRelationship(userId, businessId);
-      const dates = startDate && endDate && startDate <= endDate ? dateTextList(startDate, endDate) : [];
-      const orderCount = dates.reduce((sum, date) => sum + Number(relationship?.days?.[date] || 0), 0);
-      const amount = Math.round(orderCount * unitPrice * 100) / 100;
-      $("#marketingCostPreviewOrders").textContent = fmt(orderCount);
-      $("#marketingCostPreviewAmount").textContent = `¥${costMoney(amount)}`;
-      $("#marketingCostFormHint").textContent = relationship
-        ? `${relationship.businessName}｜数据时间 ${relationship.dataTime || "-"}${relationship.t1 && endDate === dayText(new Date()) ? "｜该业务T+1更新，今日订单暂不计费" : ""}`
-        : "该用户当前没有匹配到这个业务的历史订单缓存。";
-      return { orderCount, amount, relationship };
+    function marketingCostVisibleUsers() {
+      const visibleUserIds = new Set((activeFocusOperatorGroup(state.focusData)?.userIds || []).map(String));
+      return (state.marketingCosts?.users || [])
+        .filter(user => visibleUserIds.has(String(user.userId)))
+        .sort((a, b) => userDisplayName({ id:a.userId, name:a.name }).localeCompare(userDisplayName({ id:b.userId, name:b.name }), "zh-CN"));
     }
 
-    function fillMarketingCostBusinesses(selectedBusinessId = "") {
-      const userId = $("#marketingCostUser").value;
-      const rows = (state.marketingCosts?.relationships || []).filter(row => String(row.userId) === String(userId)).sort((a, b) => String(a.businessName).localeCompare(String(b.businessName), "zh-CN"));
-      $("#marketingCostBusiness").innerHTML = rows.map(row => `<option value="${escapeHtml(row.businessId)}">${escapeHtml(row.platform)}｜${escapeHtml(row.businessName)}</option>`).join("") || '<option value="">暂无有单业务</option>';
-      if (selectedBusinessId && rows.some(row => String(row.businessId) === String(selectedBusinessId))) $("#marketingCostBusiness").value = selectedBusinessId;
+    function marketingCostBusinessOptions() {
+      const selectedUsers = new Set(state.marketingCostSelectedUserIds.map(String));
+      const byId = new Map();
+      (state.marketingCosts?.relationships || []).forEach(row => {
+        if (!selectedUsers.has(String(row.userId))) return;
+        const businessId = String(row.businessId);
+        const current = byId.get(businessId) || { businessId, businessName:row.businessName || "未命名业务", platform:row.platform || "-", userIds:new Set() };
+        current.userIds.add(String(row.userId));
+        byId.set(businessId, current);
+      });
+      return [...byId.values()].sort((a, b) => String(a.businessName).localeCompare(String(b.businessName), "zh-CN"));
+    }
+
+    function marketingCostSelectedRelationships() {
+      const users = new Set(state.marketingCostSelectedUserIds.map(String));
+      const businesses = new Set(state.marketingCostSelectedBusinessIds.map(String));
+      return (state.marketingCosts?.relationships || []).filter(row => users.has(String(row.userId)) && businesses.has(String(row.businessId)));
+    }
+
+    function renderMarketingCostSelectors({ chooseDefaultBusiness = false } = {}) {
+      const users = marketingCostVisibleUsers();
+      const availableUserIds = new Set(users.map(user => String(user.userId)));
+      state.marketingCostSelectedUserIds = state.marketingCostSelectedUserIds.filter(id => availableUserIds.has(String(id)));
+      const single = Boolean(state.marketingCostEditId);
+      $("#marketingCostUsers").innerHTML = users.length ? users.map(user => {
+        const userId = String(user.userId);
+        const checked = state.marketingCostSelectedUserIds.includes(userId);
+        return `<label class="cost-check-option"><input type="${single ? "radio" : "checkbox"}" ${single ? 'name="marketingCostUserChoice"' : ""} data-marketing-cost-user="${escapeHtml(userId)}" ${checked ? "checked" : ""}><span><strong>${escapeHtml(userDisplayName({ id:user.userId, name:user.name }))}</strong><small>ID ${escapeHtml(userId)}</small></span></label>`;
+      }).join("") : '<div class="cost-check-empty">当前运营工作区没有重点用户</div>';
+      $("#marketingCostUserCount").textContent = `已选 ${state.marketingCostSelectedUserIds.length} 人`;
+      const businesses = marketingCostBusinessOptions();
+      const availableBusinessIds = new Set(businesses.map(row => String(row.businessId)));
+      state.marketingCostSelectedBusinessIds = state.marketingCostSelectedBusinessIds.filter(id => availableBusinessIds.has(String(id)));
+      if (chooseDefaultBusiness && !state.marketingCostSelectedBusinessIds.length && businesses.length) state.marketingCostSelectedBusinessIds = [String(businesses[0].businessId)];
+      $("#marketingCostBusinesses").innerHTML = businesses.length ? businesses.map(row => {
+        const businessId = String(row.businessId);
+        const checked = state.marketingCostSelectedBusinessIds.includes(businessId);
+        const coverage = state.marketingCostSelectedUserIds.length > 1 ? ` · ${row.userIds.size}/${state.marketingCostSelectedUserIds.length} 人有单` : "";
+        return `<label class="cost-check-option"><input type="${single ? "radio" : "checkbox"}" ${single ? 'name="marketingCostBusinessChoice"' : ""} data-marketing-cost-business="${escapeHtml(businessId)}" ${checked ? "checked" : ""}><span><strong>${escapeHtml(row.businessName)}</strong><small>${escapeHtml(row.platform)}${escapeHtml(coverage)}</small></span></label>`;
+      }).join("") : '<div class="cost-check-empty">所选用户暂时没有匹配到有单业务</div>';
+      $("#marketingCostBusinessCount").textContent = `已选 ${state.marketingCostSelectedBusinessIds.length} 项`;
+      $$('[data-cost-select-all],[data-cost-clear]').forEach(button => { button.disabled = single || state.marketingCostSubmitting; });
       marketingCostPreview();
     }
 
+    function marketingCostPreview() {
+      const startDate = $("#marketingCostStart").value;
+      const endDate = $("#marketingCostEnd").value;
+      const unitPrice = Number($("#marketingCostUnitPrice").value || 0);
+      const dates = startDate && endDate && startDate <= endDate ? dateTextList(startDate, endDate) : [];
+      const today = dayText(new Date());
+      const relationships = marketingCostSelectedRelationships();
+      const orderCount = relationships.reduce((total, relationship) => total + dates.reduce((sum, date) => relationship.t1 && date === today ? sum : sum + Number(relationship.days?.[date] || 0), 0), 0);
+      const amount = Math.round(orderCount * unitPrice * 100) / 100;
+      const requestedPairs = state.marketingCostSelectedUserIds.length * state.marketingCostSelectedBusinessIds.length;
+      const skippedPairs = Math.max(0, requestedPairs - relationships.length);
+      const futureDates = dates.filter(date => date > today);
+      $("#marketingCostPreviewItems").textContent = fmt(relationships.length);
+      $("#marketingCostPreviewOrders").textContent = fmt(orderCount);
+      $("#marketingCostPreviewAmount").textContent = `¥${costMoney(amount)}`;
+      const futureHint = futureDates.length ? `包含 ${futureDates.length} 个未来日期；保持草稿时，未来订单会在每日缓存更新后自动加入，数据完整后才能确认。` : "";
+      $("#marketingCostFormHint").textContent = relationships.length
+        ? `${state.marketingCostEditId ? "当前编辑 1 个费用项" : `将批量生成 ${relationships.length} 个费用项`}${skippedPairs ? `，跳过 ${skippedPairs} 个无对应有单关系的组合` : ""}。${futureHint}`
+        : "请至少选择一位用户和一项有单业务。";
+      return { orderCount, amount, relationships, futureDates, skippedPairs };
+    }
+
+    function newMarketingCostBatchId() {
+      const randomPart = globalThis.crypto?.randomUUID?.() || Math.random().toString(16).slice(2);
+      return `cost-${Date.now().toString(36)}-${randomPart}`.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 100);
+    }
+
+    function setMarketingCostSubmitting(submitting, itemCount = 0) {
+      state.marketingCostSubmitting = submitting;
+      $("#marketingCostModal").setAttribute("aria-busy", submitting ? "true" : "false");
+      $("#saveMarketingCost").disabled = submitting;
+      $("#cancelMarketingCost").disabled = submitting;
+      $("#closeMarketingCostModal").disabled = submitting;
+      $("#saveMarketingCost").textContent = submitting ? `正在保存 ${itemCount} 项…` : (state.marketingCostEditId ? "保存修改" : "批量加入计算");
+      $$('[data-cost-select-all],[data-cost-clear]').forEach(button => { button.disabled = submitting || Boolean(state.marketingCostEditId); });
+    }
+
     function openMarketingCostModal(item = null) {
-      const visibleUserIds = new Set((activeFocusOperatorGroup(state.focusData)?.userIds || []).map(String));
-      const users = (state.marketingCosts?.users || []).filter(user => visibleUserIds.has(String(user.userId)));
+      const users = marketingCostVisibleUsers();
       state.marketingCostEditId = item?.id || "";
+      state.marketingCostBatchId = item ? "" : newMarketingCostBatchId();
+      state.marketingCostSelectedUserIds = item?.userId ? [String(item.userId)] : (users[0] ? [String(users[0].userId)] : []);
+      state.marketingCostSelectedBusinessIds = item?.businessId ? [String(item.businessId)] : [];
       $("#marketingCostModalTitle").textContent = item ? "编辑费用项" : "新增费用项";
-      $("#marketingCostUser").innerHTML = users.map(user => `<option value="${escapeHtml(user.userId)}">${escapeHtml(userDisplayName({ id:user.userId, name:user.name }))}｜ID ${escapeHtml(user.userId)}</option>`).join("") || '<option value="">暂无重点用户</option>';
-      if (item?.userId) $("#marketingCostUser").value = item.userId;
       const month = costMonthBounds(0);
       $("#marketingCostStart").value = item?.startDate || month.start;
       $("#marketingCostEnd").value = item?.endDate || dayText(new Date());
       $("#marketingCostUnitPrice").value = item?.unitPrice || "";
       $("#marketingCostNote").value = item?.note || "";
-      fillMarketingCostBusinesses(item?.businessId || "");
-      $("#saveMarketingCost").textContent = item ? "保存修改" : "加入计算";
+      setMarketingCostSubmitting(false);
+      renderMarketingCostSelectors({ chooseDefaultBusiness: !item });
       $("#modalMask").classList.add("open");
       $("#marketingCostModal").classList.add("open");
     }
 
-    function closeMarketingCostModal() {
+    function closeMarketingCostModal(force = false) {
+      if (state.marketingCostSubmitting && !force) return;
       $("#marketingCostModal").classList.remove("open");
       $("#modalMask").classList.remove("open");
       state.marketingCostEditId = "";
+      state.marketingCostBatchId = "";
+      state.marketingCostSelectedUserIds = [];
+      state.marketingCostSelectedBusinessIds = [];
     }
 
     function clientMarketingCostItem(payload, existing = {}) {
       const relationship = marketingCostRelationship(payload.userId, payload.businessId) || {};
       const dates = dateTextList(payload.startDate, payload.endDate);
-      const t1Pending = Boolean(relationship.t1 && dates.includes(dayText(new Date())));
-      const effectiveDates = t1Pending ? dates.filter(date => date !== dayText(new Date())) : dates;
-      const orderCount = effectiveDates.reduce((sum, date) => sum + Number(relationship.days?.[date] || 0), 0);
+      const today = dayText(new Date());
+      const missingDates = [];
+      const orderCount = dates.reduce((sum, date) => {
+        if (relationship.t1 && date === today) { missingDates.push(date); return sum; }
+        if (!Object.prototype.hasOwnProperty.call(relationship.days || {}, date)) { missingDates.push(date); return sum; }
+        return sum + Number(relationship.days?.[date] || 0);
+      }, 0);
       const estimatedAmount = Math.round(orderCount * Number(payload.unitPrice || 0) * 100) / 100;
-      return { ...existing, ...payload, id: existing.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`, userName: relationship.userName || `用户 ${payload.userId}`, businessName: relationship.businessName || "未命名业务", platform: relationship.platform || "-", orderCount, estimatedAmount, liveOrders: orderCount, liveAmount: estimatedAmount, complete: !t1Pending, t1Pending, missingDates: t1Pending ? [dayText(new Date())] : [], dataTime: relationship.dataTime || "-", updatedAt: new Date().toISOString(), updatedAtText: new Date().toLocaleString("zh-CN", { hour12:false }) };
+      const t1Pending = Boolean(relationship.t1 && missingDates.includes(today));
+      return { ...existing, ...payload, id: existing.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`, userName: relationship.userName || `用户 ${payload.userId}`, businessName: relationship.businessName || "未命名业务", platform: relationship.platform || "-", orderCount, estimatedAmount, liveOrders: orderCount, liveAmount: estimatedAmount, complete: missingDates.length === 0, t1Pending, missingDates, dataTime: relationship.dataTime || "-", updatedAt: new Date().toISOString(), updatedAtText: new Date().toLocaleString("zh-CN", { hour12:false }) };
     }
 
-    async function persistMarketingCost(payload) {
+    function applyMarketingCostResponse(data) {
+      if (Array.isArray(data?.savedItems)) {
+        const byId = new Map((state.marketingCosts?.items || []).map(item => [String(item.id), item]));
+        data.savedItems.forEach(item => byId.set(String(item.id), item));
+        const items = [...byId.values()].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+        state.marketingCosts = { ...(state.marketingCosts || {}), items, summary:marketingCostSummary(items), updatedAt:data.updatedAt || state.marketingCosts?.updatedAt, updatedAtText:data.updatedAtText || state.marketingCosts?.updatedAtText };
+      } else if (Array.isArray(data?.items)) state.marketingCosts = data;
+      renderMarketingCosts();
+      return data;
+    }
+
+    async function persistMarketingCosts(payloads, batchId = "") {
       if (state.publicMode && !isLocalSettings) {
-        const existing = (state.marketingCosts?.items || []).find(item => String(item.id) === String(payload.id || "")) || {};
-        const item = clientMarketingCostItem(payload, existing);
-        if (item.status === "confirmed" && !item.complete) throw new Error("仍有日期待更新，暂不能确认费用。");
-        if (item.status === "confirmed") {
-          item.lockedOrders = item.orderCount;
-          item.lockedAmount = item.estimatedAmount;
-          item.confirmedAt = new Date().toISOString();
-        }
         const changes = readPublicMarketingCostChanges();
-        changes.upserts[item.id] = item;
-        changes.removed = changes.removed.filter(id => String(id) !== String(item.id));
+        const savedItems = payloads.map((payload, index) => {
+          const stableId = payload.id || `${batchId || newMarketingCostBatchId()}-${index}`;
+          const existing = (state.marketingCosts?.items || []).find(item => String(item.id) === String(stableId)) || {};
+          const item = clientMarketingCostItem({ ...payload, id:stableId, batchId }, existing);
+          if (item.status === "confirmed" && !item.complete) throw new Error("仍有日期待更新，暂不能确认费用。");
+          if (item.status === "confirmed") { item.lockedOrders = item.orderCount; item.lockedAmount = item.estimatedAmount; item.confirmedAt = new Date().toISOString(); }
+          changes.upserts[item.id] = item;
+          changes.removed = changes.removed.filter(id => String(id) !== String(item.id));
+          return item;
+        });
         writePublicMarketingCostChanges(changes);
         state.marketingCosts = mergePublicMarketingCosts(state.marketingCosts);
         renderMarketingCosts();
-        fetch("http://127.0.0.1:8791/api/marketing-costs", { method:"POST", mode:"cors", headers:{"content-type":"application/json"}, body:JSON.stringify(item) }).catch(() => {});
-        return item;
+        fetch("http://127.0.0.1:8791/api/marketing-costs", { method:"POST", mode:"cors", headers:{"content-type":"application/json"}, body:JSON.stringify({ batchId, items:payloads }) }).catch(() => {});
+        return { ok:true, savedItems, batchResult:{ savedCount:savedItems.length } };
       }
-      state.marketingCosts = await requestJson(apiUrl("/api/marketing-costs"), { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload) });
-      renderMarketingCosts();
-      return state.marketingCosts;
+      const data = await requestJson(apiUrl("/api/marketing-costs"), { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({ batchId, items:payloads }) });
+      return applyMarketingCostResponse(data);
+    }
+
+    async function persistMarketingCost(payload) {
+      return persistMarketingCosts([payload], payload.batchId || "");
     }
 
     async function saveMarketingCostForm() {
+      if (state.marketingCostSubmitting) return;
       const preview = marketingCostPreview();
-      const userId = $("#marketingCostUser").value;
-      const businessId = $("#marketingCostBusiness").value;
       const unitPrice = Number($("#marketingCostUnitPrice").value || 0);
-      if (!userId || !businessId) throw new Error("请选择用户和业务。");
+      if (!preview.relationships.length) throw new Error("请至少选择一位用户和一项有单业务。");
       if (!unitPrice || unitPrice <= 0) throw new Error("请输入大于0的单价。");
+      const startDate = $("#marketingCostStart").value;
+      const endDate = $("#marketingCostEnd").value;
+      if (!startDate || !endDate || startDate > endDate) throw new Error("请选择正确的开始和结束日期。");
+      if (dateTextList(startDate, endDate).length > 65) throw new Error("单个费用周期最多支持65天。");
+      const editing = Boolean(state.marketingCostEditId);
       const existing = (state.marketingCosts?.items || []).find(item => String(item.id) === String(state.marketingCostEditId || ""));
-      const relationship = preview.relationship || {};
-      await persistMarketingCost({ id: state.marketingCostEditId || undefined, userId, userName: relationship.userName || "", businessId, businessName: relationship.businessName || "", platform: relationship.platform || "", startDate: $("#marketingCostStart").value, endDate: $("#marketingCostEnd").value, unitPrice, note: $("#marketingCostNote").value.trim(), status: existing?.status || "draft" });
-      closeMarketingCostModal();
-      toast("费用项已保存，公网正在后台同步");
+      const relationships = editing ? preview.relationships.slice(0, 1) : preview.relationships;
+      const payloads = relationships.map(relationship => ({ id:state.marketingCostEditId || undefined, userId:String(relationship.userId), userName:relationship.userName || "", businessId:String(relationship.businessId), businessName:relationship.businessName || "", platform:relationship.platform || "", startDate, endDate, unitPrice, note:$("#marketingCostNote").value.trim(), status:existing?.status || "draft" }));
+      setMarketingCostSubmitting(true, payloads.length);
+      try {
+        await persistMarketingCosts(payloads, state.marketingCostBatchId);
+        const hasFutureDates = preview.futureDates.length > 0;
+        setMarketingCostSubmitting(false);
+        closeMarketingCostModal(true);
+        toast(editing ? "费用项已保存，公网正在后台同步" : `已添加 ${payloads.length} 个费用项${hasFutureDates ? "，未来订单将自动补入草稿" : ""}`);
+      } finally {
+        if (state.marketingCostSubmitting) setMarketingCostSubmitting(false);
+      }
     }
 
     async function removeMarketingCost(id) {
@@ -4600,8 +4717,31 @@
       const removeButton = e.target.closest("[data-remove-marketing-cost]");
       if (removeButton) removeMarketingCost(removeButton.dataset.removeMarketingCost).catch(error => toast(error.message || "删除失败"));
     });
-    $("#marketingCostUser").addEventListener("change", () => fillMarketingCostBusinesses());
-    ["#marketingCostBusiness", "#marketingCostStart", "#marketingCostEnd", "#marketingCostUnitPrice"].forEach(selector => $(selector).addEventListener("input", marketingCostPreview));
+    $("#marketingCostModal").addEventListener("change", e => {
+      const user = e.target.closest("[data-marketing-cost-user]");
+      if (user) {
+        const userId = String(user.dataset.marketingCostUser);
+        state.marketingCostSelectedUserIds = state.marketingCostEditId ? [userId] : user.checked ? [...new Set([...state.marketingCostSelectedUserIds, userId])] : state.marketingCostSelectedUserIds.filter(id => String(id) !== userId);
+        renderMarketingCostSelectors({ chooseDefaultBusiness:true });
+        return;
+      }
+      const business = e.target.closest("[data-marketing-cost-business]");
+      if (business) {
+        const businessId = String(business.dataset.marketingCostBusiness);
+        state.marketingCostSelectedBusinessIds = state.marketingCostEditId ? [businessId] : business.checked ? [...new Set([...state.marketingCostSelectedBusinessIds, businessId])] : state.marketingCostSelectedBusinessIds.filter(id => String(id) !== businessId);
+        renderMarketingCostSelectors();
+      }
+    });
+    $("#marketingCostModal").addEventListener("click", e => {
+      const selectAll = e.target.closest("[data-cost-select-all]");
+      const clear = e.target.closest("[data-cost-clear]");
+      if (!selectAll && !clear) return;
+      const target = (selectAll || clear).dataset.costSelectAll || (selectAll || clear).dataset.costClear;
+      if (target === "users") state.marketingCostSelectedUserIds = selectAll ? marketingCostVisibleUsers().map(user => String(user.userId)) : [];
+      if (target === "businesses") state.marketingCostSelectedBusinessIds = selectAll ? marketingCostBusinessOptions().map(row => String(row.businessId)) : [];
+      renderMarketingCostSelectors({ chooseDefaultBusiness:Boolean(selectAll && target === "users") });
+    });
+    ["#marketingCostStart", "#marketingCostEnd", "#marketingCostUnitPrice"].forEach(selector => $(selector).addEventListener("input", marketingCostPreview));
     $("#closeMarketingCostModal").addEventListener("click", closeMarketingCostModal);
     $("#cancelMarketingCost").addEventListener("click", closeMarketingCostModal);
     $("#saveMarketingCost").addEventListener("click", () => saveMarketingCostForm().catch(error => toast(error.message || "费用项保存失败")));

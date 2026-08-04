@@ -46,6 +46,7 @@ let performanceSessionPromise = null;
 let snapshotTimer = null;
 let snapshotScheduleVersion = 0;
 let snapshotRecordQueue = Promise.resolve();
+let marketingCostMutationQueue = Promise.resolve();
 let lastSnapshotAt = 0;
 let lastSnapshotSlotKey = "";
 let lastSnapshotPruneDay = "";
@@ -1943,6 +1944,7 @@ async function warmStartupData() {
     const config = await readConfig();
     await warmTopBusinessUsers(data.businesses, dateRange, config);
     await refreshFocusUsersToday();
+    await warmBusinessUserHistories(await focusBusinessCatalog());
     console.log(`[${nowText()}] 启动预热完成`);
   } catch (error) {
     console.error(`[${nowText()}] 启动预热失败：${error.message}`);
@@ -2758,6 +2760,7 @@ function normalizeMarketingCostItem(item = {}) {
     endDate: startDate <= endDate ? endDate : startDate,
     unitPrice: Math.max(0, Number(item.unitPrice || 0)),
     note: String(item.note || "").trim().slice(0, 200),
+    batchId: String(item.batchId || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 100),
     status,
     lockedOrders: status === "confirmed" && Number.isFinite(Number(item.lockedOrders)) ? Number(item.lockedOrders) : null,
     lockedAmount: status === "confirmed" && Number.isFinite(Number(item.lockedAmount)) ? Number(item.lockedAmount) : null,
@@ -3320,33 +3323,73 @@ async function buildMarketingCostWorkspace() {
   };
 }
 
+function enqueueMarketingCostMutation(task) {
+  const next = marketingCostMutationQueue.then(task, task);
+  marketingCostMutationQueue = next.catch(() => {});
+  return next;
+}
+
+function marketingCostBatchItemId(batchId, userId, businessId) {
+  const digest = createHash("sha256").update(`${batchId}|${userId}|${businessId}`).digest("hex").slice(0, 24);
+  return `cost-${digest}`;
+}
+
 async function saveMarketingCost(body) {
+  const rawItems = Array.isArray(body.items) ? body.items : [body];
+  if (!rawItems.length) throw new Error("请选择需要保存的费用项。");
+  if (rawItems.length > 500) throw new Error("单次最多新增500个费用项。");
+  const batchId = String(body.batchId || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 100);
+  const uniqueItems = [];
+  const seen = new Set();
+  rawItems.forEach(source => {
+    const key = String(source?.id || "") || `${String(source?.userId || "")}:${String(source?.businessId || "")}`;
+    if (!seen.has(key)) uniqueItems.push(source || {});
+    seen.add(key);
+  });
   const saved = await readMarketingCosts();
-  const existingIndex = saved.items.findIndex(item => String(item.id) === String(body.id || ""));
-  const existing = existingIndex >= 0 ? saved.items[existingIndex] : {};
-  const item = normalizeMarketingCostItem({ ...existing, ...body, updatedAt: new Date().toISOString(), updatedAtText: nowText() });
-  if (!item.userId) throw new Error("请选择重点用户。");
-  if (!item.businessId) throw new Error("请选择业务。");
-  if (!(item.unitPrice > 0)) throw new Error("单价必须大于0。");
-  if (dayList(item.startDate, item.endDate).length > 65) throw new Error("单个费用周期最多支持65天。");
   const context = await marketingCostContext();
-  const calculated = calculateMarketingCostItem(item, context);
-  if (item.status === "confirmed") {
-    if (!calculated.complete) throw new Error(calculated.t1Pending ? "该T+1业务仍有日期待更新，暂不能确认费用。" : `缺少 ${calculated.missingDates.length} 天订单数据，暂不能确认费用。`);
-    item.lockedOrders = calculated.liveOrders;
-    item.lockedAmount = calculated.liveAmount;
-    item.confirmedAt = new Date().toISOString();
-    item.confirmedAtText = nowText();
-  } else {
-    item.lockedOrders = null;
-    item.lockedAmount = null;
-    item.confirmedAt = "";
-    item.confirmedAtText = "";
+  const savedItems = [];
+  let createdCount = 0;
+  let updatedCount = 0;
+  for (const source of uniqueItems) {
+    const requestedId = String(source.id || "") || (batchId && source.userId && source.businessId ? marketingCostBatchItemId(batchId, source.userId, source.businessId) : "");
+    const existingIndex = saved.items.findIndex(item => String(item.id) === requestedId);
+    const existing = existingIndex >= 0 ? saved.items[existingIndex] : {};
+    const item = normalizeMarketingCostItem({ ...existing, ...source, ...(requestedId ? { id:requestedId } : {}), batchId:batchId || existing.batchId || "", updatedAt:new Date().toISOString(), updatedAtText:nowText() });
+    if (!item.userId) throw new Error("请选择重点用户。");
+    if (!item.businessId) throw new Error("请选择业务。");
+    if (!(item.unitPrice > 0)) throw new Error("单价必须大于0。");
+    if (dayList(item.startDate, item.endDate).length > 65) throw new Error("单个费用周期最多支持65天。");
+    const calculated = calculateMarketingCostItem(item, context);
+    if (item.status === "confirmed") {
+      if (!calculated.complete) throw new Error(calculated.t1Pending ? "该T+1业务仍有日期待更新，暂不能确认费用。" : `缺少 ${calculated.missingDates.length} 天订单数据，暂不能确认费用。`);
+      item.lockedOrders = calculated.liveOrders;
+      item.lockedAmount = calculated.liveAmount;
+      item.confirmedAt = new Date().toISOString();
+      item.confirmedAtText = nowText();
+    } else {
+      item.lockedOrders = null;
+      item.lockedAmount = null;
+      item.confirmedAt = "";
+      item.confirmedAtText = "";
+    }
+    if (existingIndex >= 0) {
+      saved.items.splice(existingIndex, 1, item);
+      updatedCount += 1;
+    } else {
+      saved.items.unshift(item);
+      createdCount += 1;
+    }
+    savedItems.push(calculateMarketingCostItem(item, context));
   }
-  if (existingIndex >= 0) saved.items.splice(existingIndex, 1, item);
-  else saved.items.unshift(item);
   await writeMarketingCosts(saved.items);
-  return buildMarketingCostWorkspace();
+  return {
+    ok: true,
+    savedItems,
+    updatedAt: new Date().toISOString(),
+    updatedAtText: nowText(),
+    batchResult: { batchId, requestedCount: rawItems.length, savedCount: savedItems.length, createdCount, updatedCount }
+  };
 }
 
 async function removeMarketingCost(body) {
@@ -4000,13 +4043,15 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/marketing-costs" && req.method === "GET") return json(res, 200, await buildMarketingCostWorkspace());
     if (url.pathname === "/api/marketing-costs" && req.method === "POST") {
-      const data = await saveMarketingCost(await readBody(req));
+      const body = await readBody(req);
+      const data = await enqueueMarketingCostMutation(() => saveMarketingCost(body));
       json(res, 200, { ...data, syncing: true });
       publishLatestCachedDashboard().catch(error => console.error(`[${nowText()}] 营销费用公网同步失败：${error.message}`));
       return;
     }
     if (url.pathname === "/api/marketing-costs/remove" && req.method === "POST") {
-      const data = await removeMarketingCost(await readBody(req));
+      const body = await readBody(req);
+      const data = await enqueueMarketingCostMutation(() => removeMarketingCost(body));
       json(res, 200, { ...data, syncing: true });
       publishLatestCachedDashboard().catch(error => console.error(`[${nowText()}] 营销费用删除公网同步失败：${error.message}`));
       return;
