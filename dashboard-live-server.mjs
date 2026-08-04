@@ -2760,6 +2760,46 @@ function focusUserCacheIndex(userIds = []) {
       index.set(key, attachPlainPhone(merged));
     }
   }
+  const orderHistoryByDate = new Map();
+  const currentByRelation = new Map();
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    let cache;
+    try { cache = JSON.parse(cacheKey); } catch { continue; }
+    const businessId = String(cache.businessId || "");
+    if (!businessId || !["focus-order-history", "focus-current"].includes(cache.type)) continue;
+    const savedAt = Date.parse(String(payload.savedAtText || "").replaceAll("/", "-")) || 0;
+    for (const row of payload.rows || []) {
+      const userId = String(row.id || row.userId || "");
+      if (!wanted.has(userId)) continue;
+      const relationKey = `${businessId}:${userId}`;
+      if (cache.type === "focus-current") {
+        const current = currentByRelation.get(relationKey);
+        if (!current || savedAt >= current.savedAt) currentByRelation.set(relationKey, { row, savedAt, savedAtText: payload.savedAtText || "" });
+        continue;
+      }
+      const dates = orderHistoryByDate.get(relationKey) || new Map();
+      Object.entries(row.days || {}).forEach(([date, value]) => {
+        const current = dates.get(date);
+        if (!current || savedAt >= current.savedAt) dates.set(date, { value: number(value), savedAt });
+      });
+      orderHistoryByDate.set(relationKey, dates);
+    }
+  }
+  orderHistoryByDate.forEach((dates, relationKey) => {
+    const current = index.get(relationKey) || {};
+    current.days = { ...(current.days || {}), ...Object.fromEntries([...dates].map(([date, state]) => [date, state.value])) };
+    index.set(relationKey, attachPlainPhone(current));
+  });
+  currentByRelation.forEach(({ row, savedAtText }, relationKey) => {
+    const current = index.get(relationKey) || {};
+    const today = dayKey();
+    index.set(relationKey, attachPlainPhone({
+      ...current,
+      ...row,
+      days: { ...(current.days || {}), [today]: number(row.todayOrders ?? row.days?.[today]) },
+      cacheSavedAtText: savedAtText || current.cacheSavedAtText || ""
+    }));
+  });
   return index;
 }
 
