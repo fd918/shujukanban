@@ -1774,12 +1774,17 @@ async function refreshFocusUsersMetricHistories(days = 30, includeMetrics = true
   let orderRefreshed = 0;
   let metricRefreshed = 0;
   const failureCounts = new Map();
+  let abortedMessage = "";
   await mapLimit(targets, 4, async item => {
+    if (abortedMessage) return;
     const orderResult = await refreshFocusUserOrderHistory(item, range);
     if (orderResult.ok) orderRefreshed += 1;
-    else failureCounts.set(orderResult.message, number(failureCounts.get(orderResult.message)) + 1);
+    else {
+      failureCounts.set(orderResult.message, number(failureCounts.get(orderResult.message)) + 1);
+      if (/登录超时|登陆超时|重新登录|其他地方登录|其它地方登录|登录状态失效|中台登录失败|接口超时/.test(String(orderResult.message || ""))) abortedMessage = orderResult.message;
+    }
   });
-  if (includeMetrics) {
+  if (includeMetrics && !abortedMessage) {
     await mapLimit(targets, 4, async item => {
       const metricResult = await refreshFocusUserMetricHistory(item, range);
       if (metricResult.ok) metricRefreshed += 1;
@@ -1795,6 +1800,8 @@ async function refreshFocusUsersMetricHistories(days = 30, includeMetrics = true
     metricRefreshed,
     total: targets.length,
     days: safeDays,
+    message: abortedMessage ? `中台数据刷新已停止：${abortedMessage}` : "",
+    aborted: Boolean(abortedMessage),
     failures: Object.fromEntries(failureCounts)
   };
 }
@@ -3891,12 +3898,13 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/focus-users/refresh-metrics" && req.method === "POST") {
       const body = await readBody(req);
       const result = await refreshFocusUsersMetricHistories(body.days, body.includeMetrics !== false);
+      if (!result.ok) return json(res, 502, result);
       const data = await buildFocusUsers({ preset: "7" });
       const published = await publishLatestCachedDashboard().catch(error => {
         console.error(`[${nowText()}] 重点用户指标公网同步失败：${error.message}`);
         return false;
       });
-      return json(res, 200, { ok: true, ...result, data, published });
+      return json(res, 200, { ...result, data, published });
     }
     if (url.pathname === "/api/marketing-costs" && req.method === "GET") return json(res, 200, await buildMarketingCostWorkspace());
     if (url.pathname === "/api/marketing-costs" && req.method === "POST") {
