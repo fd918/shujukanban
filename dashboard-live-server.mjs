@@ -1171,6 +1171,34 @@ function latestFullBusinessUsers(businessId, date = dayKey()) {
   return latest;
 }
 
+function mergeFocusOrderHistoryRows(businessId, baseRows = []) {
+  const rowsById = new Map(baseRows.map(row => [String(row.id || ""), { ...row, days: { ...(row.days || {}) } }]));
+  let latestDataTime = "";
+  let latestAt = 0;
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    let key;
+    try { key = JSON.parse(cacheKey); } catch { continue; }
+    if (key.type !== "focus-order-history" || String(key.businessId) !== String(businessId)) continue;
+    const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+    if (savedAt >= latestAt) {
+      latestAt = savedAt;
+      latestDataTime = payload.savedAtText || latestDataTime;
+    }
+    for (const focusRow of payload.rows || []) {
+      const id = String(focusRow.id || "");
+      if (!id) continue;
+      const current = rowsById.get(id) || {};
+      rowsById.set(id, attachPlainPhone({
+        ...current,
+        ...focusRow,
+        days: { ...(current.days || {}), ...(focusRow.days || {}) },
+        currentDataTime: payload.savedAtText || current.currentDataTime || ""
+      }));
+    }
+  }
+  return { rows: [...rowsById.values()], latestDataTime };
+}
+
 async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
   const isT1Business = T1_USER_BUSINESS_IDS.has(String(businessId));
   const history = await fetchBusinessUserHistory({
@@ -1181,8 +1209,12 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     refresh: isT1Business && refresh,
     enrichPhones: true
   }, statuses);
-  const historyRows = deduplicateBusinessUsers(history.rows || []).map(row => ({ ...row, currentDataTime: history.savedAtText || "" }));
-  const t1Detail = buildT1BusinessUserDetail({ ...history, rows: historyRows }, businessId);
+  const baseHistoryRows = deduplicateBusinessUsers(history.rows || []).map(row => ({ ...row, currentDataTime: history.savedAtText || "" }));
+  const focusHistory = mergeFocusOrderHistoryRows(businessId, baseHistoryRows);
+  const historyRows = focusHistory.rows;
+  const timeValue = value => Date.parse(String(value || "").replace(/\//g, "-")) || 0;
+  const historyLatestDataTime = timeValue(focusHistory.latestDataTime) > timeValue(history.savedAtText) ? focusHistory.latestDataTime : (history.savedAtText || "-");
+  const t1Detail = buildT1BusinessUserDetail({ ...history, savedAtText: historyLatestDataTime, rows: historyRows }, businessId);
   if (t1Detail) {
     return {
       ok: history.ok,
@@ -1192,10 +1224,10 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
       history: {
         ok: history.ok,
         cached: Boolean(history.cached),
-        latestDataTime: history.savedAtText || "-",
+        latestDataTime: historyLatestDataTime,
         dates: history.dates,
         rows: historyRows,
-        total: history.total
+        total: Math.max(number(history.total), historyRows.length)
       }
     };
   }
@@ -1213,7 +1245,6 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   }, statuses) : null;
   const full = refreshedFull || (endDate === dayKey() ? latestFullBusinessUsers(businessId, endDate) : null);
   const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
-  const timeValue = value => Date.parse(String(value || "").replace(/\//g, "-")) || 0;
   const fullRows = deduplicateBusinessUsers(full?.rows || []).map(row => ({ ...row, currentDataTime: full?.savedAtText || "" }));
   const fullById = new Map(fullRows.map(row => [String(row.id || ""), row]));
   const fastIsNewer = timeValue(fast?.savedAtText) > timeValue(full?.savedAtText);
@@ -1241,7 +1272,6 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     if (historyRows.some(row => String(row.id || "") === String(currentRow.id || ""))) continue;
     todayRows.push({ ...currentRow, days: { [endDate]: number(currentRow.todayOrders) }, realtimeToday: true });
   }
-  const historyLatestDataTime = history.savedAtText || "-";
   const fullCurrentLatestDataTime = full?.savedAtText || "";
   const currentLatestDataTime = fastIsNewer ? fast.savedAtText : (fullCurrentLatestDataTime || historyLatestDataTime);
   const users = enrichBusinessUsersWithSnapshots(
@@ -1274,7 +1304,7 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
       latestDataTime: historyLatestDataTime,
       dates: history.dates,
       rows: historyRows,
-      total: history.total
+      total: Math.max(number(history.total), historyRows.length)
     }
   };
 }
@@ -1524,6 +1554,42 @@ async function fetchFocusUserOrderMetrics(item, startDate, endDate) {
   return { ok: true, rows: rows.length, commissionDays, gmvDays };
 }
 
+async function refreshFocusUserOrderHistory(item, range) {
+  const dates = dayList(range.startDate, range.endDate);
+  const params = {
+    order_type: item.businessId,
+    page: 1,
+    pre_page: 5000,
+    start_date: range.startDate,
+    end_date: range.endDate,
+    keyword: item.userId,
+    filter_field: "order_valid"
+  };
+  const result = await apiCall("重点用户近30天订单", "GET", "/api/v2/dashboard/business/user-order-statistics", params, 30000);
+  if (!result.ok) return { ok: false, message: result.message || "用户订单历史加载失败" };
+  const matched = asList(result.data).filter(row => String(row.uid || row.promotion_id || row.accounts_id || "") === String(item.userId));
+  const merged = deduplicateBusinessUsers(matched.map(source => {
+    const row = normalizeUser(source, "period_total");
+    row.days = Object.fromEntries(dates.map(date => [date, number(source[date])]));
+    row.todayOrders = number(row.days[range.endDate]);
+    return row;
+  }));
+  const row = merged[0] || {
+    id: String(item.userId),
+    name: item.name || `用户 ${item.userId}`,
+    phone: item.phone || "-",
+    version: item.version || "-",
+    days: Object.fromEntries(dates.map(date => [date, 0])),
+    todayOrders: 0
+  };
+  row.phone = plainPhoneValue(row.id, row.phone, item.phone);
+  const savedAtText = nowText();
+  const cacheKey = JSON.stringify({ type: "focus-order-history", businessId: String(item.businessId), userId: String(item.userId), startDate: range.startDate, endDate: range.endDate });
+  userDetailCache.set(cacheKey, { ok: true, savedAtText, total: 1, dates, rows: [row] });
+  scheduleUserDetailCacheSave();
+  return { ok: true, savedAtText };
+}
+
 async function refreshFocusUserToday(item) {
   const today = dayKey();
   const params = {
@@ -1647,15 +1713,30 @@ async function refreshFocusUsersMetricHistories(days = 30) {
       targets.push({ ...item, ...business });
     }
   }
-  let refreshed = 0;
+  let orderRefreshed = 0;
+  let metricRefreshed = 0;
   const failureCounts = new Map();
   await mapLimit(targets, 4, async item => {
-    const result = await refreshFocusUserMetricHistory(item, range);
-    if (result.ok) refreshed += 1;
-    else failureCounts.set(result.message, number(failureCounts.get(result.message)) + 1);
+    const [orderResult, metricResult] = await Promise.all([
+      refreshFocusUserOrderHistory(item, range),
+      refreshFocusUserMetricHistory(item, range)
+    ]);
+    if (orderResult.ok) orderRefreshed += 1;
+    else failureCounts.set(orderResult.message, number(failureCounts.get(orderResult.message)) + 1);
+    if (metricResult.ok) metricRefreshed += 1;
+    else failureCounts.set(metricResult.message, number(failureCounts.get(metricResult.message)) + 1);
   });
-  console.log(`[${nowText()}] 已刷新重点用户近 ${safeDays} 天佣金与成交金额：${refreshed}/${targets.length} 条业务关系。`);
-  return { ok: true, refreshed, total: targets.length, days: safeDays, failures: Object.fromEntries(failureCounts) };
+  await writeUserDetailCacheToDisk();
+  console.log(`[${nowText()}] 已刷新重点用户近 ${safeDays} 天数据：订单 ${orderRefreshed}/${targets.length}，佣金与成交金额 ${metricRefreshed}/${targets.length} 条业务关系。`);
+  return {
+    ok: orderRefreshed > 0 || metricRefreshed > 0 || targets.length === 0,
+    refreshed: orderRefreshed,
+    orderRefreshed,
+    metricRefreshed,
+    total: targets.length,
+    days: safeDays,
+    failures: Object.fromEntries(failureCounts)
+  };
 }
 
 async function warmBusinessUserHistories(businesses, { refresh = false } = {}) {

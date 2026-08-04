@@ -854,7 +854,7 @@
             <div class="segmented" id="focusModeTabs"><button class="active" data-focus-mode="business">按业务看</button><button data-focus-mode="user">按用户看</button></div>
             <select class="field focus-entity-select" id="focusEntitySelect"></select>
             <div class="search-with-clear"><input class="field" id="focusSearch" placeholder="搜索用户名称或ID"><button class="search-clear" id="focusSearchClear" title="清空搜索">×</button></div>
-            <button class="btn" id="refreshFocusBtn">刷新数据</button>
+            <button class="btn" id="refreshFocusBtn" title="重新请求重点用户近30天订单、佣金和GMV，并同步用户内部看板">刷新近30天</button>
             <button class="btn primary" id="addFocusBtn">添加用户</button>
             <div class="focus-range-inline">
               <span class="focus-range-label">日期</span>
@@ -2351,9 +2351,9 @@
         return toast("已更新到最新缓存");
       }
       const button = $("#refreshFocusBtn");
-      const days = Math.max(1, Math.min(65, state.focusData?.dates?.length || (state.focusRange === "30" ? 30 : 7)));
+      const days = 30;
       button.disabled = true;
-      button.textContent = `刷新近${days}天…`;
+      button.textContent = "正在刷新近30天…";
       try {
         const result = await requestJson(apiUrl("/api/focus-users/refresh-metrics"), {
           method: "POST",
@@ -2362,10 +2362,10 @@
         });
         state.focusData = result.data || state.focusData;
         await loadFocusUsers();
-        toast(`已刷新 ${result.refreshed || 0}/${result.total || 0} 条业务关系的佣金和 GMV`);
+        toast(`近30天已更新：订单 ${result.orderRefreshed || 0}/${result.total || 0}，佣金和GMV ${result.metricRefreshed || 0}/${result.total || 0}`);
       } finally {
         button.disabled = false;
-        button.textContent = "刷新数据";
+        button.textContent = "刷新近30天";
       }
     }
 
