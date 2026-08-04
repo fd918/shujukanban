@@ -704,11 +704,13 @@ async function writeUserDetailCacheToDisk() {
   await mkdir(join(ROOT, "data"), { recursive: true });
   const entries = retainedUserDetailCacheEntries(userDetailCache.entries());
   userDetailCacheSavedAtText = nowText();
-  await writeFile(USER_DETAIL_CACHE_PATH, JSON.stringify({
+  const temporaryPath = `${USER_DETAIL_CACHE_PATH}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
+  await writeFile(temporaryPath, JSON.stringify({
     savedAt: new Date().toISOString(),
     savedAtText: userDetailCacheSavedAtText,
     items: Object.fromEntries(entries)
   }, null, 2));
+  await rename(temporaryPath, USER_DETAIL_CACHE_PATH);
 }
 
 function userDetailCacheRetentionId(cacheKey) {
