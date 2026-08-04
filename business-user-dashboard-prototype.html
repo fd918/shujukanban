@@ -2638,7 +2638,7 @@
         writePublicMarketingCostChanges(changes);
         state.marketingCosts = mergePublicMarketingCosts(state.marketingCosts);
         renderMarketingCosts();
-        fetch("http://127.0.0.1:8791/api/marketing-costs", { method:"POST", mode:"cors", headers:{"content-type":"application/json"}, body:JSON.stringify({ batchId, items:payloads }) }).catch(() => {});
+        fetch("http://127.0.0.1:8791/api/marketing-costs", { method:"POST", mode:"cors", headers:{"content-type":"application/json"}, body:JSON.stringify({ batchId, items:savedItems }) }).catch(() => {});
         return { ok:true, savedItems, batchResult:{ savedCount:savedItems.length } };
       }
       const data = await requestJson(apiUrl("/api/marketing-costs"), { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({ batchId, items:payloads }) });
