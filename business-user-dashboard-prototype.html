@@ -522,9 +522,10 @@
     .cost-orders-summary > div { padding:10px 12px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
     .cost-orders-summary span { display:block; color:var(--muted); font-size:12px; }
     .cost-orders-summary strong { display:block; margin-top:4px; font-size:18px; }
-    .cost-orders-list { max-height:52vh; overflow:auto; border:1px solid var(--line); border-radius:7px; }
-    .cost-orders-list table { width:100%; }
-    .cost-orders-list td:last-child,.cost-orders-list th:last-child { text-align:right; }
+    .cost-orders-list { max-height:52vh; overflow-x:hidden; overflow-y:auto; border:1px solid var(--line); border-radius:7px; }
+    .cost-orders-list table { width:100%; min-width:0; table-layout:fixed; }
+    .cost-orders-list th:first-child,.cost-orders-list td:first-child { width:58%; }
+    .cost-orders-list th:last-child,.cost-orders-list td:last-child { width:42%; text-align:right; }
     .cost-note-modal { width:min(560px,calc(100vw - 28px)); }
     .cost-note-editor { width:100%; min-height:150px; resize:vertical; line-height:1.6; font-family:inherit; }
     .cost-note-source { margin:0 0 10px; color:var(--muted); font-size:12px; line-height:1.55; }
