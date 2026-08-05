@@ -2720,6 +2720,8 @@ async function runDailyHistoryFinalization(businesses) {
   if (minuteOfDay() < 30) return false;
   if (dailyHistoryFinalizationPromise) return dailyHistoryFinalizationPromise;
   const targetDate = shiftDay(dayKey(), -1);
+  const existingFinalization = userRefreshState.historyFinalizations?.[targetDate];
+  if (minuteOfDay() >= 6 * 60 && !existingFinalization?.startedAtText) return false;
   const catalog = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
   const businessIds = [...new Set(catalog.map(row => String(row.platformBusinessId || row.businessId || "")).filter(Boolean))];
   if (!businessIds.length) return false;
