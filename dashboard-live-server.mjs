@@ -1200,10 +1200,13 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
   let pageLoadFailed = false;
   if (totalPages > 1) {
     const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
-    const rest = await mapLimit(restPages, 1, currentPage => retryBusinessUserStatisticsCall(`业务用户历史第${currentPage}页`, {
-      ...params,
-      page: currentPage
-    }, 30000));
+    const rest = await mapLimit(restPages, 1, async currentPage => {
+      await new Promise(resolveWait => setTimeout(resolveWait, currentPage === 2 ? 5000 : 600));
+      return retryBusinessUserStatisticsCall(`业务用户历史第${currentPage}页`, {
+        ...params,
+        page: currentPage
+      }, 30000);
+    });
     const failed = rest.filter(item => !item.ok).length;
     pageLoadFailed = failed > 0;
     statuses.push({ name: "业务用户历史翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${totalPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
@@ -1650,10 +1653,13 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   if (result.ok && needPages > 1) {
     const loadedPageSet = new Set(loadedPages);
     const restPages = Array.from({ length: needPages - 1 }, (_, index) => index + 2).filter(currentPage => !loadedPageSet.has(currentPage));
-    const rest = await mapLimit(restPages, 1, currentPage => retryBusinessUserStatisticsCall(`业务用户下钻第${currentPage}页`, {
-      ...params,
-      page: currentPage
-    }, 25000));
+    const rest = await mapLimit(restPages, 1, async currentPage => {
+      await new Promise(resolveWait => setTimeout(resolveWait, currentPage === 2 ? 5000 : 600));
+      return retryBusinessUserStatisticsCall(`业务用户下钻第${currentPage}页`, {
+        ...params,
+        page: currentPage
+      }, 25000);
+    });
     const failed = rest.filter(item => !item.ok).length;
     loadedPages = loadedPages.concat(restPages.filter((currentPage, index) => rest[index]?.ok));
     loadedPages = [...new Set(loadedPages)].sort((a, b) => a - b);
