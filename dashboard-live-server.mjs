@@ -715,12 +715,15 @@ async function writeUserDetailCacheToDisk() {
   await rename(temporaryPath, USER_DETAIL_CACHE_PATH);
 }
 
-function userDetailCacheRetentionId(cacheKey) {
+function userDetailCacheRetentionId(cacheKey, payload = {}) {
   try {
     const key = JSON.parse(cacheKey);
     const businessId = String(key.businessId || "");
     const userId = String(key.userId || "");
-    if (key.type === "history" && businessId) return `history:${businessId}`;
+    if (key.type === "history" && businessId) {
+      const completeness = payload.partial === true || payload.complete === false ? "partial" : "complete";
+      return `history:${businessId}:${completeness}`;
+    }
     if (["focus-order-history", "focus-current", "focus-metric-history"].includes(key.type) && businessId && userId) {
       return `${key.type}:${businessId}:${userId}`;
     }
@@ -745,7 +748,7 @@ function retainedUserDetailCacheEntries(sourceEntries) {
   const retained = new Map();
   const ranks = new Map();
   for (const [cacheKey, payload] of sourceEntries) {
-    const retentionId = userDetailCacheRetentionId(cacheKey);
+    const retentionId = userDetailCacheRetentionId(cacheKey, payload);
     const rank = userDetailCacheRetentionRank(cacheKey, payload);
     const currentRank = ranks.get(retentionId);
     const shouldReplace = !currentRank || rank.some((value, index) => value > currentRank[index] && rank.slice(0, index).every((item, prefix) => item === currentRank[prefix]));
@@ -1636,20 +1639,27 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   const perPage = Math.max(1, number(result.data?.per_page) || firstRows.length || 10);
   const totalPages = Math.max(1, number(result.data?.total_pages) || Math.ceil(total / perPage));
   const needPages = Math.min(totalPages, Math.ceil(Math.max(pageSize, firstRows.length) / perPage));
+  const resumePartialCache = exactCache?.rows?.length
+    && (exactCache.partial === true || exactCache.complete === false)
+    && Array.isArray(exactCache.loadedPages);
   let allRows = firstRows;
   let pageLoadFailed = false;
-  let loadedPages = [1];
+  let loadedPages = resumePartialCache
+    ? [...new Set([1, ...exactCache.loadedPages])].filter(currentPage => currentPage >= 1 && currentPage <= needPages).sort((a, b) => a - b)
+    : [1];
   if (result.ok && needPages > 1) {
-    const restPages = Array.from({ length: needPages - 1 }, (_, index) => index + 2);
+    const loadedPageSet = new Set(loadedPages);
+    const restPages = Array.from({ length: needPages - 1 }, (_, index) => index + 2).filter(currentPage => !loadedPageSet.has(currentPage));
     const rest = await mapLimit(restPages, 1, currentPage => retryBusinessUserStatisticsCall(`业务用户下钻第${currentPage}页`, {
       ...params,
       page: currentPage
     }, 25000));
     const failed = rest.filter(item => !item.ok).length;
-    pageLoadFailed = failed > 0;
     loadedPages = loadedPages.concat(restPages.filter((currentPage, index) => rest[index]?.ok));
-    statuses.push({ name: "业务用户下钻翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${needPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
-    if (failed) {
+    loadedPages = [...new Set(loadedPages)].sort((a, b) => a - b);
+    pageLoadFailed = failed > 0 || loadedPages.length < needPages;
+    statuses.push({ name: "业务用户下钻翻页", ok: !pageLoadFailed, message: pageLoadFailed ? `${needPages - loadedPages.length} 页尚未补齐` : `已加载 ${needPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
+    if (pageLoadFailed) {
       const fallback = cachedFallback();
       const fallbackComplete = fallback && fallback.partial !== true && fallback.complete !== false;
       if (fallbackComplete) {
@@ -1715,11 +1725,10 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     const plainPhone = await fetchPlainPhone(row.id);
     row.phone = plainPhoneValue(row.id, plainPhone, row.phone);
   });
-  if (pageLoadFailed && exactCache?.rows?.length && (exactCache.partial === true || exactCache.complete === false)) {
+  if (resumePartialCache) {
     const mergedById = new Map(deduplicateBusinessUsers(exactCache.rows).map(row => [String(row.id || ""), row]));
     rows.forEach(row => mergedById.set(String(row.id || ""), row));
     rows = [...mergedById.values()];
-    loadedPages = [...new Set([...(exactCache.loadedPages || []), ...loadedPages])].sort((a, b) => a - b);
   }
   const payload = {
     ok: true,
