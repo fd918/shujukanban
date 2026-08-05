@@ -3199,7 +3199,7 @@ function normalizeMarketingCostItem(item = {}) {
     endDate: startDate <= endDate ? endDate : startDate,
     unitPrice: Math.max(0, Number(item.unitPrice || 0)),
     note: String(item.note || "").trim().slice(0, 200),
-    noteCustomized: item.noteCustomized === true,
+    noteCustomized: item.noteCustomized === true || (item.noteCustomized !== false && Boolean(String(item.note || "").trim())),
     batchId: String(item.batchId || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 100),
     status,
     lockedOrders: status === "confirmed" && Number.isFinite(Number(item.lockedOrders)) ? Number(item.lockedOrders) : null,
@@ -3740,7 +3740,7 @@ function calculateMarketingCostItem(item, context) {
   const confirmed = normalized.status === "confirmed" && normalized.lockedOrders !== null && normalized.lockedAmount !== null;
   const dataTimes = [current?.savedAtText, cached.cacheSavedAtText].filter(Boolean).sort();
   const focusNote = String(user.note || (Array.isArray(user.notes) ? user.notes.join("；") : "")).trim().slice(0, 200);
-  const inheritedNote = !normalized.noteCustomized && !normalized.note && Boolean(focusNote);
+  const inheritedNote = !normalized.noteCustomized && Boolean(focusNote);
   return {
     ...normalized,
     userName: context.aliases[normalized.userId] || user.name || cached.name || normalized.userName || `用户 ${normalized.userId}`,
