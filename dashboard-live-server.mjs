@@ -38,6 +38,7 @@ const SNAPSHOT_RETENTION_DAYS = 8;
 const PUBLIC_KDF_ITERATIONS = 60000;
 const T1_USER_BUSINESS_IDS = new Set(["2410"]);
 const DEFAULT_USER_HISTORY_DAYS = 30;
+const BUSINESS_USER_STATISTICS_MIN_INTERVAL_MS = 5200;
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
@@ -49,6 +50,7 @@ let snapshotScheduleVersion = 0;
 let snapshotRecordQueue = Promise.resolve();
 let marketingCostMutationQueue = Promise.resolve();
 let businessUserStatisticsQueue = Promise.resolve();
+let lastBusinessUserStatisticsRequestAt = 0;
 let lastSnapshotAt = 0;
 let lastSnapshotSlotKey = "";
 let lastSnapshotPruneDay = "";
@@ -67,6 +69,7 @@ let startupWarmupRunning = false;
 let publicHistoryWarmupRunning = false;
 let dailyHistoryFinalizationPromise = null;
 let highFrequencyUserWarmupPromise = null;
+let userMaintenancePromise = null;
 let snapshotMemoryCache = null;
 let marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null };
 let detailCacheSaveTimer = null;
@@ -724,7 +727,7 @@ function userDetailCacheRetentionId(cacheKey, payload = {}) {
     const key = JSON.parse(cacheKey);
     const businessId = String(key.businessId || "");
     const userId = String(key.userId || "");
-    if (key.type === "history" && businessId) {
+    if (["history", "history-partial"].includes(key.type) && businessId) {
       const completeness = payload.partial === true || payload.complete === false ? "partial" : "complete";
       const rangeDays = key.startDate && key.endDate ? daysBetweenInclusive(key.startDate, key.endDate) : 0;
       const rolling = rangeDays > 0 && rangeDays <= DEFAULT_USER_HISTORY_DAYS && String(key.endDate || "") >= shiftDay(dayKey(), -1);
@@ -929,10 +932,17 @@ async function businessUserStatisticsCall(name, params, timeoutMs) {
       // Sending our desired merged size (for example 5000) as pre_page causes code 100100.
       pre_page: Math.min(10, Math.max(1, number(params?.pre_page) || 10))
     };
+    const waitForSlot = async () => {
+      const waitMs = Math.max(0, lastBusinessUserStatisticsRequestAt + BUSINESS_USER_STATISTICS_MIN_INTERVAL_MS - Date.now());
+      if (waitMs) await new Promise(resolveWait => setTimeout(resolveWait, waitMs));
+      lastBusinessUserStatisticsRequestAt = Date.now();
+    };
+    await waitForSlot();
     const result = await apiCall(name, "GET", path, requestParams, timeoutMs);
     if (result.ok || result.code !== 100100 || !Object.prototype.hasOwnProperty.call(requestParams, "filter_field")) return result;
     const officialParams = { ...requestParams };
     delete officialParams.filter_field;
+    await waitForSlot();
     const fallback = await apiCall(`${name}（官方参数兼容）`, "GET", path, officialParams, timeoutMs);
     return fallback.ok
       ? { ...fallback, filterFieldFallback: true }
@@ -952,7 +962,7 @@ async function retryBusinessUserStatisticsCall(name, params, timeoutMs, attempts
     // This endpoint throttles short bursts after several successful pages. A real
     // backoff lets the next page recover instead of turning the rest of the batch
     // into code 100100 failures.
-    if (attempt < attempts) await new Promise(resolveWait => setTimeout(resolveWait, attempt * 1200));
+    if (attempt < attempts) await new Promise(resolveWait => setTimeout(resolveWait, 200));
   }
   return result;
 }
@@ -1136,6 +1146,13 @@ async function fetchBusinessUserHistory(options = {}, statuses = []) {
 
 async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
+  const partialCacheKey = JSON.stringify({ type: "history-partial", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
+  const legacyExactCache = userDetailCache.get(cacheKey);
+  if (legacyExactCache && (legacyExactCache.partial === true || legacyExactCache.complete === false)) {
+    userDetailCache.set(partialCacheKey, legacyExactCache);
+    userDetailCache.delete(cacheKey);
+  }
+  const exactPartialCache = userDetailCache.get(partialCacheKey);
   const historyCandidates = [...userDetailCache.entries()]
     .map(([key, payload]) => {
         try {
@@ -1144,7 +1161,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
           return null;
         }
       })
-    .filter(item => item?.key?.type === "history"
+    .filter(item => ["history", "history-partial"].includes(item?.key?.type)
       && String(item.key.businessId) === String(businessId)
       && item.key.startDate <= startDate)
     .sort((a, b) => {
@@ -1202,51 +1219,71 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
   const total = number(result.data?.total);
   const perPage = Math.max(1, number(result.data?.per_page) || firstRows.length || 10);
   const totalPages = Math.max(1, number(result.data?.total_pages) || Math.ceil(total / perPage));
+  const resumePartialCache = exactPartialCache?.rows?.length
+    && Array.isArray(exactPartialCache.loadedPages)
+    && number(exactPartialCache.totalPages) === totalPages;
   let allRows = firstRows;
-  let pageLoadFailed = false;
+  let loadedPages = resumePartialCache
+    ? [...new Set([1, ...exactPartialCache.loadedPages])].filter(currentPage => currentPage >= 1 && currentPage <= totalPages).sort((a, b) => a - b)
+    : [1];
+  let pageLoadFailed = loadedPages.length < totalPages;
   if (totalPages > 1) {
-    const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
+    const loadedPageSet = new Set(loadedPages);
+    const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2).filter(currentPage => !loadedPageSet.has(currentPage));
     const rest = await mapLimit(restPages, 1, async currentPage => {
-      await new Promise(resolveWait => setTimeout(resolveWait, currentPage === 2 ? 5000 : 600));
       return retryBusinessUserStatisticsCall(`业务用户历史第${currentPage}页`, {
         ...params,
         page: currentPage
       }, 30000);
     });
     const failed = rest.filter(item => !item.ok).length;
-    pageLoadFailed = failed > 0;
-    statuses.push({ name: "业务用户历史翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${totalPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
+    loadedPages = [...new Set(loadedPages.concat(restPages.filter((currentPage, index) => rest[index]?.ok)))].sort((a, b) => a - b);
+    pageLoadFailed = failed > 0 || loadedPages.length < totalPages;
+    statuses.push({ name: "业务用户历史翻页", ok: !pageLoadFailed, message: pageLoadFailed ? `已完成 ${loadedPages.length}/${totalPages} 页，下次只补 ${totalPages - loadedPages.length} 个缺页` : `已加载 ${totalPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
     allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
   }
   if (pageLoadFailed) {
     const fallback = cachedSlice();
-    if (fallback) {
+    const fallbackComplete = fallback && fallback.partial !== true && fallback.complete !== false;
+    if (fallbackComplete) {
       statuses.push({ name: "业务用户历史保护", ok: true, message: "中台分页不完整，已保留并返回旧缓存", durationMs: 0 });
-      return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
+      // The partial progress is still persisted separately below, so the next
+      // refresh can continue from its missing pages without replacing this cache.
+    } else {
+      statuses.push({ name: "业务用户历史部分结果", ok: true, message: "没有完整旧缓存，先返回已成功加载的用户页，后续刷新继续补齐", durationMs: 0 });
     }
-    statuses.push({ name: "业务用户历史部分结果", ok: true, message: "没有完整旧缓存，先返回已成功加载的用户页，后续刷新继续补齐", durationMs: 0 });
   }
-  const rows = allRows.map(row => {
+  let rows = allRows.map(row => {
     const normalized = normalizeUser(row, startDate === endDate ? endDate : "period_total");
     normalized.days = Object.fromEntries(dates.map(date => [date, number(row[date])]));
     return normalized;
   });
+  if (resumePartialCache) {
+    const mergedById = new Map((exactPartialCache.rows || []).map(row => [String(row.id || ""), row]));
+    rows.forEach(row => mergedById.set(String(row.id || ""), row));
+    rows = [...mergedById.values()].filter(row => row.id);
+  }
   if (enrichPhones) {
     await mapLimit(rows, 8, async row => {
       const plainPhone = await fetchPlainPhone(row.id);
       if (plainPhone) row.phone = plainPhone;
     });
   }
-  const fallback = cachedSlice();
-  const fallbackHasOrders = fallback?.rows?.some(row => dates.some(date => number(row.days?.[date]) > 0));
+  const cachedFallback = cachedSlice();
+  const fallbackHasOrders = cachedFallback?.rows?.some(row => dates.some(date => number(row.days?.[date]) > 0));
   if (!rows.length && fallbackHasOrders) {
     statuses.push({ name: "业务用户历史保护", ok: true, message: "中台返回空历史，已保留并返回旧缓存", durationMs: 0 });
-    return { ...fallback, ok: true, upstreamOk: false, cacheFallback: true };
+    return { ...cachedFallback, ok: true, upstreamOk: false, cacheFallback: true };
   }
-  const payload = { ok: true, complete: !pageLoadFailed, upstreamOk: !pageLoadFailed, partial: pageLoadFailed, filterFieldFallback: Boolean(result.filterFieldFallback), savedAtText: nowText(), total, dates, rows };
-  userDetailCache.set(cacheKey, payload);
+  const payload = { ok: true, complete: !pageLoadFailed, upstreamOk: !pageLoadFailed, partial: pageLoadFailed, filterFieldFallback: Boolean(result.filterFieldFallback), savedAtText: nowText(), total, totalPages, loadedPages, dates, rows };
+  if (pageLoadFailed) userDetailCache.set(partialCacheKey, payload);
+  else {
+    userDetailCache.set(cacheKey, payload);
+    userDetailCache.delete(partialCacheKey);
+  }
   scheduleUserDetailCacheSave();
-  return payload;
+  const fallbackComplete = pageLoadFailed && cachedFallback && cachedFallback.partial !== true && cachedFallback.complete !== false;
+  return fallbackComplete ? { ...cachedFallback, ok: true, upstreamOk: false, cacheFallback: true } : payload;
 }
 
 function deduplicateBusinessUsers(rows = []) {
@@ -1810,9 +1847,13 @@ async function saveUserRefreshState() {
   await writeFile(USER_REFRESH_STATE_PATH, JSON.stringify(userRefreshState, null, 2));
 }
 
-async function warmTopBusinessUsersRun(businesses, dateRange, config) {
+function selectedUserBusinesses(businesses, config) {
   const enabled = new Set((config.fastUserBusinessIds || []).map(String));
-  const rows = (businesses || []).filter(row => enabled.has(String(row.platformBusinessId || row.businessId || "")));
+  return (businesses || []).filter(row => enabled.has(String(row.platformBusinessId || row.businessId || "")));
+}
+
+async function warmTopBusinessUsersRun(businesses, dateRange, config) {
+  const rows = selectedUserBusinesses(businesses, config);
   if (!rows.length) return { businesses: 0, users: 0, newTop100: 0 };
   let users = 0;
   let newTop100 = 0;
@@ -1831,7 +1872,7 @@ async function warmTopBusinessUsersRun(businesses, dateRange, config) {
       includePrevious: false
     }, statuses);
     if (!result.ok || result.complete === false || result.partial === true || !(result.rows || []).length) {
-      console.error(`[${nowText()}] 高频业务完整用户刷新失败：${row.name}；已保留旧缓存`);
+      console.error(`[${nowText()}] 重点业务前100用户刷新失败：${row.name}；已保留旧缓存`);
       return;
     }
     const topRows = (result.rows || []).slice(0, 100);
@@ -1849,7 +1890,7 @@ async function warmTopBusinessUsersRun(businesses, dateRange, config) {
     newTop100 += previousIds.size ? entered.length : 0;
   });
   await saveUserRefreshState();
-  console.log(`[${nowText()}] 已刷新高频业务完整用户：${rows.length} 个业务，${users} 个用户；前100新进 ${newTop100} 人。`);
+  console.log(`[${nowText()}] 已刷新重点业务前100用户：${rows.length} 个业务，${users} 个用户；前100新进 ${newTop100} 人。`);
   return { businesses: rows.length, users, newTop100 };
 }
 
@@ -2705,24 +2746,25 @@ async function runScheduledUserRefresh(businesses, config) {
   if (!time) return false;
   const key = `${dayKey()} ${time}`;
   if (userRefreshState.scheduledRuns[key]) return false;
-  console.log(`[${nowText()}] 开始固定时段今日全量用户对账：${time}`);
+  const selected = selectedUserBusinesses(businesses, config);
+  console.log(`[${nowText()}] 开始固定时段重点业务今日全量用户对账：${time}；${selected.length} 个业务`);
   const todayRange = { startDate: dayKey(), endDate: dayKey() };
-  const result = await warmBusinessUserDetails(businesses, todayRange, { refresh: true, pageSize: 5000, includePrevious: false });
+  const result = await warmBusinessUserDetails(selected, todayRange, { refresh: true, pageSize: 5000, includePrevious: false });
   await refreshFocusUsersMetricHistories(1);
   userRefreshState.scheduledRuns = Object.fromEntries(Object.entries(userRefreshState.scheduledRuns).filter(([item]) => item.startsWith(dayKey())));
   userRefreshState.scheduledRuns[key] = { updatedAtText: nowText(), ...result };
   await saveUserRefreshState();
-  console.log(`[${nowText()}] 固定时段今日全量用户对账完成：${time}；完整 ${result.complete}/${result.total}`);
+  console.log(`[${nowText()}] 固定时段重点业务今日全量用户对账完成：${time}；完整 ${result.complete}/${result.total}`);
   return true;
 }
 
-async function runDailyHistoryFinalization(businesses) {
+async function runDailyHistoryFinalization(businesses, config) {
   if (minuteOfDay() < 30) return false;
   if (dailyHistoryFinalizationPromise) return dailyHistoryFinalizationPromise;
   const targetDate = shiftDay(dayKey(), -1);
   const existingFinalization = userRefreshState.historyFinalizations?.[targetDate];
   if (minuteOfDay() >= 6 * 60 && !existingFinalization?.startedAtText) return false;
-  const catalog = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
+  const catalog = selectedUserBusinesses(businesses, config).filter(row => row.platformBusinessId || row.businessId);
   const businessIds = [...new Set(catalog.map(row => String(row.platformBusinessId || row.businessId || "")).filter(Boolean))];
   if (!businessIds.length) return false;
   userRefreshState.historyFinalizations ||= {};
@@ -2777,6 +2819,19 @@ async function runDailyHistoryFinalization(businesses) {
     return current.completedAtText ? true : false;
   })().finally(() => { dailyHistoryFinalizationPromise = null; });
   return dailyHistoryFinalizationPromise;
+}
+
+function startUserMaintenance(businesses, config, dateRange) {
+  if (userMaintenancePromise) return false;
+  userMaintenancePromise = (async () => {
+    const scheduled = Boolean(currentRefreshTime(config));
+    if (scheduled) await runScheduledUserRefresh(businesses, config);
+    else await warmTopBusinessUsers(businesses, dateRange, config);
+    await refreshFocusUsersToday();
+  })()
+    .catch(error => console.error(`[${nowText()}] 用户数据后台维护失败：${error.message}`))
+    .finally(() => { userMaintenancePromise = null; });
+  return true;
 }
 
 async function checkSnapshotHealth(snapshot, previousSnapshot, config = defaultConfig) {
@@ -2841,12 +2896,10 @@ async function scheduleSnapshots() {
         await notifyOperationalIssue("apiDataMissing", "快照异常：接口数据缺失", data.source.missing.join("；"), currentConfig);
       }
       const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
-      runDailyHistoryFinalization(data.businesses).catch(error => console.error(`[${nowText()}] 昨日用户历史结算失败：${error.message}`));
-      await warmTopBusinessUsers(data.businesses, dateRange, currentConfig);
-      await refreshFocusUsersToday();
-      await runScheduledUserRefresh(data.businesses, currentConfig);
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { slot });
       console.log(`[${nowText()}] ${recorded ? `已记录业务用户快照：${slot.label}` : `跳过重复快照：${slot.label}`}`);
+      runDailyHistoryFinalization(data.businesses, currentConfig).catch(error => console.error(`[${nowText()}] 昨日用户历史结算失败：${error.message}`));
+      startUserMaintenance(data.businesses, currentConfig, dateRange);
     } catch (error) {
       console.error(`[${nowText()}] 记录快照失败：${error.message}`);
       readConfig()
