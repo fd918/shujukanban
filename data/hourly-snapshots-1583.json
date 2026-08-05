@@ -797,5 +797,22 @@
     "todayRedemptionAmount": 4909.67,
     "cumulativeRedemptionOrders": 233,
     "cumulativeRedemptionAmount": 4909.67
+  },
+  {
+    "activityId": "1583",
+    "title": "8.05-8.19企业媒体-买药享好价日常激励赛",
+    "metric": "orders",
+    "date": "2026-08-05",
+    "hour": 20,
+    "slotMinute": 20,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-05 20:20",
+    "recordedAt": "2026/8/5 20:20:17",
+    "todayValidOrders": 295,
+    "todayRedemptionOrders": 239,
+    "todayActualPayment": 7143.6,
+    "todayRedemptionAmount": 5009.85,
+    "cumulativeRedemptionOrders": 239,
+    "cumulativeRedemptionAmount": 5009.85
   }
 ]
