@@ -8,7 +8,7 @@
 
 - “激励活动看板”：对应 `meituan-dashboard-preview.html`。
 - “用户内部看板”：本地打开时由统一入口嵌入本机实时服务 `http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1`，公网打开时由统一入口嵌入加密公开快照。
-- “流失挽回看板”：本机专用原型，读取美团“平台联盟”每日订单数据，展示完整自然日订单趋势、流失/高风险指标和用户明细；由于包含用户资料，暂不进入公网版本。
+- “流失挽回看板”：本机专用的全业务流失监控原型。业务层读取实时业务看板，用户层以最近完整日对比此前 7 日均值；每个业务可独立配置影响订单阈值、下降/上涨比例以及 AND/OR 组合方式。由于包含用户资料，暂不进入公网版本。
 - “重点用户看板”：统一入口左侧独立入口，直接进入跨平台、跨业务的关注用户页面；与用户内部看板共用数据和缓存。运营人员使用可新增、删除的独立标签工作区，同一用户可重复加入多个标签；数据支持订单、佣金和 GMV 切换。
 - “开放平台毛利”：仅在本机入口显示，读取蒋敏工作日邮件中的 `开放平台毛利表2026.xlsx`，展示累计毛利、月度走势、利润结构、经营底盘、项目贡献与异常日期。经营数据不会进入公网发布文件。
 
@@ -19,19 +19,19 @@
 
 ## 流失挽回看板原型
 
-本机统一入口打开后，点击左侧“流失挽回看板”即可进入。也可以直接访问：
+本机统一入口打开后，点击左侧“全业务流失监控”即可进入。也可以直接访问：
 
 ```text
-http://127.0.0.1:8791/churn-user-dashboard-prototype.html
+http://127.0.0.1:8791/business-churn-dashboard-prototype.html
 ```
 
-当前原型使用 `/Users/tanwenjie/Downloads/美团订单-数据统计-2026080509.xlsx` 的“平台联盟”工作表。重新生成本机私有数据时，在 macOS 终端进入项目根目录，执行：
+当前原型读取本机业务看板缓存 `data/business-dashboard-cache.json` 与业务用户历史缓存 `data/business-user-detail-cache.json`。重新生成本机私有原型数据时，在 macOS 终端进入项目根目录，执行：
 
 ```bash
-/Users/tanwenjie/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/build-churn-dashboard-prototype-data.py "/Users/tanwenjie/Downloads/美团订单-数据统计-2026080509.xlsx" "data/private/churn-dashboard-prototype-data.json"
+/Users/tanwenjie/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/build-business-churn-prototype-data.py
 ```
 
-生成的数据保存在 `data/private/`，已经被 `.gitignore` 排除，不会进入 GitHub。页面默认排除当天未完整数据；近7天使用最近7个完整自然日，近30天使用当前文件内最多30个完整自然日。跟进备注暂时保存在当前浏览器本地，用于确认原型交互。
+生成的数据保存在 `data/private/`，已经被 `.gitignore` 排除，不会进入 GitHub。页面中业务订单展示当天实时值；用户流失判定排除当天，以最近完整自然日对比此前 7 日均值。业务规则暂时保存在当前浏览器本地，用于确认原型交互，不会改动正式配置。
 
 ## 刷新接口数据
 
