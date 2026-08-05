@@ -3694,23 +3694,16 @@ async function buildFocusUsers(query = {}) {
   };
 }
 
-function marketingCostOrderCacheIndex(userIds = []) {
-  return focusUserCacheIndex(userIds);
-}
-
-async function marketingCostContext(extraUserIds = []) {
+async function marketingCostContext() {
   const focus = await readFocusUsers();
   const aliases = (await readUserAliases()).aliases || {};
   const catalog = await focusBusinessCatalog();
-  const userIds = [...new Set([...(focus.items || []).map(item => item.userId), ...extraUserIds].map(String).filter(Boolean))];
-  let cacheIndex = marketingCostOrderCacheIndex(userIds);
-  if (!cacheIndex.size && userIds.length) cacheIndex = focusUserCacheIndex(userIds);
   return {
     focus,
     aliases,
     catalog,
     catalogById: new Map(catalog.map(item => [String(item.businessId), item])),
-    cacheIndex
+    cacheIndex: focusUserCacheIndex(focus.items.map(item => item.userId))
   };
 }
 
@@ -3775,48 +3768,19 @@ function invalidateMarketingCostWorkspace() {
 
 async function buildMarketingCostWorkspaceFresh() {
   const saved = await readMarketingCosts();
-  const context = await marketingCostContext(saved.items.map(item => item.userId));
+  const context = await marketingCostContext();
   const items = saved.items.map(item => calculateMarketingCostItem(item, context)).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  const focusUsersById = new Map((context.focus.items || []).map(user => [String(user.userId), user]));
-  const relationshipsById = new Map();
-  context.cacheIndex.forEach((row, relationKey) => {
-    const separator = relationKey.lastIndexOf(":");
-    const businessId = relationKey.slice(0, separator);
-    const userId = relationKey.slice(separator + 1);
-    const user = focusUsersById.get(userId);
-    if (!user) return;
-    const business = context.catalogById.get(businessId) || (user.businessHints || []).find(hint => String(hint.businessId || hint.catalogBusinessId || "") === businessId) || {};
-    relationshipsById.set(relationKey, {
-      userId,
-      userName: context.aliases[userId] || user.name || row.name || `用户 ${userId}`,
-      businessId,
-      businessName: business.businessName || row.businessName || "未命名业务",
-      platform: business.platform || row.platform || "-",
-      days: row.days || {},
-      dataTime: row.cacheSavedAtText || "-",
-      t1: T1_USER_BUSINESS_IDS.has(businessId)
-    });
-  });
-  (context.focus.items || []).forEach(user => {
-    (user.businessHints || []).forEach(hint => {
-      const businessId = String(hint.businessId || hint.catalogBusinessId || "");
-      const userId = String(user.userId || "");
-      const relationKey = `${businessId}:${userId}`;
-      if (!businessId || !userId || relationshipsById.has(relationKey)) return;
-      const business = context.catalogById.get(businessId) || hint;
-      relationshipsById.set(relationKey, {
-        userId,
-        userName: context.aliases[userId] || user.name || `用户 ${userId}`,
-        businessId,
-        businessName: business.businessName || "未命名业务",
-        platform: business.platform || "-",
-        days: {},
-        dataTime: "-",
-        t1: T1_USER_BUSINESS_IDS.has(businessId)
-      });
-    });
-  });
-  const relationships = [...relationshipsById.values()];
+  const focusData = await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -(DEFAULT_USER_HISTORY_DAYS - 1)), end_date: dayKey() });
+  const relationships = (focusData.businessRows || []).map(row => ({
+    userId: String(row.userId),
+    userName: context.aliases[String(row.userId)] || row.name || `用户 ${row.userId}`,
+    businessId: String(row.businessId),
+    businessName: row.businessName || "未命名业务",
+    platform: row.platform || "-",
+    days: row.days || {},
+    dataTime: row.userDataTime || "-",
+    t1: T1_USER_BUSINESS_IDS.has(String(row.businessId))
+  }));
   const summary = {
     itemCount: items.length,
     userCount: new Set(items.map(item => item.userId)).size,
@@ -3831,8 +3795,8 @@ async function buildMarketingCostWorkspaceFresh() {
     latestDataTime: relationships.map(row => row.dataTime).filter(Boolean).sort().at(-1) || userDetailCacheSavedAtText || "-",
     items,
     summary,
-    operatorGroups: (context.focus.operatorGroups || []).map(group => ({ ...group, count: (group.userIds || []).length })),
-    users: (context.focus.items || []).map(user => ({
+    operatorGroups: focusData.operatorGroups || [],
+    users: focusData.users.map(user => ({
       userId: String(user.userId),
       name: context.aliases[String(user.userId)] || user.name || `用户 ${user.userId}`,
       note: String(user.note || (Array.isArray(user.notes) ? user.notes.join("；") : "")).trim().slice(0, 200)
