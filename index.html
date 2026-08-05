@@ -475,6 +475,13 @@
             <span class="nav-desc">业务异常与用户明细</span>
           </span>
         </button>
+        <button class="nav-btn local-only-board" type="button" data-board="churn" aria-selected="false" title="流失挽回看板" hidden>
+          <span class="nav-icon">挽</span>
+          <span class="nav-text">
+            <span class="nav-title">流失挽回看板</span>
+            <span class="nav-desc">平台流失与用户跟进</span>
+          </span>
+        </button>
         <button class="nav-btn" type="button" data-board="focus" aria-selected="false" title="重点用户看板">
           <span class="nav-icon">重</span>
           <span class="nav-text">
@@ -501,6 +508,7 @@
       </div>
       <iframe class="board-frame active" id="activityFrame" data-board-frame="activity" title="激励活动看板" src="about:blank"></iframe>
       <iframe class="board-frame" id="businessFrame" data-board-frame="business" title="用户内部看板" src="about:blank"></iframe>
+      <iframe class="board-frame" id="churnFrame" data-board-frame="churn" title="流失挽回看板" src="about:blank"></iframe>
       <iframe class="board-frame" id="focusFrame" data-board-frame="focus" title="重点用户看板" src="about:blank"></iframe>
       <iframe class="board-frame" id="profitFrame" data-board-frame="profit" title="开放平台毛利看板" src="about:blank"></iframe>
     </main>
@@ -523,6 +531,11 @@
         localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&v=20260804-focus-refresh-v1",
         publicUrl: "./business-user-dashboard-prototype.html?embed=1&v=20260804-focus-refresh-v1"
       },
+      churn: {
+        title: "流失挽回看板",
+        localUrl: "http://127.0.0.1:8791/churn-user-dashboard-prototype.html?embed=1&v=20260805-pc-prototype-v1",
+        publicUrl: "about:blank"
+      },
       focus: {
         title: "重点用户看板",
         localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&view=focus&v=20260804-focus-refresh-v1",
@@ -539,6 +552,7 @@
     const frames = {
       activity: document.getElementById("activityFrame"),
       business: document.getElementById("businessFrame"),
+      churn: document.getElementById("churnFrame"),
       focus: document.getElementById("focusFrame"),
       profit: document.getElementById("profitFrame")
     };
@@ -649,7 +663,7 @@
         activateFrame(resolvedKey);
         if (shouldLoad) {
           loadedBoards.delete(resolvedKey);
-          scheduleFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : resolvedKey === "focus" ? "正在加载重点用户看板..." : resolvedKey === "profit" ? "正在加载毛利看板..." : "正在加载用户看板...");
+          scheduleFrameLoading(resolvedKey === "activity" ? "正在加载活动看板..." : resolvedKey === "churn" ? "正在加载流失挽回看板..." : resolvedKey === "focus" ? "正在加载重点用户看板..." : resolvedKey === "profit" ? "正在加载毛利看板..." : "正在加载用户看板...");
           if (resolvedKey !== "activity") waitForFrameReady(resolvedKey);
           frame.src = publicFrameUrl(url, { fresh: Boolean(options.fresh) });
         } else {
@@ -849,7 +863,7 @@
     let sidebarCollapsed = false;
     if (!isLocalAccess) {
       document.querySelectorAll(".local-only-board").forEach((item) => { item.hidden = true; });
-      if (location.hash === "#profit") history.replaceState(null, "", "#activity");
+      if (["#profit", "#churn"].includes(location.hash)) history.replaceState(null, "", "#activity");
     }
     try { sidebarCollapsed = localStorage.getItem("dashboardSidebarCollapsed") === "1"; } catch {}
     applySidebarState(sidebarCollapsed);
