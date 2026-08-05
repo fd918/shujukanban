@@ -449,6 +449,9 @@
     .focus-group-action.danger:hover { border-color:#fda4af; color:var(--red); background:#fff1f2; }
     .cost-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 10px; border-bottom:1px solid var(--line); }
     .cost-toolbar .search-with-clear { width:min(320px,100%); }
+    .cost-entity-filter { display:inline-flex; align-items:center; gap:6px; min-height:34px; max-width:320px; padding:5px 10px; border:1px solid #93c5fd; border-radius:999px; background:#eff6ff; color:#1d4ed8; cursor:pointer; }
+    .cost-entity-filter span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cost-entity-filter strong { flex:0 0 auto; font-size:16px; line-height:1; }
     .cost-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-bottom:1px solid var(--line); background:#fff; }
     .cost-summary-item { position:relative; padding:16px 18px; text-align:center; }
     .cost-summary-item + .cost-summary-item::before { content:""; position:absolute; left:0; top:18px; bottom:18px; width:1px; background:var(--line); }
@@ -461,7 +464,16 @@
     .cost-table .cost-user { min-width:160px; white-space:normal; }
     .cost-table .cost-user span { display:block; margin-top:2px; color:var(--muted); font-size:12px; }
     .cost-table .cost-business { min-width:210px; white-space:normal; }
-    .cost-table .cost-note { max-width:180px; overflow:hidden; text-overflow:ellipsis; }
+    .cost-entity-button,.cost-orders-button { border:0; background:transparent; color:inherit; padding:0; font:inherit; text-align:left; cursor:pointer; }
+    .cost-entity-button strong,.cost-orders-button strong { color:#1d4ed8; text-decoration:underline; text-decoration-color:#bfdbfe; text-underline-offset:3px; }
+    .cost-entity-button:hover strong,.cost-orders-button:hover strong { color:#1e40af; text-decoration-color:#1e40af; }
+    .cost-entity-button:focus-visible,.cost-orders-button:focus-visible,.cost-note-edit:focus-visible { outline:2px solid var(--blue); outline-offset:3px; border-radius:3px; }
+    .cost-note { max-width:220px; white-space:normal !important; }
+    .cost-note-wrap { display:flex; align-items:flex-start; gap:6px; min-width:150px; }
+    .cost-note-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cost-note-edit { flex:0 0 30px; width:30px; height:30px; display:inline-grid; place-items:center; margin-top:-5px; border:1px solid transparent; border-radius:6px; background:transparent; color:#64748b; cursor:pointer; }
+    .cost-note-edit:hover { border-color:#bfdbfe; background:#eff6ff; color:#1d4ed8; }
+    .cost-note-edit svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     .cost-table .cost-actions { display:flex; gap:6px; }
     .cost-table .cost-actions .btn { padding:5px 9px; }
     .cost-incomplete { display:block; margin-top:3px; color:#c2410c; font-size:11px; }
@@ -500,6 +512,17 @@
     .cost-preview strong { display:block; margin-top:4px; color:var(--text); font-size:18px; }
     .cost-preview .total strong { color:#d97706; }
     .cost-modal { width:min(760px,calc(100vw - 28px)); }
+    .cost-orders-modal { width:min(660px,calc(100vw - 28px)); }
+    .cost-orders-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+    .cost-orders-summary > div { padding:10px 12px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
+    .cost-orders-summary span { display:block; color:var(--muted); font-size:12px; }
+    .cost-orders-summary strong { display:block; margin-top:4px; font-size:18px; }
+    .cost-orders-list { max-height:52vh; overflow:auto; border:1px solid var(--line); border-radius:7px; }
+    .cost-orders-list table { width:100%; }
+    .cost-orders-list td:last-child,.cost-orders-list th:last-child { text-align:right; }
+    .cost-note-modal { width:min(560px,calc(100vw - 28px)); }
+    .cost-note-editor { width:100%; min-height:150px; resize:vertical; line-height:1.6; font-family:inherit; }
+    .cost-note-source { margin:0 0 10px; color:var(--muted); font-size:12px; line-height:1.55; }
     .new-top { display:inline-block; margin-top:3px; padding:2px 5px; color:var(--orange); border:1px solid #fed7aa; background:#fff7ed; border-radius:4px; font-size:11px; }
     .focus-add-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .focus-add-grid label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; }
@@ -650,6 +673,7 @@
       .focus-workspace-tabs > .segmented { width:100%; }
       .focus-workspace-tabs .segmented button { flex:1; min-height:42px; min-width:0; }
       .cost-toolbar > * { flex:1 1 100%; }
+      .cost-entity-filter { max-width:none; min-height:44px; justify-content:center; }
       .cost-toolbar .segmented { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
       .cost-toolbar .segmented button { min-height:42px; padding:4px; }
       .cost-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -663,6 +687,8 @@
       .cost-check-list { height:150px; }
       .cost-date-fields { grid-template-columns:1fr; }
       .cost-date-add { width:100%; min-height:44px; }
+      .cost-note-edit { flex-basis:44px; width:44px; height:44px; margin-top:-10px; }
+      .cost-orders-summary { grid-template-columns:1fr; }
       .mobile-matrix-status { padding:8px 10px; border-bottom:1px solid var(--line); background:#f8fafc; color:var(--muted); font-size:11px; line-height:1.45; }
       .mobile-matrix-scroll { width:100%; overflow-x:auto; overflow-y:visible; overscroll-behavior-x:contain; scrollbar-gutter:stable; background:#fff; }
       .mobile-matrix-scroll::-webkit-scrollbar { height:8px; }
@@ -929,12 +955,13 @@
             <div class="cost-toolbar">
               <button class="btn primary" id="addMarketingCostBtn">新增费用项</button>
               <div class="search-with-clear"><input class="field" id="marketingCostSearch" placeholder="搜索用户、业务或备注"><button class="search-clear" id="marketingCostSearchClear" title="清空搜索">×</button></div>
+              <button class="cost-entity-filter hidden" id="marketingCostEntityFilter" type="button" title="清除当前用户或业务筛选"><span></span><strong aria-hidden="true">×</strong></button>
               <div class="segmented" id="marketingCostRangeTabs"><button class="active" data-cost-range="all">全部周期</button><button data-cost-range="month">本月</button><button data-cost-range="lastMonth">上月</button></div>
               <div class="segmented" id="marketingCostStatusTabs"><button class="active" data-cost-status="all">全部</button><button data-cost-status="draft">待确认</button><button data-cost-status="confirmed">已确认</button></div>
               <button class="btn" id="refreshMarketingCostBtn">刷新费用</button>
             </div>
             <div class="cost-summary" id="marketingCostSummary"></div>
-            <div class="table-wrap cost-table-scroll"><table class="cost-table"><thead><tr><th>序号</th><th>用户</th><th>业务</th><th>开始日期</th><th>结束日期</th><th>周期订单</th><th>单价（元/单）</th><th>预估费用</th><th>状态</th><th>备注</th><th>操作</th></tr></thead><tbody id="marketingCostBody"></tbody></table></div>
+            <div class="table-wrap cost-table-scroll"><table class="cost-table"><thead><tr><th>序号</th><th>用户</th><th>业务</th><th>开始日期</th><th>结束日期</th><th>天数</th><th>周期订单</th><th>单价（元/单）</th><th>预估费用</th><th>状态</th><th>备注</th><th>操作</th></tr></thead><tbody id="marketingCostBody"></tbody></table></div>
           </div>
         </section>
       </div>
@@ -983,6 +1010,30 @@
       </div>
     </div>
     <div class="modal-foot"><button class="btn" id="cancelMarketingCost">取消</button><button class="btn primary" id="saveMarketingCost">加入计算</button></div>
+  </section>
+
+  <section class="modal cost-orders-modal" id="marketingCostOrdersModal">
+    <div class="modal-head">
+      <div><h2 id="marketingCostOrdersTitle">周期订单明细</h2><small id="marketingCostOrdersSub">按自然日展示该周期订单</small></div>
+      <button class="icon-btn" id="closeMarketingCostOrders" type="button" title="关闭周期订单明细" aria-label="关闭周期订单明细">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="cost-orders-summary" id="marketingCostOrdersSummary"></div>
+      <div class="cost-orders-list"><table><thead><tr><th>日期</th><th>数据状态</th><th>订单数</th></tr></thead><tbody id="marketingCostOrdersBody"></tbody></table></div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="closeMarketingCostOrdersFoot" type="button">关闭</button></div>
+  </section>
+
+  <section class="modal cost-note-modal" id="marketingCostNoteModal">
+    <div class="modal-head">
+      <div><h2>修改费用备注</h2><small id="marketingCostNoteSub">仅修改当前费用项</small></div>
+      <button class="icon-btn" id="closeMarketingCostNote" type="button" title="关闭备注编辑" aria-label="关闭备注编辑">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="cost-note-source" id="marketingCostNoteSource"></p>
+      <textarea class="field cost-note-editor" id="marketingCostNoteEditor" maxlength="200" placeholder="记录投放说明或核对事项" aria-label="费用项备注"></textarea>
+    </div>
+    <div class="modal-foot"><button class="btn" id="cancelMarketingCostNote" type="button">取消</button><button class="btn primary" id="saveMarketingCostNote" type="button">保存备注</button></div>
   </section>
 
   <section class="modal" id="helpModal">
@@ -1314,7 +1365,7 @@
       return times.join("、") || "未配置";
     }
 
-    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostEditId: "", marketingCostSelectedUserIds: [], marketingCostSelectedBusinessIds: [], marketingCostUserSearch: "", marketingCostDateRanges: [], marketingCostSubmitting: false, marketingCostBatchId: "" });
+    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostEditId: "", marketingCostSelectedUserIds: [], marketingCostSelectedBusinessIds: [], marketingCostUserSearch: "", marketingCostDateRanges: [], marketingCostSubmitting: false, marketingCostBatchId: "", marketingCostEntityFilterType: "", marketingCostEntityFilterId: "", marketingCostEntityFilterLabel: "", marketingCostNoteEditId: "", marketingCostNoteSaving: false });
 
     function isFastUserBusiness(row = state.detailRow) {
       const ids = new Set((state.config?.fastUserBusinessIds || []).map(String));
@@ -1622,6 +1673,10 @@
       state.detailHistoryStart = dayText(start);
       state.detailHistoryEnd = dayText(end);
       state.detailDisplayRange = type;
+      if (state.detailMode === "all") {
+        state.detailSort = "rangeTotal";
+        state.detailSortDir = "desc";
+      }
       if (reload) {
         state.detailHistory = null;
         state.detailRefreshing = true;
@@ -4272,9 +4327,18 @@
       $("#detailInfoModal").classList.remove("open");
     }
 
-    function detailSortValue(user, key) {
+    function detailRangeTotal(user, dates = []) {
+      return dates.reduce((sum, date) => sum + Number(user.days?.[date] || 0), 0);
+    }
+
+    function detailRangeLabel() {
+      return ({ "7": "近7天", month: "本月", "30": "近30天", custom: "所选区间" })[state.detailDisplayRange] || "所选区间";
+    }
+
+    function detailSortValue(user, key, dates = []) {
       if (key === "impact") return user.cmp?.impact ?? -1;
       if (key === "ratio") return user.cmp?.ratio ?? -999999;
+      if (key === "rangeTotal") return detailRangeTotal(user, dates);
       return user.cmp?.today || user.todayOrders || 0;
     }
 
@@ -4299,6 +4363,8 @@
     function renderMobileDetailResult(users, dates) {
       const visibleUsers = users.slice(0, state.detailMobileLimit);
       const selectedDate = dates.at(-1) || "";
+      const showRangeTotal = state.detailMode === "all";
+      const rangeTotalSum = showRangeTotal ? users.reduce((sum, user) => sum + detailRangeTotal(user, dates), 0) : 0;
       const todaySum = users.reduce((sum, user) => sum + Number(user.cmp?.today || 0), 0);
       const baseUsers = users.filter(user => user.cmp?.base !== null && user.cmp?.base !== undefined);
       const baseSum = baseUsers.reduce((sum, user) => sum + Number(user.cmp?.base || 0), 0);
@@ -4307,13 +4373,13 @@
       const emptyText = state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。";
       return `<div class="mobile-detail-matrix">
         <div class="mobile-matrix-status"><span>共 ${fmt(users.length)} 人，已显示 ${fmt(visibleUsers.length)} 人</span><span>用户列固定，右侧可滑动</span></div>
-        <div class="mobile-matrix-scroll" data-mobile-matrix-scroll="users"><table class="mobile-matrix-table mobile-detail-table"><thead><tr><th class="mobile-identity-col">用户信息<br><small>点击展开明细</small></th><th class="mobile-today-col">${detailCurrentColumnLabel()}</th><th>${detailBaselineColumnLabel()}</th><th>变化率</th><th>下降影响</th><th class="mobile-status-col">状态</th>${selectedDate ? `<th>${selectedDate.slice(5)}<br>选中日期</th>` : ""}</tr></thead>
-        ${users.length ? `<tbody class="mobile-total-row"><tr><td class="mobile-identity-col">当前列表合计</td><td class="mobile-today-col" data-mobile-total="today" data-value="${todaySum}">${fmt(todaySum)}</td><td data-mobile-total="base" data-value="${baseSum}">${baseUsers.length ? fmt(baseSum) : "-"}</td><td>-</td><td data-mobile-total="impact" data-value="${impactTotal}">${fmt(impactTotal)}</td><td>-</td>${selectedDate ? `<td data-mobile-total-date="${selectedDate}" data-value="${selectedDateSum}">${fmt(selectedDateSum)}</td>` : ""}</tr></tbody>` : ""}
+        <div class="mobile-matrix-scroll" data-mobile-matrix-scroll="users"><table class="mobile-matrix-table mobile-detail-table"><thead><tr><th class="mobile-identity-col">用户信息<br><small>点击展开明细</small></th><th class="mobile-today-col">${detailCurrentColumnLabel()}</th><th>${detailBaselineColumnLabel()}</th><th>变化率</th><th>下降影响</th><th class="mobile-status-col">状态</th>${selectedDate ? `<th>${selectedDate.slice(5)}<br>选中日期</th>` : ""}${showRangeTotal ? `<th>${detailSortButton("rangeTotal", `${detailRangeLabel()}合计`)}</th>` : ""}</tr></thead>
+        ${users.length ? `<tbody class="mobile-total-row"><tr><td class="mobile-identity-col">当前列表合计</td><td class="mobile-today-col" data-mobile-total="today" data-value="${todaySum}">${fmt(todaySum)}</td><td data-mobile-total="base" data-value="${baseSum}">${baseUsers.length ? fmt(baseSum) : "-"}</td><td>-</td><td data-mobile-total="impact" data-value="${impactTotal}">${fmt(impactTotal)}</td><td>-</td>${selectedDate ? `<td data-mobile-total-date="${selectedDate}" data-value="${selectedDateSum}">${fmt(selectedDateSum)}</td>` : ""}${showRangeTotal ? `<td data-mobile-range-total="1" data-value="${rangeTotalSum}"><strong>${fmt(rangeTotalSum)}</strong></td>` : ""}</tr></tbody>` : ""}
         <tbody>${visibleUsers.length ? visibleUsers.map(user => {
           const id = String(user.id || "");
           const expanded = state.detailExpandedUserId === id;
-          return `<tr data-mobile-user-id="${escapeHtml(id)}"><td class="mobile-identity-col"><button data-detail-user-toggle="${escapeHtml(id)}" aria-expanded="${expanded}"><span class="mobile-user-name">${escapeHtml(userDisplayName(user))}</span><span class="mobile-user-id">ID：${escapeHtml(id || "-")}｜${expanded ? "收起" : "展开"}</span></button></td><td class="mobile-today-col" data-field="today" data-value="${Number(user.cmp?.today || 0)}">${fmt(user.cmp?.today)}</td><td data-field="base" data-value="${user.cmp?.base ?? ""}">${fmtValue(user.cmp?.base)}</td><td data-field="ratio" data-value="${user.cmp?.ratio ?? ""}" class="${user.cmp?.diff < 0 ? "down" : user.cmp?.diff > 0 ? "up" : ""}">${pctValue(user.cmp?.ratio)}</td><td data-field="impact" data-value="${user.cmp?.impact ?? ""}" class="${user.cmp?.diff < 0 ? "down" : ""}">${fmtValue(user.cmp?.impact)}</td><td class="mobile-status-col">${detailUserStatusTag(user)}</td>${selectedDate ? `<td data-field="date" data-date="${selectedDate}" data-value="${Number(user.days?.[selectedDate] || 0)}">${fmt(user.days?.[selectedDate])}</td>` : ""}</tr>${expanded ? `<tr class="mobile-expanded-row"><td class="mobile-expanded-spacer"></td><td class="mobile-expanded-cell" colspan="${selectedDate ? 6 : 5}"><div class="mobile-expanded-meta"><span>手机号：${escapeHtml(user.phone || "-")}</span><span>版本：${escapeHtml(user.version || "-")}</span><span>${copyUserIdButton(user)}</span>${aliasEditButton(user)}${addFocusButton(user)}</div><div class="mobile-expanded-days">${dates.map(date => `<div class="mobile-expanded-day" data-date="${date}" data-value="${Number(user.days?.[date] || 0)}"><span>${date.slice(5)}</span><strong>${fmt(user.days?.[date])}</strong></div>`).join("")}</div></td></tr>` : ""}`;
-        }).join("") : `<tr><td class="mobile-identity-col">暂无数据</td><td colspan="${selectedDate ? 6 : 5}" class="muted">${emptyText}</td></tr>`}</tbody></table></div>
+          return `<tr data-mobile-user-id="${escapeHtml(id)}"><td class="mobile-identity-col"><button data-detail-user-toggle="${escapeHtml(id)}" aria-expanded="${expanded}"><span class="mobile-user-name">${escapeHtml(userDisplayName(user))}</span><span class="mobile-user-id">ID：${escapeHtml(id || "-")}｜${expanded ? "收起" : "展开"}</span></button></td><td class="mobile-today-col" data-field="today" data-value="${Number(user.cmp?.today || 0)}">${fmt(user.cmp?.today)}</td><td data-field="base" data-value="${user.cmp?.base ?? ""}">${fmtValue(user.cmp?.base)}</td><td data-field="ratio" data-value="${user.cmp?.ratio ?? ""}" class="${user.cmp?.diff < 0 ? "down" : user.cmp?.diff > 0 ? "up" : ""}">${pctValue(user.cmp?.ratio)}</td><td data-field="impact" data-value="${user.cmp?.impact ?? ""}" class="${user.cmp?.diff < 0 ? "down" : ""}">${fmtValue(user.cmp?.impact)}</td><td class="mobile-status-col">${detailUserStatusTag(user)}</td>${selectedDate ? `<td data-field="date" data-date="${selectedDate}" data-value="${Number(user.days?.[selectedDate] || 0)}">${fmt(user.days?.[selectedDate])}</td>` : ""}${showRangeTotal ? `<td data-field="range-total" data-value="${detailRangeTotal(user, dates)}"><strong>${fmt(detailRangeTotal(user, dates))}</strong></td>` : ""}</tr>${expanded ? `<tr class="mobile-expanded-row"><td class="mobile-expanded-spacer"></td><td class="mobile-expanded-cell" colspan="${(selectedDate ? 6 : 5) + (showRangeTotal ? 1 : 0)}"><div class="mobile-expanded-meta"><span>手机号：${escapeHtml(user.phone || "-")}</span><span>版本：${escapeHtml(user.version || "-")}</span><span>${copyUserIdButton(user)}</span>${aliasEditButton(user)}${addFocusButton(user)}</div><div class="mobile-expanded-days">${dates.map(date => `<div class="mobile-expanded-day" data-date="${date}" data-value="${Number(user.days?.[date] || 0)}"><span>${date.slice(5)}</span><strong>${fmt(user.days?.[date])}</strong></div>`).join("")}</div></td></tr>` : ""}`;
+        }).join("") : `<tr><td class="mobile-identity-col">暂无数据</td><td colspan="${(selectedDate ? 6 : 5) + (showRangeTotal ? 1 : 0)}" class="muted">${emptyText}</td></tr>`}</tbody></table></div>
         ${visibleUsers.length < users.length ? `<button class="btn mobile-load-more" data-detail-load-more="1">继续加载（剩余 ${fmt(users.length - visibleUsers.length)} 人）</button>` : `<div class="mobile-matrix-status">已显示当前筛选下的全部 ${fmt(users.length)} 人</div>`}
       </div>`;
     }
@@ -4327,9 +4393,12 @@
       const upUsers = allUsers.filter(user => Number(user.cmp?.diff || 0) > 0);
       const sourceUsers = state.detailMode === "abnormal" ? downUsers : state.detailMode === "up" ? upUsers : allUsers;
       const keyword = state.detailSearch.toLowerCase();
+      const dates = state.detailHistoryStart && state.detailHistoryEnd
+        ? dateTextList(state.detailHistoryStart, state.detailHistoryEnd)
+        : [];
       const users = (keyword ? sourceUsers.filter(user => userSearchText(user).includes(keyword)) : sourceUsers)
         .slice()
-        .sort((a, b) => (detailSortValue(a, state.detailSort) - detailSortValue(b, state.detailSort)) * (state.detailSortDir === "asc" ? 1 : -1));
+        .sort((a, b) => (detailSortValue(a, state.detailSort, dates) - detailSortValue(b, state.detailSort, dates)) * (state.detailSortDir === "asc" ? 1 : -1));
       const userOrderSum = state.detailStats?.userOrderSum ?? allUsers.reduce((sum, user) => sum + Number(user.todayOrders || 0), 0);
       const diff = state.detailScope === "today" ? userOrderSum - Number(row.cmp.today || 0) : null;
       const impactSum = allDecliningUsers.reduce((sum, user) => sum + Number(user.cmp.impact || 0), 0);
@@ -4337,9 +4406,8 @@
       const businessImpact = Number(row.cmp?.diff) < 0 ? Math.abs(Number(row.cmp.diff)) : 0;
       const locatedNet = Math.max(0, impactSum - growthSum);
       const unattributed = businessImpact ? businessImpact - locatedNet : null;
-      const dates = state.detailHistoryStart && state.detailHistoryEnd
-        ? dateTextList(state.detailHistoryStart, state.detailHistoryEnd)
-        : [];
+      const showRangeTotal = state.detailMode === "all";
+      const rangeTotalSum = showRangeTotal ? users.reduce((sum, user) => sum + detailRangeTotal(user, dates), 0) : 0;
       const todaySum = users.reduce((sum, user) => sum + Number(user.cmp?.today || 0), 0);
       const baseUsers = users.filter(user => user.cmp?.base !== null && user.cmp?.base !== undefined);
       const baseSum = baseUsers.reduce((sum, user) => sum + Number(user.cmp.base || 0), 0);
@@ -4356,8 +4424,8 @@
       return `
         <div class="detail-table-wrap">
           <table class="compact wide-date-table user-data-table">
-            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", detailCurrentColumnLabel())}${isT1Detail ? "" : majorityHeader("多数数据", currentMajority, users.length)}</th><th>${detailBaselineColumnLabel()}${isT1Detail ? "" : majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>${detailLastWeekColumnLabel()}${isT1Detail ? "" : majorityHeader("多数参考", lastWeekMajority, lastWeekMatched.length)}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}</tr></thead>
-            ${users.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(todaySum)}</td><td>${baseUsers.length ? fmt(baseSum) : "-"}</td><td>${lastWeekUsers.length ? fmt(lastWeekSum) : "-"}</td><td>-</td><td>${fmt(impactTotal)}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}</tr></tbody>` : ""}
+            <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", detailCurrentColumnLabel())}${isT1Detail ? "" : majorityHeader("多数数据", currentMajority, users.length)}</th><th>${detailBaselineColumnLabel()}${isT1Detail ? "" : majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>${detailLastWeekColumnLabel()}${isT1Detail ? "" : majorityHeader("多数参考", lastWeekMajority, lastWeekMatched.length)}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5)}</th>`).join("")}${showRangeTotal ? `<th>${detailSortButton("rangeTotal", `${detailRangeLabel()}合计`)}</th>` : ""}</tr></thead>
+            ${users.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(users.length)} 人）</td><td>${fmt(todaySum)}</td><td>${baseUsers.length ? fmt(baseSum) : "-"}</td><td>${lastWeekUsers.length ? fmt(lastWeekSum) : "-"}</td><td>-</td><td>${fmt(impactTotal)}</td><td>-</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}${showRangeTotal ? `<td><strong>${fmt(rangeTotalSum)}</strong></td>` : ""}</tr></tbody>` : ""}
             <tbody>${users.length ? users.map((user, index) => {
               const same = user.sameTime || {};
               const lastWeek = same.lastWeek ? same.lastWeek.orders : null;
@@ -4365,8 +4433,8 @@
               const userTimeNote = !isT1Detail && isFiniteMinute(userMinute) && isFiniteMinute(currentMajority.minute) && userMinute !== currentMajority.minute
                 ? `<small class="comparison-ref">数据 ${minuteText(userMinute)} · 较多数${userMinute < currentMajority.minute ? "早" : "晚"} ${Math.abs(userMinute - currentMajority.minute)} 分钟</small>`
                 : "";
-              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}${userTimeNote}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {}, fmt, { dominantMinute: lastWeekMajority.minute, compactMajority: true })}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}</tr>`;
-            }).join("") : `<tr><td colspan="${dates.length + 8}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
+              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}${userTimeNote}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {}, fmt, { dominantMinute: lastWeekMajority.minute, compactMajority: true })}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}${showRangeTotal ? `<td><strong>${fmt(detailRangeTotal(user, dates))}</strong></td>` : ""}</tr>`;
+            }).join("") : `<tr><td colspan="${dates.length + 8 + (showRangeTotal ? 1 : 0)}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>
         ${dates.length > 7 ? `<div class="scroll-hint">当前展示 ${dates.length} 天，每日订单列可在表格底部左右拖动查看。</div>` : ""}`;
@@ -5020,10 +5088,8 @@
         state.detailMode = mode.dataset.detailMode;
         state.detailMobileLimit = 80;
         state.detailExpandedUserId = "";
-        if (state.detailMode === "up") {
-          state.detailSort = "impact";
-          state.detailSortDir = "desc";
-        }
+        state.detailSort = state.detailMode === "all" ? "rangeTotal" : "impact";
+        state.detailSortDir = "desc";
         renderDetail(true);
         return;
       }
@@ -5051,6 +5117,10 @@
           return;
         }
         state.detailDisplayRange = "custom";
+        if (state.detailMode === "all") {
+          state.detailSort = "rangeTotal";
+          state.detailSortDir = "desc";
+        }
         renderDetail(true);
         return;
       }

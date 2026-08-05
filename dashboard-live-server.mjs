@@ -3199,6 +3199,7 @@ function normalizeMarketingCostItem(item = {}) {
     endDate: startDate <= endDate ? endDate : startDate,
     unitPrice: Math.max(0, Number(item.unitPrice || 0)),
     note: String(item.note || "").trim().slice(0, 200),
+    noteCustomized: item.noteCustomized === true,
     batchId: String(item.batchId || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 100),
     status,
     lockedOrders: status === "confirmed" && Number.isFinite(Number(item.lockedOrders)) ? Number(item.lockedOrders) : null,
@@ -3738,6 +3739,8 @@ function calculateMarketingCostItem(item, context) {
   const liveAmount = Math.round(liveOrders * normalized.unitPrice * 100) / 100;
   const confirmed = normalized.status === "confirmed" && normalized.lockedOrders !== null && normalized.lockedAmount !== null;
   const dataTimes = [current?.savedAtText, cached.cacheSavedAtText].filter(Boolean).sort();
+  const focusNote = String(user.note || (Array.isArray(user.notes) ? user.notes.join("；") : "")).trim().slice(0, 200);
+  const inheritedNote = !normalized.noteCustomized && !normalized.note && Boolean(focusNote);
   return {
     ...normalized,
     userName: context.aliases[normalized.userId] || user.name || cached.name || normalized.userName || `用户 ${normalized.userId}`,
@@ -3745,12 +3748,16 @@ function calculateMarketingCostItem(item, context) {
     platform: business.platform || normalized.platform || "-",
     orderCount: confirmed ? normalized.lockedOrders : liveOrders,
     estimatedAmount: confirmed ? normalized.lockedAmount : liveAmount,
+    dayCount: dates.length,
     liveOrders,
     liveAmount,
     dailyOrders,
     missingDates,
     complete: missingDates.length === 0,
     t1Pending: T1_USER_BUSINESS_IDS.has(normalized.businessId) && missingDates.includes(dayKey()),
+    note: inheritedNote ? focusNote : normalized.note,
+    focusNote,
+    noteInherited: inheritedNote,
     dataTime: dataTimes.at(-1) || "-"
   };
 }
@@ -3789,7 +3796,11 @@ async function buildMarketingCostWorkspaceFresh() {
     items,
     summary,
     operatorGroups: focusData.operatorGroups || [],
-    users: focusData.users.map(user => ({ userId: String(user.userId), name: context.aliases[String(user.userId)] || user.name || `用户 ${user.userId}` })),
+    users: focusData.users.map(user => ({
+      userId: String(user.userId),
+      name: context.aliases[String(user.userId)] || user.name || `用户 ${user.userId}`,
+      note: String(user.note || (Array.isArray(user.notes) ? user.notes.join("；") : "")).trim().slice(0, 200)
+    })),
     relationships,
     range: { startDate: shiftDay(dayKey(), -(DEFAULT_USER_HISTORY_DAYS - 1)), endDate: dayKey() }
   };
