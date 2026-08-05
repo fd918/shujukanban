@@ -1227,20 +1227,48 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
     ? [...new Set([1, ...exactPartialCache.loadedPages])].filter(currentPage => currentPage >= 1 && currentPage <= totalPages).sort((a, b) => a - b)
     : [1];
   let pageLoadFailed = loadedPages.length < totalPages;
+  let successfulPagesSinceCheckpoint = 0;
+  const writeHistoryCheckpoint = async () => {
+    const rowsById = new Map((exactPartialCache?.rows || []).map(row => [String(row.id || ""), row]));
+    allRows.forEach(rawRow => {
+      const row = normalizeUser(rawRow, startDate === endDate ? endDate : "period_total");
+      row.days = Object.fromEntries(dates.map(date => [date, number(rawRow[date])]));
+      if (row.id) rowsById.set(String(row.id), row);
+    });
+    userDetailCache.set(partialCacheKey, {
+      ok: true,
+      complete: false,
+      upstreamOk: false,
+      partial: true,
+      savedAtText: nowText(),
+      total,
+      totalPages,
+      loadedPages: [...loadedPages],
+      dates,
+      rows: [...rowsById.values()]
+    });
+    await writeUserDetailCacheToDisk();
+    successfulPagesSinceCheckpoint = 0;
+  };
   if (totalPages > 1) {
     const loadedPageSet = new Set(loadedPages);
     const restPages = Array.from({ length: totalPages - 1 }, (_, index) => index + 2).filter(currentPage => !loadedPageSet.has(currentPage));
     const rest = await mapLimit(restPages, 1, async currentPage => {
-      return retryBusinessUserStatisticsCall(`业务用户历史第${currentPage}页`, {
+      const pageResult = await retryBusinessUserStatisticsCall(`业务用户历史第${currentPage}页`, {
         ...params,
         page: currentPage
       }, 30000);
+      if (pageResult.ok) {
+        allRows = allRows.concat(asList(pageResult.data));
+        loadedPages = [...new Set([...loadedPages, currentPage])].sort((a, b) => a - b);
+        successfulPagesSinceCheckpoint += 1;
+        if (successfulPagesSinceCheckpoint >= 5 && loadedPages.length < totalPages) await writeHistoryCheckpoint();
+      }
+      return pageResult;
     });
     const failed = rest.filter(item => !item.ok).length;
-    loadedPages = [...new Set(loadedPages.concat(restPages.filter((currentPage, index) => rest[index]?.ok)))].sort((a, b) => a - b);
     pageLoadFailed = failed > 0 || loadedPages.length < totalPages;
     statuses.push({ name: "业务用户历史翻页", ok: !pageLoadFailed, message: pageLoadFailed ? `已完成 ${loadedPages.length}/${totalPages} 页，下次只补 ${totalPages - loadedPages.length} 个缺页` : `已加载 ${totalPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
-    allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
   }
   if (pageLoadFailed) {
     const fallback = cachedSlice();
