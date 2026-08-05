@@ -49,7 +49,9 @@ let snapshotTimer = null;
 let snapshotScheduleVersion = 0;
 let snapshotRecordQueue = Promise.resolve();
 let marketingCostMutationQueue = Promise.resolve();
-let businessUserStatisticsQueue = Promise.resolve();
+const businessUserStatisticsTasks = [];
+let businessUserStatisticsTaskSequence = 0;
+let businessUserStatisticsWorkerRunning = false;
 let lastBusinessUserStatisticsRequestAt = 0;
 let lastSnapshotAt = 0;
 let lastSnapshotSlotKey = "";
@@ -70,6 +72,7 @@ let publicHistoryWarmupRunning = false;
 let dailyHistoryFinalizationPromise = null;
 let highFrequencyUserWarmupPromise = null;
 let userMaintenancePromise = null;
+let focusUserMaintenancePromise = null;
 let snapshotMemoryCache = null;
 let marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null };
 let detailCacheSaveTimer = null;
@@ -923,8 +926,35 @@ async function retryApiCall(name, path, params, timeoutMs, attempts = 3) {
   return result;
 }
 
+function startBusinessUserStatisticsWorker() {
+  if (businessUserStatisticsWorkerRunning) return;
+  businessUserStatisticsWorkerRunning = true;
+  (async () => {
+    while (businessUserStatisticsTasks.length) {
+      const current = businessUserStatisticsTasks.shift();
+      try {
+        current.resolve(await current.task());
+      } catch (error) {
+        current.reject(error);
+      }
+    }
+  })().finally(() => {
+    businessUserStatisticsWorkerRunning = false;
+    if (businessUserStatisticsTasks.length) startBusinessUserStatisticsWorker();
+  });
+}
+
+function enqueueBusinessUserStatisticsTask(task, priority = 0) {
+  return new Promise((resolve, reject) => {
+    businessUserStatisticsTasks.push({ task, priority, sequence: businessUserStatisticsTaskSequence += 1, resolve, reject });
+    businessUserStatisticsTasks.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
+    startBusinessUserStatisticsWorker();
+  });
+}
+
 async function businessUserStatisticsCall(name, params, timeoutMs) {
-  const run = businessUserStatisticsQueue.catch(() => {}).then(async () => {
+  const priority = String(name || "").startsWith("重点用户") ? 10 : 0;
+  return enqueueBusinessUserStatisticsTask(async () => {
     const path = "/api/v2/dashboard/business/user-order-statistics";
     const requestParams = {
       ...(params || {}),
@@ -947,9 +977,7 @@ async function businessUserStatisticsCall(name, params, timeoutMs) {
     return fallback.ok
       ? { ...fallback, filterFieldFallback: true }
       : { ...fallback, filterFieldFallbackAttempted: true };
-  });
-  businessUserStatisticsQueue = run.catch(() => {});
-  return run;
+  }, priority);
 }
 
 async function retryBusinessUserStatisticsCall(name, params, timeoutMs, attempts = 3) {
@@ -2037,8 +2065,7 @@ async function refreshFocusUserToday(item) {
     pre_page: 10,
     start_date: today,
     end_date: today,
-    keyword: item.userId,
-    filter_field: "order_valid"
+    keyword: item.userId
   };
   const [ordersResult, orderMetrics] = await Promise.all([
     businessUserStatisticsCall("重点用户今日订单", params, 20000),
@@ -2855,10 +2882,20 @@ function startUserMaintenance(businesses, config, dateRange) {
     const scheduled = Boolean(currentRefreshTime(config));
     if (scheduled) await runScheduledUserRefresh(businesses, config);
     else await warmTopBusinessUsers(businesses, dateRange, config);
-    await refreshFocusUsersToday();
   })()
     .catch(error => console.error(`[${nowText()}] 用户数据后台维护失败：${error.message}`))
     .finally(() => { userMaintenancePromise = null; });
+  return true;
+}
+
+function startFocusUserMaintenance() {
+  if (focusUserMaintenancePromise) {
+    console.log(`[${nowText()}] 重点用户上一轮仍在刷新，本时间槽不重复排队。`);
+    return false;
+  }
+  focusUserMaintenancePromise = refreshFocusUsersToday()
+    .catch(error => console.error(`[${nowText()}] 重点用户后台刷新失败：${error.message}`))
+    .finally(() => { focusUserMaintenancePromise = null; });
   return true;
 }
 
@@ -2927,6 +2964,7 @@ async function scheduleSnapshots() {
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { slot });
       console.log(`[${nowText()}] ${recorded ? `已记录业务用户快照：${slot.label}` : `跳过重复快照：${slot.label}`}`);
       runDailyHistoryFinalization(data.businesses, currentConfig).catch(error => console.error(`[${nowText()}] 昨日用户历史结算失败：${error.message}`));
+      startFocusUserMaintenance();
       startUserMaintenance(data.businesses, currentConfig, dateRange);
     } catch (error) {
       console.error(`[${nowText()}] 记录快照失败：${error.message}`);
