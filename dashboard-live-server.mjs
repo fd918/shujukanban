@@ -65,6 +65,7 @@ let userPhoneIndexTotal = 0;
 let lastOperationalAlert = { key: "", at: 0 };
 let startupWarmupRunning = false;
 let publicHistoryWarmupRunning = false;
+let dailyHistoryFinalizationPromise = null;
 let highFrequencyUserWarmupPromise = null;
 let snapshotMemoryCache = null;
 let marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null };
@@ -725,7 +726,9 @@ function userDetailCacheRetentionId(cacheKey, payload = {}) {
     const userId = String(key.userId || "");
     if (key.type === "history" && businessId) {
       const completeness = payload.partial === true || payload.complete === false ? "partial" : "complete";
-      return `history:${businessId}:${completeness}`;
+      const rangeDays = key.startDate && key.endDate ? daysBetweenInclusive(key.startDate, key.endDate) : 0;
+      const rolling = rangeDays > 0 && rangeDays <= DEFAULT_USER_HISTORY_DAYS && String(key.endDate || "") >= shiftDay(dayKey(), -1);
+      return rolling ? `history:${businessId}:rolling:${completeness}` : `history:${businessId}:custom:${key.startDate || ""}:${key.endDate || ""}:${completeness}`;
     }
     if (["focus-order-history", "focus-current", "focus-metric-history"].includes(key.type) && businessId && userId) {
       return `${key.type}:${businessId}:${userId}`;
@@ -744,7 +747,7 @@ function userDetailCacheRetentionRank(cacheKey, payload = {}) {
   const rows = Array.isArray(payload.rows) ? payload.rows.length : 0;
   const complete = payload.partial === true || payload.complete === false ? 0 : 1;
   const usable = rows > 0 ? 1 : 0;
-  return [endDate, rangeDays, complete, usable, savedAt, rows];
+  return [endDate, complete, usable, savedAt, rangeDays, rows];
 }
 
 function retainedUserDetailCacheEntries(sourceEntries) {
@@ -1799,6 +1802,7 @@ async function loadUserRefreshState() {
   }
   userRefreshState.scheduledRuns ||= {};
   userRefreshState.top100 ||= {};
+  userRefreshState.historyFinalizations ||= {};
 }
 
 async function saveUserRefreshState() {
@@ -2121,39 +2125,49 @@ async function refreshFocusUsersMetricHistories(days = 30, includeMetrics = true
   };
 }
 
-async function warmBusinessUserHistories(businesses, { refresh = false } = {}) {
+async function warmBusinessUserHistories(businesses, { refresh = false, range = publicHistoryRange(), businessIds = null } = {}) {
   if (publicHistoryWarmupRunning) return;
   publicHistoryWarmupRunning = true;
-  const rows = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
+  const selected = businessIds ? new Set([...businessIds].map(String)) : null;
+  const rows = (businesses || []).filter(row => {
+    const businessId = String(row.platformBusinessId || row.businessId || "");
+    return businessId && (!selected || selected.has(businessId));
+  });
   try {
-    if (!rows.length) return;
-    const range = publicHistoryRange();
+    if (!rows.length) return { total: 0, complete: 0, failed: [] };
     let warmed = 0;
-    let failed = 0;
+    const failed = [];
     await mapLimit(rows, 1, async row => {
       const statuses = [];
+      const businessId = String(row.platformBusinessId || row.businessId || "");
       try {
         const history = await fetchBusinessUserHistory({
-          businessId: row.platformBusinessId || row.businessId || "",
+          businessId,
           startDate: range.startDate,
           endDate: range.endDate,
           pageSize: 5000,
           enrichPhones: false,
           refresh
         }, statuses);
-        if (history?.ok) warmed += 1;
+        const complete = history?.ok
+          && history.complete !== false
+          && history.partial !== true
+          && history.upstreamOk !== false
+          && (history.dates || []).includes(range.endDate);
+        if (complete) warmed += 1;
         else {
-          failed += 1;
           const status = [...statuses].reverse().find(item => !item.ok);
+          failed.push({ businessId, name: row.name || businessId, message: status?.message || history?.message || "历史分页未完整" });
           console.error(`[${nowText()}] 预热业务用户历史未取得有效数据：${row.name}${status ? `；${status.name}：${status.message}` : ""}`);
         }
       } catch (error) {
-        failed += 1;
+        failed.push({ businessId, name: row.name || businessId, message: error.message });
         console.error(`[${nowText()}] 预热业务用户历史失败：${row.name} ${error.message}`);
       }
     });
     if (warmed) await writeUserDetailCacheToDisk();
-    console.log(`[${nowText()}] 已预热公网业务用户历史：${warmed}/${rows.length}${failed ? `；失败 ${failed}` : ""}`);
+    console.log(`[${nowText()}] 已更新业务用户历史：${warmed}/${rows.length}${failed.length ? `；失败 ${failed.length}` : ""}`);
+    return { total: rows.length, complete: warmed, failed };
   } finally {
     publicHistoryWarmupRunning = false;
   }
@@ -2702,6 +2716,67 @@ async function runScheduledUserRefresh(businesses, config) {
   return true;
 }
 
+async function runDailyHistoryFinalization(businesses) {
+  if (minuteOfDay() < 30) return false;
+  if (dailyHistoryFinalizationPromise) return dailyHistoryFinalizationPromise;
+  const targetDate = shiftDay(dayKey(), -1);
+  const catalog = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
+  const businessIds = [...new Set(catalog.map(row => String(row.platformBusinessId || row.businessId || "")).filter(Boolean))];
+  if (!businessIds.length) return false;
+  userRefreshState.historyFinalizations ||= {};
+  const current = userRefreshState.historyFinalizations[targetDate] || { completedIds: [], failures: {}, startedAtText: nowText(), completedAtText: "" };
+  const completed = new Set((current.completedIds || []).map(String));
+  const now = Date.now();
+  const pendingIds = businessIds.filter(id => {
+    if (completed.has(id)) return false;
+    const failed = current.failures?.[id];
+    return !failed?.nextRetryAt || Number(failed.nextRetryAt) <= now;
+  });
+  if (!pendingIds.length) {
+    if (completed.size >= businessIds.length && !current.completedAtText) {
+      current.completedAtText = nowText();
+      userRefreshState.historyFinalizations[targetDate] = current;
+      await saveUserRefreshState();
+    }
+    return false;
+  }
+  dailyHistoryFinalizationPromise = (async () => {
+    console.log(`[${nowText()}] 开始结算 ${targetDate} 全业务用户订单：待处理 ${pendingIds.length}/${businessIds.length}`);
+    const result = await warmBusinessUserHistories(catalog, {
+      refresh: true,
+      range: { startDate: shiftDay(targetDate, -(DEFAULT_USER_HISTORY_DAYS - 1)), endDate: targetDate },
+      businessIds: pendingIds
+    });
+    if (!result) return false;
+    const failedById = new Map((result.failed || []).map(item => [String(item.businessId), item]));
+    pendingIds.forEach(id => {
+      const failure = failedById.get(id);
+      if (!failure) {
+        completed.add(id);
+        delete current.failures[id];
+        return;
+      }
+      const previous = current.failures[id] || {};
+      const attempts = Number(previous.attempts || 0) + 1;
+      const delayMinutes = [5, 15, 30][Math.min(attempts - 1, 2)];
+      current.failures[id] = {
+        attempts,
+        message: failure.message || "历史结算失败",
+        updatedAtText: nowText(),
+        nextRetryAt: Date.now() + delayMinutes * 60 * 1000
+      };
+    });
+    current.completedIds = [...completed];
+    if (completed.size >= businessIds.length) current.completedAtText = nowText();
+    userRefreshState.historyFinalizations = Object.fromEntries(Object.entries(userRefreshState.historyFinalizations).filter(([date]) => date >= shiftDay(targetDate, -7)));
+    userRefreshState.historyFinalizations[targetDate] = current;
+    await saveUserRefreshState();
+    console.log(`[${nowText()}] ${targetDate} 历史结算进度：${completed.size}/${businessIds.length}；待重试 ${Object.keys(current.failures).length}`);
+    return current.completedAtText ? true : false;
+  })().finally(() => { dailyHistoryFinalizationPromise = null; });
+  return dailyHistoryFinalizationPromise;
+}
+
 async function checkSnapshotHealth(snapshot, previousSnapshot, config = defaultConfig) {
   const businesses = Object.values(snapshot.business || {});
   const totalOrders = businesses.reduce((sum, item) => sum + number(item.orders), 0);
@@ -2764,6 +2839,7 @@ async function scheduleSnapshots() {
         await notifyOperationalIssue("apiDataMissing", "快照异常：接口数据缺失", data.source.missing.join("；"), currentConfig);
       }
       const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
+      runDailyHistoryFinalization(data.businesses).catch(error => console.error(`[${nowText()}] 昨日用户历史结算失败：${error.message}`));
       await warmTopBusinessUsers(data.businesses, dateRange, currentConfig);
       await refreshFocusUsersToday();
       await runScheduledUserRefresh(data.businesses, currentConfig);

@@ -1006,10 +1006,10 @@
         <strong>用户流失分析：</strong>用户列表固定用今日订单对比昨日同时刻判断流失风险、增长用户和影响订单；“增长用户”包含所有同时刻订单净增长大于 0 的用户，再按增长影响量从高到低排序。右侧每日订单列默认展示近7天，也可切换本月、近30天或自定义日期。日期范围只改变每日订单列，不改变今日异常结论。
       </section>
       <section class="source">
-        <strong>各区域更新时间：</strong>业务指标卡、业务列表、每日业务数据和小时趋势每 10 分钟更新。业务行开启“前100用户更新”后，系统每10分钟重新按今日订单获取当时的前100名：新进入者从该轮开始继续更新；离开前100者停止高频更新，保留离开时的最后值，直到下一个固定全量时段或手动刷新。其余今日用户、近7天、本月和历史订单在设置中心配置的固定时段更新，默认12:00、17:00、22:00。“刷新用户”只分页刷新当前业务，刷新时保留旧数据，全部加载成功后一次替换。重点用户按用户ID全局唯一保存；新增时扫描一次全部业务以发现有单关系，之后只对已发现的有单业务每10分钟同步今日订单，历史日期仍使用固定时段数据。
+        <strong>各区域更新时间：</strong>业务指标卡、业务列表、每日业务数据和小时趋势每10分钟更新。业务行开启“前100用户更新”后，每10分钟只刷新该业务当前前100名；12:00、17:00、22:00对账所有业务今天的全部用户。近30天历史在首次查询、手动查询和次日凌晨结算时更新，不再在三个固定时段重复全量请求。超出30天时点击查询，只更新当前业务和所选日期。刷新期间保留旧完整数据，全部分页成功后再替换。
       </section>
       <section class="source warn">
-        <strong>请求频率与数量：</strong>页面每1分钟检查本机缓存，请求中台为0次；页面重新获得焦点时也会立即检查一次。每10分钟业务汇总、目录、每日数据、默认趋势和快照约38次；当前15个高频业务的前100用户约150次；8位重点用户近期每轮约84～114条已发现业务关系，即合计约272～302次/轮、约3.9～4.35万次/天。新增重点用户时会额外一次性扫描当前全部业务，之后不会在每轮重复扫描无单业务。完整明文手机号索引每天最多更新一次，当前25,043位用户约835次。“65天全量历史”由一次日期范围返回65个日期列，再按业务用户分页；2026年7月14日12:00实测全业务一轮约4,000次，三个固定时段约1.2万次/天。具体数量随业务数、重点用户有单关系、高频业务数和失败重试变化。
+        <strong>请求频率与数量：</strong>页面每1分钟检查本机缓存，请求中台为0次；页面重新获得焦点时也只检查缓存。每10分钟更新业务汇总、目录、每日数据、默认趋势和快照，并只分页刷新已勾选重点业务的前100用户。12:00、17:00、22:00只对账所有业务今天的全部用户，不再重复请求30天历史。近30天历史首次或手动查询时按当前业务加载，超出30天也只请求当前业务和所选日期。具体数量随业务用户数、重点用户关系和失败重试变化。
       </p><p>
         <strong>影响订单定位：</strong>外层影响量是业务当前值与昨日同时刻快照的净差额；用户弹窗会同时展示下降用户、增长抵消、用户净下降和未定位差额。“流失风险”仅包含达到异常阈值的用户，“增长用户”包含所有同时刻净增长用户。缺少昨日同时刻快照或两个中台接口口径不一致时会产生未定位差额，页面不会虚构分摊到某个用户。
       </p><p>
@@ -1050,7 +1050,7 @@
       <div id="tabSnapshot" class="settings-grid hidden">
         <div class="setting"><strong>页面自动检查频率</strong><label>页面只读取本机最新缓存，不额外请求中台；中台业务数据仍按快照频率更新</label><select class="field" id="refreshSeconds"><option value="30">每 30 秒</option><option value="60">每 60 秒</option><option value="120">每 2 分钟</option><option value="300">每 5 分钟</option></select></div>
         <div class="setting"><strong>快照记录频率</strong><label>用于生成昨日同时刻、上周同时刻和近7日同期均值；自动保留最近8个自然日</label><select class="field" id="snapshotMinutes"><option value="10">每 10 分钟</option><option value="30">每 30 分钟</option><option value="60">每 60 分钟</option></select></div>
-        <div class="setting"><strong>全量用户更新时间</strong><label>关闭业务高频开关后，用户明细和历史在这些时间更新；可增加，使用逗号分隔</label><input class="field" id="userRefreshTimes" placeholder="12:00,17:00,22:00"></div>
+        <div class="setting"><strong>今日全部用户对账时间</strong><label>在这些时间更新所有业务今天的全部用户；近30天历史单独缓存，超范围按查询更新</label><input class="field" id="userRefreshTimes" placeholder="12:00,17:00,22:00"></div>
         <div class="setting"><strong>今日接口请求统计</strong><label>按中台接口累计实际请求，服务重启后仍保留当天记录</label><span id="requestStatsText">打开设置时读取...</span></div>
         <div class="setting"><strong>手动补记</strong><label>立即记录当前业务和用户快照</label><button class="btn primary" id="settingSnapshotBtn">立即记录快照</button></div>
       </div>
@@ -1289,7 +1289,7 @@
     }
 
     function detailFrequencyText() {
-      if (state.detailMode === "history" || state.detailScope !== "today") return `固定时段 ${userRefreshTimesText()} 更新，可手动刷新当前业务`;
+      if (state.detailMode === "history" || state.detailScope !== "today") return "近30天读取历史缓存，超出范围点击查询后按当前业务更新";
       const realtime = Number(state.detailStats?.realtimeUserCount || 0);
       return isFastUserBusiness()
         ? `今日前 ${fmt(realtime || 100)} 名每 10 分钟更新，其余用户在 ${userRefreshTimesText()} 更新`
@@ -2500,7 +2500,7 @@
       $("#refreshMarketingCostBtn").textContent = state.marketingCostLoading ? "刷新中..." : "刷新费用";
     }
 
-    async function loadMarketingCosts() {
+    async function loadMarketingCosts(refresh = false) {
       if (state.publicMode) {
         state.marketingCosts = mergePublicMarketingCosts(state.marketingCosts);
         renderMarketingCosts();
@@ -2509,7 +2509,8 @@
       state.marketingCostLoading = true;
       renderMarketingCosts();
       try {
-        state.marketingCosts = await requestJson(apiUrl(`/api/marketing-costs?_=${Date.now()}`));
+        const refreshValue = refresh ? "1" : "0";
+        state.marketingCosts = await requestJson(apiUrl("/api/marketing-costs?refresh=" + refreshValue + "&_=" + Date.now()));
       } finally {
         state.marketingCostLoading = false;
         renderMarketingCosts();
@@ -3907,7 +3908,7 @@
       state.detailRefreshing = true;
       state.detailLoadingLabel = "全部用户数据";
       if (state.detailUsers.length > 0) renderDetail(false);
-      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在读取当前业务的同步用户缓存；点击“刷新用户”时会分页更新该业务全部用户，今日、近7天和本月共用同一批数据。</section>`;
+      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在读取当前业务的同步用户缓存；点击“刷新用户”时会分页更新该业务今天的全部用户，近7天、本月和近30天读取历史缓存。</section>`;
       const today = dayText(new Date());
       const start = new Date();
       start.setDate(start.getDate() - 29);
@@ -3930,6 +3931,25 @@
         renderDetail(false);
         throw error;
       }
+    }
+
+    function mergeBusinessUserHistory(base = {}, incoming = {}) {
+      const dates = [...new Set([...(base.dates || []), ...(incoming.dates || [])])].sort();
+      const rowsById = new Map((base.rows || []).map(row => [String(row.id || row.userId || ""), { ...row, days: { ...(row.days || {}) } }]));
+      (incoming.rows || []).forEach(row => {
+        const id = String(row.id || row.userId || "");
+        if (!id) return;
+        const current = rowsById.get(id) || {};
+        rowsById.set(id, { ...current, ...row, days: { ...(current.days || {}), ...(row.days || {}) } });
+      });
+      return {
+        ...base,
+        ...incoming,
+        dates,
+        rows: [...rowsById.values()],
+        total: Math.max(Number(base.total || 0), Number(incoming.total || 0), rowsById.size),
+        latestDataTime: incoming.latestDataTime || base.latestDataTime || "-"
+      };
     }
 
     async function loadBusinessUserHistory(refresh = false) {
@@ -3989,7 +4009,16 @@
       try {
         const res = await fetch(apiUrl(`/api/business-users-history?${params.toString()}`));
         const data = await res.json();
-        state.detailHistory = data;
+        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || `用户历史查询失败：HTTP ${res.status}`);
+        state.detailHistory = mergeBusinessUserHistory(state.detailHistory || {}, data);
+        if (state.detailSyncedData && state.detailRow) {
+          const mergedHistory = mergeBusinessUserHistory(state.detailSyncedData.history || {}, data);
+          applySynchronizedUserData({
+            ...state.detailSyncedData,
+            history: mergedHistory,
+            historyLatestDataTime: data.latestDataTime || state.detailSyncedData.historyLatestDataTime
+          }, state.detailRow, Boolean(data.cached));
+        }
         state.detailLatestTime = data.latestDataTime || state.detailLatestTime;
       } finally {
         state.detailRefreshing = false;
@@ -4172,8 +4201,8 @@
             <button class="${rangeType === "month" ? "active" : ""}" data-detail-display-range="month">本月</button>
             <button class="${rangeType === "30" ? "active" : ""}" data-detail-display-range="30">近30天</button>
           </div>
-          <input class="field" id="detailHistoryStart" type="date" value="${state.detailHistoryStart || ""}" min="${minDailyDate}" max="${maxDailyDate}" title="每日订单开始日期">
-          <input class="field" id="detailHistoryEnd" type="date" value="${state.detailHistoryEnd || ""}" min="${minDailyDate}" max="${maxDailyDate}" title="每日订单结束日期">
+          <input class="field" id="detailHistoryStart" type="date" value="${state.detailHistoryStart || ""}" min="${state.publicMode ? minDailyDate : ""}" max="${state.publicMode ? maxDailyDate : dayText(new Date())}" title="每日订单开始日期">
+          <input class="field" id="detailHistoryEnd" type="date" value="${state.detailHistoryEnd || ""}" min="${state.publicMode ? minDailyDate : ""}" max="${state.publicMode ? maxDailyDate : dayText(new Date())}" title="每日订单结束日期">
           <button class="btn" data-detail-display-apply="1">应用日期</button>
           <div class="search-with-clear"><input class="field" id="detailSearch" value="${state.detailSearch}" placeholder="搜索用户名称或ID"><button class="search-clear ${state.detailSearch ? "" : "hidden"}" data-detail-search-clear="1" title="清空搜索">×</button></div>
           <button class="btn" data-detail-refresh="1">刷新用户</button>
@@ -4196,7 +4225,7 @@
       const unattributed = businessImpact ? businessImpact - locatedNet : null;
       const diff = userOrderSum - Number(row.cmp?.today || 0);
       return `
-        <section class="source"><strong>更新时间：</strong>${isT1Detail ? `该业务按 T+1 更新，数据日 ${state.detailCurrentBusinessDate || "-"}，获取时间 ${state.detailStats?.currentLatestDataTime || "-"}；点击“刷新用户”会刷新历史明细，不请求当天空数据。` : `今日数据按“${detailFrequencyText()}”执行，当前时间 ${state.detailStats?.currentLatestDataTime || "-"}；`}每日订单在 ${userRefreshTimesText()} 更新，当前历史时间 ${state.detailStats?.historyLatestDataTime || "-"}。页面自动检查只读取缓存，不请求中台。</section>
+        <section class="source"><strong>更新时间：</strong>${isT1Detail ? `该业务按 T+1 更新，数据日 ${state.detailCurrentBusinessDate || "-"}，获取时间 ${state.detailStats?.currentLatestDataTime || "-"}；点击“刷新用户”会刷新历史明细，不请求当天空数据。` : `今日数据按“${detailFrequencyText()}”执行，当前时间 ${state.detailStats?.currentLatestDataTime || "-"}；`}近30天每日订单读取历史缓存，当前历史时间 ${state.detailStats?.historyLatestDataTime || "-"}；超出范围点击查询后只更新当前业务。页面自动检查只读取缓存，不请求中台。</section>
         <section class="source warn"><strong>影响定位：</strong>${isT1Detail ? `${state.detailCurrentBusinessDate || "最近完整日"}比${state.detailComparisonBusinessDate || "前一日"}净下降` : "外层业务净下降"} ${fmt(businessImpact)} 单；下降用户合计 ${fmt(impactSum)} 单，增长用户抵消 ${fmt(growthSum)} 单，用户净下降 ${fmt(locatedNet)} 单，未定位差额 ${fmtValue(unattributed)}。流失风险只显示达到阈值者；增长用户显示所有${isT1Detail ? "完整业务日" : "同一时刻"}订单净增长大于0的用户。</section>
         <section class="source ${diff ? "warn" : ""}"><strong>数据校验：</strong>${isT1Detail ? `${state.detailCurrentBusinessDate || "数据日"}` : "今日"}用户明细求和 ${fmt(userOrderSum)}；外层和内层均使用中台有效订单口径。业务列表用户数 ${fmt(row.users || row.userIds?.length || 0)}，明细接口记录=${fmt(state.detailStats?.total || allUsers.length)}，按用户ID合并后 ${fmt(allUsers.length)} 人，当前订单口径差异 ${fmt(diff)}。</section>`;
     }
@@ -4331,7 +4360,7 @@
       const baseSum = comparableUsers.reduce((sum, user) => sum + Number(periodDisplayCmp(user)?.base || 0), 0);
       const impactSum = users.reduce((sum, user) => sum + Number(periodRiskCmp(user)?.impact || 0), 0);
       return `
-        <section class="source"><strong>${detailScopeLabel()}用户评估：</strong>${state.detailScope === "seven" ? "最近7天对比前7天" : "本月截至今天对比上月相同日期进度"}；数据在 ${userRefreshTimesText()} 固定更新，也可手动刷新当前业务。流失风险只显示达到阈值者，增长用户显示净增长大于 0 的用户。</section>
+        <section class="source"><strong>${detailScopeLabel()}用户评估：</strong>日期范围只用于查看每日订单和区间合计，不进行上月同期对比；异常判断继续使用昨日或上周同时刻。近30天读取缓存，超出范围点击查询后只更新当前业务。</section>
         <div class="detail-table-wrap">
           <table class="compact user-data-table">
             <thead><tr><th>序号</th><th>用户</th><th>${detailSortButton("orders", currentLabel)}</th><th>${baseLabel}</th><th>${detailSortButton("ratio", "变化比例")}</th><th>${detailSortButton("impact", "影响订单")}</th><th>近期趋势</th><th>风险等级</th><th>判断原因</th></tr></thead>
@@ -4817,7 +4846,7 @@
     document.addEventListener("scroll", hideFocusNoteTooltip, true);
     $("#addFocusBtn").addEventListener("click", () => openFocusModal());
     $("#addMarketingCostBtn").addEventListener("click", () => openMarketingCostModal());
-    $("#refreshMarketingCostBtn").addEventListener("click", () => loadMarketingCosts().then(() => toast("费用数据已更新")).catch(error => toast(error.message || "费用刷新失败")));
+    $("#refreshMarketingCostBtn").addEventListener("click", () => loadMarketingCosts(true).then(() => toast("费用数据已更新")).catch(error => toast(error.message || "费用刷新失败")));
     $("#marketingCostSearch").addEventListener("input", e => { state.marketingCostSearch = e.target.value.trim(); renderMarketingCosts(); });
     $("#marketingCostSearchClear").addEventListener("click", () => { state.marketingCostSearch = ""; $("#marketingCostSearch").value = ""; renderMarketingCosts(); $("#marketingCostSearch").focus(); });
     $("#marketingCostRangeTabs").addEventListener("click", e => { const button = e.target.closest("[data-cost-range]"); if (!button) return; state.marketingCostRange = button.dataset.costRange; renderMarketingCosts(); });
@@ -4977,8 +5006,15 @@
           return;
         }
         const availableDates = state.detailSyncedData?.history?.dates || [];
-        if (availableDates.length && (state.detailHistoryStart < availableDates[0] || state.detailHistoryEnd > availableDates.at(-1))) {
-          toast(`当前可选日期为 ${availableDates[0]} 至 ${availableDates.at(-1)}`);
+        if (!availableDates.length || state.detailHistoryStart < availableDates[0] || state.detailHistoryEnd > availableDates.at(-1)) {
+          if (state.publicMode) {
+            toast(availableDates.length ? `公网当前可选日期为 ${availableDates[0]} 至 ${availableDates.at(-1)}` : "公网快照暂未包含该日期范围");
+            return;
+          }
+          state.detailDisplayRange = "custom";
+          state.detailLoadingLabel = "所选日期历史";
+          state.detailHistory = null;
+          loadBusinessUserHistory(true).catch(error => toast(error.message || "所选日期历史查询失败"));
           return;
         }
         state.detailDisplayRange = "custom";
