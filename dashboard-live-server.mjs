@@ -925,7 +925,9 @@ async function businessUserStatisticsCall(name, params, timeoutMs) {
     const officialParams = { ...requestParams };
     delete officialParams.filter_field;
     const fallback = await apiCall(`${name}（官方参数兼容）`, "GET", path, officialParams, timeoutMs);
-    return fallback.ok ? { ...fallback, filterFieldFallback: true } : fallback;
+    return fallback.ok
+      ? { ...fallback, filterFieldFallback: true }
+      : { ...fallback, filterFieldFallbackAttempted: true };
   });
   businessUserStatisticsQueue = run.catch(() => {});
   return run;
@@ -933,10 +935,15 @@ async function businessUserStatisticsCall(name, params, timeoutMs) {
 
 async function retryBusinessUserStatisticsCall(name, params, timeoutMs, attempts = 3) {
   let result = null;
+  let retryParams = { ...(params || {}) };
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    result = await businessUserStatisticsCall(attempt === 1 ? name : `${name}（重试${attempt - 1}）`, params, timeoutMs);
+    result = await businessUserStatisticsCall(attempt === 1 ? name : `${name}（重试${attempt - 1}）`, retryParams, timeoutMs);
     if (result.ok) return result;
-    if (attempt < attempts) await new Promise(resolveWait => setTimeout(resolveWait, attempt * 200));
+    if (result.filterFieldFallbackAttempted) delete retryParams.filter_field;
+    // This endpoint throttles short bursts after several successful pages. A real
+    // backoff lets the next page recover instead of turning the rest of the batch
+    // into code 100100 failures.
+    if (attempt < attempts) await new Promise(resolveWait => setTimeout(resolveWait, attempt * 1200));
   }
   return result;
 }
