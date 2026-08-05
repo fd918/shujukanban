@@ -11762,5 +11762,22 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 0,
     "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1400",
+    "title": "7.14-7.20丰巢洗护单单返激励",
+    "metric": "orders",
+    "date": "2026-08-06",
+    "hour": 5,
+    "slotMinute": 0,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-06 05:00",
+    "recordedAt": "2026/8/6 05:02:08",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 0,
+    "cumulativeRedemptionAmount": 0
   }
 ]
