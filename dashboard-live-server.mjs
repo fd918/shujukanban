@@ -1120,7 +1120,7 @@ async function fetchBusinessUserHistory(options = {}, statuses = []) {
 
 async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
-  const covering = [...userDetailCache.entries()]
+  const historyCandidates = [...userDetailCache.entries()]
     .map(([key, payload]) => {
         try {
           return { key: JSON.parse(key), payload };
@@ -1130,8 +1130,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
       })
     .filter(item => item?.key?.type === "history"
       && String(item.key.businessId) === String(businessId)
-      && item.key.startDate <= startDate
-      && item.key.endDate >= endDate)
+      && item.key.startDate <= startDate)
     .sort((a, b) => {
       const completeA = a.payload.partial === true || a.payload.complete === false ? 0 : 1;
       const completeB = b.payload.partial === true || b.payload.complete === false ? 0 : 1;
@@ -1142,20 +1141,33 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
       const timeA = Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0;
       const timeB = Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0;
       return timeB - timeA || (b.payload.dates?.length || 0) - (a.payload.dates?.length || 0);
-    })[0];
+    });
+  const isCompleteHistory = item => item.payload.partial !== true && item.payload.complete !== false;
+  const covering = historyCandidates.find(item => isCompleteHistory(item) && item.key.endDate >= endDate)
+    || historyCandidates.find(item => isCompleteHistory(item) && item.key.endDate < endDate && shiftDay(item.key.endDate, 1) >= endDate)
+    || historyCandidates.find(item => item.key.endDate >= endDate)
+    || historyCandidates.find(item => item.key.endDate < endDate && shiftDay(item.key.endDate, 1) >= endDate)
+    || null;
   const cachedSlice = () => {
     if (!covering) return null;
-      const dates = (covering.payload.dates || []).filter(date => date >= startDate && date <= endDate);
+      const dates = dayList(startDate, endDate);
       const rows = (covering.payload.rows || []).map(row => attachPlainPhone({
         ...row,
         days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
         todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
       }));
-    return { ...covering.payload, dates, rows, total: rows.length, cached: true };
+    return {
+      ...covering.payload,
+      dates,
+      rows,
+      total: rows.length,
+      cached: true,
+      staleThroughDate: covering.key.endDate < endDate ? covering.key.endDate : ""
+    };
   };
   if (!refresh && covering) {
     const cached = cachedSlice();
-    statuses.push({ name: "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${cached.rows.length} 个用户、${cached.dates.length} 天`, durationMs: 0 });
+    statuses.push({ name: "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${cached.rows.length} 个用户、${cached.dates.length} 天${cached.staleThroughDate ? `（完整历史截至 ${cached.staleThroughDate}，今日由实时分页补齐）` : ""}`, durationMs: 0 });
     return cached;
   }
   const dates = dayList(startDate, endDate);
@@ -1342,6 +1354,27 @@ function latestFullBusinessUsers(businessId, date = dayKey()) {
   return latest;
 }
 
+function latestPartialBusinessUsers(businessId, date = dayKey()) {
+  let latest = null;
+  let latestAt = 0;
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    try {
+      const key = JSON.parse(cacheKey);
+      if (String(key.businessId) !== String(businessId)) continue;
+      if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
+      if (key.filterField !== "order_valid" || number(key.pageSize) < 5000) continue;
+      if (payload.partial !== true && payload.complete !== false) continue;
+      if (!(payload.rows || []).length) continue;
+      const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      if (!latest || savedAt > latestAt) {
+        latest = payload;
+        latestAt = savedAt;
+      }
+    } catch {}
+  }
+  return latest;
+}
+
 function mergeFocusOrderHistoryRows(businessId, baseRows = []) {
   const rowsById = new Map(baseRows.map(row => [String(row.id || ""), { ...row, days: { ...(row.days || {}) } }]));
   let latestDataTime = "";
@@ -1456,13 +1489,21 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
   }, statuses) : null;
   const refreshedFull = refreshedCandidate?.ok && refreshedCandidate.complete !== false && refreshedCandidate.partial !== true ? refreshedCandidate : null;
   const full = refreshedFull || (endDate === dayKey() ? latestFullBusinessUsers(businessId, endDate) : null);
+  const partial = refreshedCandidate?.ok && (refreshedCandidate.partial === true || refreshedCandidate.complete === false)
+    ? refreshedCandidate
+    : (endDate === dayKey() ? latestPartialBusinessUsers(businessId, endDate) : null);
   const fast = endDate === dayKey() ? latestFastBusinessUsers(businessId, endDate) : null;
   const fullRows = deduplicateBusinessUsers(full?.rows || []).map(row => ({ ...row, currentDataTime: full?.savedAtText || "" }));
   const fullById = new Map(fullRows.map(row => [String(row.id || ""), row]));
-  const fastIsNewer = timeValue(fast?.savedAtText) > timeValue(full?.savedAtText);
+  const partialIsNewer = partial && (!full || timeValue(partial.savedAtText) > timeValue(full.savedAtText));
+  const partialRows = deduplicateBusinessUsers(partialIsNewer ? partial.rows || [] : []).map(row => ({ ...row, currentDataTime: partial?.savedAtText || "", realtimeToday: true }));
+  const partialById = new Map(partialRows.map(row => [String(row.id || ""), row]));
+  const currentBaseTime = Math.max(timeValue(full?.savedAtText), timeValue(partialIsNewer ? partial?.savedAtText : ""));
+  const fastIsNewer = timeValue(fast?.savedAtText) > currentBaseTime;
   const fastRows = deduplicateBusinessUsers(fastIsNewer ? fast?.rows || [] : []).map(row => ({ ...row, currentDataTime: fast?.savedAtText || "" }));
   const fastById = new Map(fastRows.map(row => [String(row.id || ""), row]));
   const currentById = new Map(fullById);
+  partialById.forEach((row, id) => currentById.set(id, row));
   fastById.forEach((row, id) => currentById.set(id, row));
   latestFocusCurrentRows(businessId, endDate).forEach(row => {
     const id = String(row.id || "");
@@ -1477,9 +1518,9 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
       currentDataTime: current?.currentDataTime || (full ? full.savedAtText : row.currentDataTime),
       days: {
         ...(row.days || {}),
-        ...(full ? { [endDate]: number(current?.todayOrders) } : {})
+        ...(current || full ? { [endDate]: number(current?.todayOrders) } : {})
       },
-      todayOrders: full ? number(current?.todayOrders) : number(fastById.get(String(row.id || ""))?.todayOrders ?? row.days?.[endDate]),
+      todayOrders: current ? number(current.todayOrders) : (full ? 0 : number(row.days?.[endDate])),
       yesterdayOrders: number(row.days?.[shiftDay(endDate, -1)]),
       // A complete current-day response also proves that omitted historical users have zero orders at this batch time.
       realtimeToday: Boolean(full || current)
@@ -1490,7 +1531,8 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     todayRows.push({ ...currentRow, days: { [endDate]: number(currentRow.todayOrders) }, realtimeToday: true });
   }
   const fullCurrentLatestDataTime = full?.savedAtText || "";
-  const currentLatestDataTime = fastIsNewer ? fast.savedAtText : (fullCurrentLatestDataTime || historyLatestDataTime);
+  const currentLatestDataTime = [...currentById.values()].map(row => row.currentDataTime).filter(Boolean).sort().at(-1)
+    || (fastIsNewer ? fast.savedAtText : (partialIsNewer ? partial.savedAtText : (fullCurrentLatestDataTime || historyLatestDataTime)));
   const users = enrichBusinessUsersWithSnapshots(
     todayRows,
     snapshots,
@@ -1511,8 +1553,9 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
     currentLatestDataTime,
     fullCurrentLatestDataTime: fullCurrentLatestDataTime || "-",
     historyLatestDataTime,
-    realtimeUserCount: fastById.size,
-    total: full?.total || history.total,
+    realtimeUserCount: currentById.size,
+    partialCurrent: Boolean(!full && partial),
+    total: Math.max(number(full?.total), number(partial?.total), number(history.total), users.length),
     userOrderSum: users.reduce((sum, row) => sum + number(row.todayOrders), 0),
     users,
     history: {
@@ -1588,6 +1631,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   const needPages = Math.min(totalPages, Math.ceil(Math.max(pageSize, firstRows.length) / perPage));
   let allRows = firstRows;
   let pageLoadFailed = false;
+  let loadedPages = [1];
   if (result.ok && needPages > 1) {
     const restPages = Array.from({ length: needPages - 1 }, (_, index) => index + 2);
     const rest = await mapLimit(restPages, 1, currentPage => retryBusinessUserStatisticsCall(`业务用户下钻第${currentPage}页`, {
@@ -1596,14 +1640,16 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     }, 25000));
     const failed = rest.filter(item => !item.ok).length;
     pageLoadFailed = failed > 0;
+    loadedPages = loadedPages.concat(restPages.filter((currentPage, index) => rest[index]?.ok));
     statuses.push({ name: "业务用户下钻翻页", ok: failed === 0, message: failed ? `${failed} 页加载失败` : `已加载 ${needPages} 页`, durationMs: rest.reduce((sum, item) => sum + number(item.durationMs), 0) });
     if (failed) {
       const fallback = cachedFallback();
-      if (fallback) {
+      const fallbackComplete = fallback && fallback.partial !== true && fallback.complete !== false;
+      if (fallbackComplete) {
         statuses.push({ name: "业务用户刷新保护", ok: true, message: "中台分页不完整，已保留并返回上一次完整用户缓存", durationMs: 0 });
         return fallback;
       }
-      statuses.push({ name: "业务用户下钻部分结果", ok: true, message: "没有完整旧缓存，先展示已成功加载的用户页，后续刷新继续补齐", durationMs: 0 });
+      statuses.push({ name: "业务用户下钻部分结果", ok: true, message: "没有完整旧缓存，已把本轮成功页与此前部分缓存合并，后续刷新继续补齐", durationMs: 0 });
     }
     allRows = allRows.concat(...rest.filter(item => item.ok).map(item => asList(item.data)));
   }
@@ -1645,7 +1691,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
       previousById[id] = number(previousById[id]) + number(row[previousKey] ?? row.period_total);
     });
   }
-  const rows = allRows.slice(0, pageSize).map(row => normalizeUser(row, startDate === endDate ? endDate : "period_total"));
+  let rows = deduplicateBusinessUsers(allRows.slice(0, pageSize).map(row => normalizeUser(row, startDate === endDate ? endDate : "period_total")));
   if (!rows.length) {
     const fallback = cachedFallback();
     if (fallback?.rows?.some(row => number(row.todayOrders) > 0)) {
@@ -1662,6 +1708,12 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     const plainPhone = await fetchPlainPhone(row.id);
     row.phone = plainPhoneValue(row.id, plainPhone, row.phone);
   });
+  if (pageLoadFailed && exactCache?.rows?.length && (exactCache.partial === true || exactCache.complete === false)) {
+    const mergedById = new Map(deduplicateBusinessUsers(exactCache.rows).map(row => [String(row.id || ""), row]));
+    rows.forEach(row => mergedById.set(String(row.id || ""), row));
+    rows = [...mergedById.values()];
+    loadedPages = [...new Set([...(exactCache.loadedPages || []), ...loadedPages])].sort((a, b) => a - b);
+  }
   const payload = {
     ok: true,
     complete: !pageLoadFailed,
@@ -1670,6 +1722,8 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     filterFieldFallback: Boolean(result.filterFieldFallback),
     savedAtText: nowText(),
     total,
+    totalPages,
+    loadedPages,
     page: number(result.data?.page || page),
     pageSize: perPage,
     columns: result.data?.columns || [],
@@ -3820,11 +3874,23 @@ async function encryptedPublicUserDetails(dateRange) {
     const historyRows = detail.history?.rows || [];
     if (!full) {
       if (!fastBusinessIds.has(String(businessId))) continue;
-      const currentRows = deduplicateBusinessUsers(detail.rows || []);
+      const partial = latestPartialBusinessUsers(businessId, dateRange.endDate);
+      const currentMap = new Map(deduplicateBusinessUsers(detail.rows || []).map(row => [String(row.id || ""), row]));
+      for (const row of deduplicateBusinessUsers(partial?.rows || [])) {
+        currentMap.set(String(row.id || ""), { ...row, currentDataTime: partial.savedAtText || "", realtimeToday: true });
+      }
+      for (const row of latestFocusCurrentRows(businessId, dateRange.endDate)) {
+        const id = String(row.id || "");
+        const existing = currentMap.get(id);
+        if (!existing || timeValue(row.currentDataTime) >= timeValue(existing.currentDataTime)) currentMap.set(id, row);
+      }
+      const currentRows = [...currentMap.values()];
       const currentById = new Map(currentRows.map(row => [String(row.id || ""), row]));
       const historyLatestDataTime = detail.history?.latestDataTime || "";
       const historyById = new Map(historyRows.map(row => [String(row.id || ""), row]));
-      const currentLatestDataTime = currentRows.length ? (detail.currentLatestDataTime || detail.latestDataTime || historyLatestDataTime) : historyLatestDataTime;
+      const currentLatestDataTime = currentRows.map(row => row.currentDataTime).filter(Boolean).sort().at(-1)
+        || partial?.savedAtText
+        || (currentRows.length ? (detail.currentLatestDataTime || detail.latestDataTime || historyLatestDataTime) : historyLatestDataTime);
       const targetMinutes = new Set([historyLatestDataTime, ...currentRows.map(row => row.currentDataTime)].map(comparisonMinuteFromText).filter(Number.isFinite));
       const referenceDays = new Set(Array.from({ length: 7 }, (_, index) => shiftDay(dateRange.endDate, -(index + 1))));
       const comparisonUserIds = new Set(currentRows.map(row => String(row.id || "")));
@@ -3848,11 +3914,12 @@ async function encryptedPublicUserDetails(dateRange) {
       const comparisons = enrichBusinessUsersWithSnapshots(comparisonRows, snapshots, businessId, dateRange, comparisonMinuteFromText(currentLatestDataTime));
       detail.sameTimeUsers = Object.fromEntries(comparisons.filter(row => row.sameTime?.hasSnapshot).map(row => [String(row.id || ""), row.sameTime]));
       detail.rows = currentRows;
-      detail.total = Math.max(number(detail.history?.total), historyRows.length, currentRows.length);
+      detail.total = Math.max(number(detail.history?.total), number(partial?.total), historyRows.length, currentRows.length);
       detail.latestDataTime = currentLatestDataTime || "-";
       detail.currentLatestDataTime = detail.latestDataTime;
       detail.fullCurrentLatestDataTime = "-";
       detail.realtimeUserCount = currentRows.length;
+      detail.partialCurrent = Boolean(partial);
       continue;
     }
     const fast = latestFastBusinessUsers(businessId, dateRange.endDate);

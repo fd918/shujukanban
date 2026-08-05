@@ -2834,17 +2834,22 @@
       const range = publicFocusRange(state.globalUserRange, endDate);
       const dates = dateTextList(range.startDate, range.endDate);
       const previousDates = dateTextList(range.comparisonStartDate, range.comparisonEndDate);
-      const businessRows = (await Promise.all((selected.businessIds || []).map(async businessId => {
-        const detail = await loadPublicUserDetail(String(businessId));
+      const publicFocusData = state.publicFocusUsers[state.globalUserRange] || state.publicFocusUsers["7"] || state.focusData || {};
+      const focusRows = (publicFocusData.businessRows || publicFocusData.rows || []).filter(row => String(row.userId || row.id || "") === userId);
+      const focusByBusinessId = new Map(focusRows.map(row => [String(row.businessId || row.platformBusinessId || ""), row]));
+      const businessIds = [...new Set([...(selected.businessIds || []).map(String), ...focusByBusinessId.keys()])];
+      const businessRows = (await Promise.all(businessIds.map(async businessId => {
+        const detail = await loadPublicUserDetail(String(businessId)).catch(() => ({}));
         const history = (detail.history?.rows || []).find(row => String(row.id || row.userId || "") === userId) || {};
         const current = (detail.rows || []).find(row => String(row.id || row.userId || "") === userId) || {};
-        const merged = { ...history, ...current, days: { ...(history.days || {}), ...(current.days || {}) } };
+        const focus = focusByBusinessId.get(String(businessId)) || {};
+        const merged = { ...history, ...current, ...focus, days: { ...(history.days || {}), ...(current.days || {}), ...(focus.days || {}) } };
         const business = state.businesses.find(row => String(row.platformBusinessId || row.businessId) === String(businessId) || String(row.businessId) === String(businessId));
         const days = Object.fromEntries(dates.map(date => [date, Number(merged.days?.[date] || 0)]));
         const periodTotal = Object.values(days).reduce((sum, value) => sum + value, 0);
         const previousPeriodTotal = previousDates.reduce((sum, date) => sum + Number(merged.days?.[date] || 0), 0);
-        const todayOrders = Number(current.todayOrders ?? merged.days?.[endDate] ?? 0);
-        const baseline = current.sameTime?.yesterday?.orders ?? current.yesterdaySameTime ?? merged.sameTime?.yesterday?.orders ?? merged.yesterdaySameTime;
+        const todayOrders = Number(focus.todayOrders ?? current.todayOrders ?? merged.days?.[endDate] ?? 0);
+        const baseline = focus.sameTime?.yesterday?.orders ?? focus.yesterdaySameTime ?? current.sameTime?.yesterday?.orders ?? current.yesterdaySameTime ?? merged.sameTime?.yesterday?.orders ?? merged.yesterdaySameTime;
         const yesterdaySameTime = baseline === null || baseline === undefined ? null : Number(baseline);
         const diff = yesterdaySameTime === null ? null : todayOrders - yesterdaySameTime;
         const periodDiff = periodTotal - previousPeriodTotal;
@@ -2852,19 +2857,19 @@
           ...merged,
           userId,
           businessId: String(businessId),
-          businessName: business?.name || business?.businessName || "未命名业务",
-          platform: business?.platform || "-",
+          businessName: focus.businessName || business?.name || business?.businessName || "未命名业务",
+          platform: focus.platform || business?.platform || "-",
           days,
           todayOrders,
           yesterdaySameTime,
-          sameTime: current.sameTime || merged.sameTime || {},
+          sameTime: focus.sameTime || current.sameTime || merged.sameTime || {},
           ratio: yesterdaySameTime === null ? null : (yesterdaySameTime ? diff / yesterdaySameTime * 100 : (todayOrders ? 100 : 0)),
           impact: diff === null ? null : Math.abs(diff),
           periodTotal,
           previousPeriodTotal,
           periodRatio: previousPeriodTotal ? periodDiff / previousPeriodTotal * 100 : null,
           periodImpact: Math.abs(periodDiff),
-          userDataTime: detail.currentLatestDataTime || detail.latestDataTime || detail.history?.latestDataTime || "-"
+          userDataTime: focus.userDataTime || detail.currentLatestDataTime || detail.latestDataTime || detail.history?.latestDataTime || "-"
         };
       }))).filter(row => row.todayOrders > 0 || row.yesterdaySameTime > 0 || row.periodTotal > 0 || row.previousPeriodTotal > 0);
       const todayOrders = businessRows.reduce((sum, row) => sum + Number(row.todayOrders || 0), 0);
