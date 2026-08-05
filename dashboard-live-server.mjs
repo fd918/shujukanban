@@ -3838,9 +3838,15 @@ async function encryptedPublicUserDetails(dateRange) {
       const id = String(key.businessId || "");
       if (!id) continue;
       if (key.type === "history") {
-        const rank = [String(key.endDate || ""), (payload.dates || []).length, timeValue(payload.savedAtText)];
+        const complete = payload.partial === true || payload.complete === false ? 0 : 1;
+        const rank = [complete, String(key.endDate || ""), (payload.dates || []).length, timeValue(payload.savedAtText)];
         const previous = historyRanks.get(id);
-        if (previous && (rank[0] < previous[0] || (rank[0] === previous[0] && rank[1] < previous[1]) || (rank[0] === previous[0] && rank[1] === previous[1] && rank[2] <= previous[2]))) continue;
+        if (previous && (
+          rank[0] < previous[0]
+          || (rank[0] === previous[0] && rank[1] < previous[1])
+          || (rank[0] === previous[0] && rank[1] === previous[1] && rank[2] < previous[2])
+          || (rank[0] === previous[0] && rank[1] === previous[1] && rank[2] === previous[2] && rank[3] <= previous[3])
+        )) continue;
         historyRanks.set(id, rank);
         details[id] = details[id] || {};
         details[id].history = {
