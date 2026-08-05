@@ -461,6 +461,11 @@
     .cost-status { display:inline-flex; align-items:center; min-height:24px; padding:2px 9px; border:1px solid #fdba74; color:#c2410c; background:#fff7ed; border-radius:12px; font-size:12px; }
     .cost-status.confirmed { border-color:#86efac; color:#15803d; background:#f0fdf4; }
     .cost-table th,.cost-table td { white-space:nowrap; }
+    .cost-sort-button { display:inline-flex; align-items:center; gap:5px; min-height:30px; padding:3px 5px; margin:-3px -5px; border:0; border-radius:5px; background:transparent; color:inherit; font:inherit; font-weight:inherit; cursor:pointer; }
+    .cost-sort-button:hover,.cost-sort-button.active { background:#eff6ff; color:#1d4ed8; }
+    .cost-sort-button:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
+    .cost-sort-button span { min-width:12px; color:#64748b; font-size:12px; text-align:center; }
+    .cost-sort-button.active span { color:#1d4ed8; }
     .cost-table .cost-user { min-width:160px; white-space:normal; }
     .cost-table .cost-user span { display:block; margin-top:2px; color:var(--muted); font-size:12px; }
     .cost-table .cost-business { min-width:210px; white-space:normal; }
@@ -961,7 +966,7 @@
               <button class="btn" id="refreshMarketingCostBtn">刷新费用</button>
             </div>
             <div class="cost-summary" id="marketingCostSummary"></div>
-            <div class="table-wrap cost-table-scroll"><table class="cost-table"><thead><tr><th>序号</th><th>用户</th><th>业务</th><th>开始日期</th><th>结束日期</th><th>天数</th><th>周期订单</th><th>单价（元/单）</th><th>预估费用</th><th>状态</th><th>备注</th><th>操作</th></tr></thead><tbody id="marketingCostBody"></tbody></table></div>
+            <div class="table-wrap cost-table-scroll"><table class="cost-table"><thead><tr><th>序号</th><th>用户</th><th>业务</th><th>开始日期</th><th>结束日期</th><th>天数</th><th aria-sort="none"><button class="cost-sort-button" type="button" data-marketing-cost-sort="orders" aria-label="按周期订单降序排列">周期订单 <span aria-hidden="true">↕</span></button></th><th>单价（元/单）</th><th aria-sort="descending"><button class="cost-sort-button active" type="button" data-marketing-cost-sort="amount" aria-label="当前按预估费用降序排列，再次点击改为升序">预估费用 <span aria-hidden="true">↓</span></button></th><th>状态</th><th>备注</th><th>操作</th></tr></thead><tbody id="marketingCostBody"></tbody></table></div>
           </div>
         </section>
       </div>
@@ -1019,7 +1024,7 @@
     </div>
     <div class="modal-body">
       <div class="cost-orders-summary" id="marketingCostOrdersSummary"></div>
-      <div class="cost-orders-list"><table><thead><tr><th>日期</th><th>数据状态</th><th>订单数</th></tr></thead><tbody id="marketingCostOrdersBody"></tbody></table></div>
+      <div class="cost-orders-list"><table><thead><tr><th>日期</th><th>订单数</th></tr></thead><tbody id="marketingCostOrdersBody"></tbody></table></div>
     </div>
     <div class="modal-foot"><button class="btn" id="closeMarketingCostOrdersFoot" type="button">关闭</button></div>
   </section>
@@ -1107,7 +1112,7 @@
         <strong>重点用户和备注：</strong>重点用户按用户ID全局关注，日常只刷新已经发现的有单业务。运营标签保存关注关系，同一用户可以出现在多个标签。名称、观察备注和置顶按用户ID统一应用；近7天、本月、近30天和自定义日期只改变每日指标列。
       </section>
       <section class="source">
-        <strong>营销费用预估：</strong>计费订单直接汇总所选用户在所选业务的每日订单缓存，不会混入其他业务。点击周期订单可查看周期内每天的数据，天数包含开始日和结束日；点击用户或业务可查看对应全部费用项。费用备注默认同步重点用户备注，也可通过铅笔按钮改为该费用项的独立备注。草稿会随缓存重算，确认后锁定订单数和金额；未来日期在产生订单并完成缓存更新后自动纳入。缺少历史数据时会标注并禁止提前确认。
+        <strong>营销费用预估：</strong>计费订单直接汇总所选用户在所选业务的每日订单缓存，不会混入其他业务。点击周期订单可查看周期内每天的订单数，尚未产生或尚未返回的日期按 0 展示；天数包含开始日和结束日。点击用户或业务可查看对应全部费用项；列表默认按预估费用降序，也可点击“周期订单”或“预估费用”表头切换升降序。费用备注默认同步重点用户备注，也可通过铅笔按钮改为该费用项的独立备注。草稿会随缓存重算，确认后锁定订单数和金额；缺少历史数据时会标注并禁止提前确认。
       </section>
     </div>
     <div class="modal-foot"><button class="btn" id="closeHelpFoot">关闭</button></div>
@@ -1365,7 +1370,7 @@
       return times.join("、") || "未配置";
     }
 
-    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostEditId: "", marketingCostSelectedUserIds: [], marketingCostSelectedBusinessIds: [], marketingCostUserSearch: "", marketingCostDateRanges: [], marketingCostSubmitting: false, marketingCostBatchId: "", marketingCostEntityFilterType: "", marketingCostEntityFilterId: "", marketingCostEntityFilterLabel: "", marketingCostNoteEditId: "", marketingCostNoteSaving: false });
+    Object.assign(state, { focusWorkspace: "users", marketingCosts: null, marketingCostLoading: false, marketingCostSearch: "", marketingCostStatus: "all", marketingCostRange: "all", marketingCostSortKey: "amount", marketingCostSortDirection: "desc", marketingCostEditId: "", marketingCostSelectedUserIds: [], marketingCostSelectedBusinessIds: [], marketingCostUserSearch: "", marketingCostDateRanges: [], marketingCostSubmitting: false, marketingCostBatchId: "", marketingCostEntityFilterType: "", marketingCostEntityFilterId: "", marketingCostEntityFilterLabel: "", marketingCostNoteEditId: "", marketingCostNoteSaving: false });
 
     function isFastUserBusiness(row = state.detailRow) {
       const ids = new Set((state.config?.fastUserBusinessIds || []).map(String));
@@ -2586,7 +2591,22 @@
         if (bounds && (item.endDate < bounds.start || item.startDate > bounds.end)) return false;
         if (keyword && !`${item.userName || ""}${item.userId || ""}${item.businessName || ""}${item.platform || ""}${item.note || ""}`.toLowerCase().includes(keyword)) return false;
         return true;
+      }).sort((a, b) => {
+        const key = state.marketingCostSortKey === "orders" ? "orderCount" : "estimatedAmount";
+        const direction = state.marketingCostSortDirection === "asc" ? 1 : -1;
+        const difference = (Number(a[key]) || 0) - (Number(b[key]) || 0);
+        return difference ? difference * direction : String(b.updatedAt || b.id || "").localeCompare(String(a.updatedAt || a.id || ""));
       });
+    }
+
+    function setMarketingCostSort(key) {
+      const normalized = key === "orders" ? "orders" : "amount";
+      if (state.marketingCostSortKey === normalized) state.marketingCostSortDirection = state.marketingCostSortDirection === "desc" ? "asc" : "desc";
+      else {
+        state.marketingCostSortKey = normalized;
+        state.marketingCostSortDirection = "desc";
+      }
+      renderMarketingCosts();
     }
 
     function renderMarketingCosts() {
@@ -2596,6 +2616,14 @@
       $$("#focusWorkspaceTabs button").forEach(button => button.classList.toggle("active", button.dataset.focusWorkspace === state.focusWorkspace));
       $$("#marketingCostRangeTabs button").forEach(button => button.classList.toggle("active", button.dataset.costRange === state.marketingCostRange));
       $$("#marketingCostStatusTabs button").forEach(button => button.classList.toggle("active", button.dataset.costStatus === state.marketingCostStatus));
+      $$('[data-marketing-cost-sort]').forEach(button => {
+        const active = button.dataset.marketingCostSort === state.marketingCostSortKey;
+        const directionText = state.marketingCostSortDirection === "desc" ? "降序" : "升序";
+        button.classList.toggle("active", active);
+        button.querySelector("span").textContent = active ? (state.marketingCostSortDirection === "desc" ? "↓" : "↑") : "↕";
+        button.setAttribute("aria-label", active ? `当前按${button.dataset.marketingCostSort === "orders" ? "周期订单" : "预估费用"}${directionText}排列，再次点击改为${state.marketingCostSortDirection === "desc" ? "升序" : "降序"}` : `按${button.dataset.marketingCostSort === "orders" ? "周期订单" : "预估费用"}降序排列`);
+        button.closest("th")?.setAttribute("aria-sort", active ? (state.marketingCostSortDirection === "desc" ? "descending" : "ascending") : "none");
+      });
       $("#focusUsersWorkspace").classList.toggle("hidden", state.focusWorkspace !== "users");
       $("#marketingCostWorkspace").classList.toggle("hidden", state.focusWorkspace !== "costs");
       const entityFilter = $("#marketingCostEntityFilter");
@@ -2819,16 +2847,11 @@
 
     function openMarketingCostOrders(item) {
       const dates = dateTextList(item.startDate, item.endDate);
-      const missingDates = new Set((item.missingDates || []).map(String));
       const liveOrders = dates.reduce((sum, date) => sum + Number(item.dailyOrders?.[date] || 0), 0);
       $("#marketingCostOrdersTitle").textContent = `${item.userName || `用户 ${item.userId}`}｜周期订单明细`;
       $("#marketingCostOrdersSub").textContent = `${item.businessName || "未命名业务"} · ${item.startDate} 至 ${item.endDate}`;
-      $("#marketingCostOrdersSummary").innerHTML = `<div><span>周期天数（含首尾）</span><strong>${fmt(dates.length)} 天</strong></div><div><span>${item.status === "confirmed" ? "已锁定周期订单" : "当前周期订单"}</span><strong>${fmt(item.orderCount)}</strong></div><div><span>当前逐日合计</span><strong>${fmt(liveOrders)}</strong></div>`;
-      $("#marketingCostOrdersBody").innerHTML = dates.map(date => {
-        const missing = missingDates.has(date);
-        const status = missing ? (item.t1Pending && date === dayText(new Date()) ? "T+1待更新" : "缺少数据") : "已获取";
-        return `<tr><td>${escapeHtml(date)}</td><td><span class="${missing ? "down" : "muted"}">${status}</span></td><td>${missing ? "-" : `<strong>${fmt(item.dailyOrders?.[date] || 0)}</strong>`}</td></tr>`;
-      }).join("");
+      $("#marketingCostOrdersSummary").innerHTML = `<div><span>周期天数（含首尾）</span><strong>${fmt(dates.length)} 天</strong></div><div><span>${item.status === "confirmed" ? "已锁定周期订单" : "当前周期订单"}</span><strong>${fmt(item.orderCount)}</strong></div><div><span>逐日合计（未产生按 0）</span><strong>${fmt(liveOrders)}</strong></div>`;
+      $("#marketingCostOrdersBody").innerHTML = dates.map(date => `<tr><td>${escapeHtml(date)}</td><td><strong>${fmt(item.dailyOrders?.[date] || 0)}</strong></td></tr>`).join("");
       $("#modalMask").classList.add("open");
       $("#marketingCostOrdersModal").classList.add("open");
     }
@@ -5039,6 +5062,8 @@
     $("#marketingCostRangeTabs").addEventListener("click", e => { const button = e.target.closest("[data-cost-range]"); if (!button) return; state.marketingCostRange = button.dataset.costRange; renderMarketingCosts(); });
     $("#marketingCostStatusTabs").addEventListener("click", e => { const button = e.target.closest("[data-cost-status]"); if (!button) return; state.marketingCostStatus = button.dataset.costStatus; renderMarketingCosts(); });
     $("#marketingCostWorkspace").addEventListener("click", e => {
+      const sortButton = e.target.closest("[data-marketing-cost-sort]");
+      if (sortButton) { setMarketingCostSort(sortButton.dataset.marketingCostSort); return; }
       const userFilter = e.target.closest("[data-filter-marketing-cost-user]");
       if (userFilter) { const item = (state.marketingCosts?.items || []).find(row => String(row.userId) === String(userFilter.dataset.filterMarketingCostUser)); setMarketingCostEntityFilter("user", userFilter.dataset.filterMarketingCostUser, item?.userName || userFilter.dataset.filterMarketingCostUser); return; }
       const businessFilter = e.target.closest("[data-filter-marketing-cost-business]");
