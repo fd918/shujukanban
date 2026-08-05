@@ -37,6 +37,7 @@ const PUBLIC_PASSWORD_SERVICE = "com.tanwenjie.business-dashboard.public.passwor
 const SNAPSHOT_RETENTION_DAYS = 8;
 const PUBLIC_KDF_ITERATIONS = 60000;
 const T1_USER_BUSINESS_IDS = new Set(["2410"]);
+const DEFAULT_USER_HISTORY_DAYS = 30;
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
@@ -65,6 +66,8 @@ let lastOperationalAlert = { key: "", at: 0 };
 let startupWarmupRunning = false;
 let publicHistoryWarmupRunning = false;
 let highFrequencyUserWarmupPromise = null;
+let snapshotMemoryCache = null;
+let marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null };
 let detailCacheSaveTimer = null;
 let requestStatsSaveTimer = null;
 let requestStats = { day: dayKey(), total: 0, byPath: {}, byName: {}, updatedAt: "" };
@@ -1756,15 +1759,16 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
   return payload;
 }
 
-async function warmBusinessUserDetails(businesses, dateRange, { refresh = false } = {}) {
+async function warmBusinessUserDetails(businesses, dateRange, { refresh = false, pageSize = 5000, includePrevious = true } = {}) {
   const rows = (businesses || []).filter(row => row.platformBusinessId || row.businessId);
-  if (!rows.length) return;
+  if (!rows.length) return { total: 0, complete: 0, failed: 0 };
   let warmed = 0;
+  let complete = 0;
+  let failed = 0;
   await mapLimit(rows, 4, async row => {
     const statuses = [];
-    const pageSize = Math.min(5000, Math.max(500, number(row.users || row.userIds?.length || 0) + 50));
     try {
-      await fetchBusinessUsers({
+      const result = await fetchBusinessUsers({
         businessId: row.platformBusinessId || row.businessId || "",
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
@@ -1772,14 +1776,19 @@ async function warmBusinessUserDetails(businesses, dateRange, { refresh = false 
         pageSize,
         sortField: dateRange.startDate === dateRange.endDate ? dateRange.endDate : "period_total",
         sortOrder: "desc",
-        refresh
+        refresh,
+        includePrevious
       }, statuses);
-      warmed += 1;
+      if (result?.ok) warmed += 1;
+      if (result?.ok && result.complete !== false && result.partial !== true) complete += 1;
+      else failed += 1;
     } catch (error) {
+      failed += 1;
       console.error(`[${nowText()}] 预热业务用户失败：${row.name} ${error.message}`);
     }
   });
-  console.log(`[${nowText()}] 已预热业务用户明细缓存：${warmed}/${rows.length}`);
+  console.log(`[${nowText()}] 已预热业务用户明细缓存：${warmed}/${rows.length}；完整 ${complete}；失败或部分 ${failed}`);
+  return { total: rows.length, warmed, complete, failed };
 }
 
 async function loadUserRefreshState() {
@@ -1811,7 +1820,7 @@ async function warmTopBusinessUsersRun(businesses, dateRange, config) {
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
       page: 1,
-      pageSize: 5000,
+      pageSize: 100,
       sortField: dateRange.endDate,
       sortOrder: "desc",
       refresh: true,
@@ -2033,7 +2042,7 @@ async function refreshFocusUsersToday() {
 
 function publicHistoryRange() {
   const today = new Date();
-  const start = addDays(today, -64);
+  const start = addDays(today, -(DEFAULT_USER_HISTORY_DAYS - 1));
   return { startDate: dayKey(start), endDate: dayKey(today) };
 }
 
@@ -2173,16 +2182,18 @@ async function warmStartupData() {
 
 async function readSnapshots(limit = 5000) {
   if (!existsSync(SNAPSHOT_PATH)) return [];
-  const text = await readFile(SNAPSHOT_PATH, "utf8");
-  const snapshots = [];
-  for (const line of text.trim().split("\n").filter(Boolean).slice(-limit)) {
-    try {
-      snapshots.push(JSON.parse(line));
-    } catch {
-      // A partial final write must not make the whole dashboard unavailable.
+  if (!snapshotMemoryCache) {
+    const text = await readFile(SNAPSHOT_PATH, "utf8");
+    snapshotMemoryCache = [];
+    for (const line of text.trim().split("\n").filter(Boolean)) {
+      try {
+        snapshotMemoryCache.push(JSON.parse(line));
+      } catch {
+        // A partial final write must not make the whole dashboard unavailable.
+      }
     }
   }
-  return snapshots;
+  return snapshotMemoryCache.slice(-Math.max(1, number(limit) || 5000));
 }
 
 function compactSnapshot(snapshot) {
@@ -2234,6 +2245,7 @@ async function pruneSnapshots() {
   output.end();
   await once(output, "finish");
   await rename(tempPath, SNAPSHOT_PATH);
+  snapshotMemoryCache = null;
   lastSnapshotPruneDay = today;
   console.log(`[${nowText()}] 快照清理完成：保留 ${cutoff} 至 ${today}，共 ${kept} 条`);
 }
@@ -2651,6 +2663,7 @@ async function recordSnapshot(businesses, users, force = false, businessDaily = 
   };
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
+  if (snapshotMemoryCache) snapshotMemoryCache.push(snapshot);
   await pruneSnapshots();
   lastSnapshotAt = Date.now();
   if (!options.manual) lastSnapshotSlotKey = slot.key;
@@ -2678,13 +2691,14 @@ async function runScheduledUserRefresh(businesses, config) {
   if (!time) return false;
   const key = `${dayKey()} ${time}`;
   if (userRefreshState.scheduledRuns[key]) return false;
-  console.log(`[${nowText()}] 开始固定时段全量用户更新：${time}`);
-  await warmBusinessUserHistories(businesses, { refresh: true });
+  console.log(`[${nowText()}] 开始固定时段今日全量用户对账：${time}`);
+  const todayRange = { startDate: dayKey(), endDate: dayKey() };
+  const result = await warmBusinessUserDetails(businesses, todayRange, { refresh: true, pageSize: 5000, includePrevious: false });
   await refreshFocusUsersMetricHistories(1);
   userRefreshState.scheduledRuns = Object.fromEntries(Object.entries(userRefreshState.scheduledRuns).filter(([item]) => item.startsWith(dayKey())));
-  userRefreshState.scheduledRuns[key] = nowText();
+  userRefreshState.scheduledRuns[key] = { updatedAtText: nowText(), ...result };
   await saveUserRefreshState();
-  console.log(`[${nowText()}] 固定时段全量用户历史更新完成：${time}`);
+  console.log(`[${nowText()}] 固定时段今日全量用户对账完成：${time}；完整 ${result.complete}/${result.total}`);
   return true;
 }
 
@@ -2969,6 +2983,7 @@ async function writeFocusUsers(items, operatorGroups = null) {
   const payload = { schemaVersion: 3, items: mergedItems, operatorGroups: normalizeFocusGroups(sourceGroups, mergedItems), updatedAt: new Date().toISOString(), updatedAtText: nowText() };
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
+  invalidateMarketingCostWorkspace();
   return payload;
 }
 
@@ -3023,6 +3038,7 @@ async function writeMarketingCosts(items) {
   };
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(MARKETING_COSTS_PATH, JSON.stringify(payload, null, 2));
+  invalidateMarketingCostWorkspace();
   return payload;
 }
 
@@ -3542,11 +3558,15 @@ function calculateMarketingCostItem(item, context) {
   };
 }
 
-async function buildMarketingCostWorkspace() {
+function invalidateMarketingCostWorkspace() {
+  marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null };
+}
+
+async function buildMarketingCostWorkspaceFresh() {
   const saved = await readMarketingCosts();
   const context = await marketingCostContext();
   const items = saved.items.map(item => calculateMarketingCostItem(item, context)).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  const focusData = await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -64), end_date: dayKey() });
+  const focusData = await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -(DEFAULT_USER_HISTORY_DAYS - 1)), end_date: dayKey() });
   const relationships = (focusData.businessRows || []).map(row => ({
     userId: String(row.userId),
     userName: context.aliases[String(row.userId)] || row.name || `用户 ${row.userId}`,
@@ -3574,8 +3594,24 @@ async function buildMarketingCostWorkspace() {
     operatorGroups: focusData.operatorGroups || [],
     users: focusData.users.map(user => ({ userId: String(user.userId), name: context.aliases[String(user.userId)] || user.name || `用户 ${user.userId}` })),
     relationships,
-    range: { startDate: shiftDay(dayKey(), -64), endDate: dayKey() }
+    range: { startDate: shiftDay(dayKey(), -(DEFAULT_USER_HISTORY_DAYS - 1)), endDate: dayKey() }
   };
+}
+
+async function buildMarketingCostWorkspace({ refresh = false } = {}) {
+  if (!refresh && marketingCostWorkspaceCache.data && Date.now() < marketingCostWorkspaceCache.expiresAt) {
+    return { ...marketingCostWorkspaceCache.data, cached: true };
+  }
+  if (!refresh && marketingCostWorkspaceCache.promise) return marketingCostWorkspaceCache.promise;
+  const promise = buildMarketingCostWorkspaceFresh().then(data => {
+    marketingCostWorkspaceCache = { data, expiresAt: Date.now() + 60 * 1000, promise: null };
+    return data;
+  }).catch(error => {
+    marketingCostWorkspaceCache.promise = null;
+    throw error;
+  });
+  marketingCostWorkspaceCache.promise = promise;
+  return promise;
 }
 
 function enqueueMarketingCostMutation(task) {
@@ -4031,8 +4067,7 @@ async function sanitizePublicDashboard(data) {
     focusUsersByRange: {
       7: await buildFocusUsers({ preset: "7" }),
       month: await buildFocusUsers({ preset: "month" }),
-      30: await buildFocusUsers({ preset: "30" }),
-      65: await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -64), end_date: dayKey() })
+      30: await buildFocusUsers({ preset: "30" })
     },
     marketingCosts: await buildMarketingCostWorkspace()
   };
@@ -4225,7 +4260,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/business-users-sync") {
       const statuses = [];
       const endDate = parseDay(url.searchParams.get("end_date") || dayKey());
-      const startDate = parseDay(url.searchParams.get("start_date") || shiftDay(endDate, -64));
+      const startDate = parseDay(url.searchParams.get("start_date") || shiftDay(endDate, -(DEFAULT_USER_HISTORY_DAYS - 1)));
       const result = await fetchSynchronizedBusinessUsers({
         businessId: url.searchParams.get("business_id") || "",
         startDate,
@@ -4272,7 +4307,18 @@ const server = createServer(async (req, res) => {
         pageSize: number(url.searchParams.get("page_size")) || 5000,
         refresh: url.searchParams.get("refresh") === "1"
       }, statuses);
-      return json(res, 200, { ok: result.ok, cached: Boolean(result.cached), latestDataTime: result.savedAtText || "-", dates: result.dates, rows: result.rows, total: result.total, source: { statuses } });
+      return json(res, 200, {
+        ok: result.ok,
+        cached: Boolean(result.cached),
+        complete: result.complete !== false && result.partial !== true,
+        partial: result.partial === true || result.complete === false,
+        upstreamOk: result.upstreamOk !== false,
+        latestDataTime: result.savedAtText || "-",
+        dates: result.dates,
+        rows: result.rows,
+        total: result.total,
+        source: { statuses }
+      });
     }
     if (url.pathname === "/api/config" && req.method === "GET") return json(res, 200, await getPublicConfig());
     if (url.pathname === "/api/config" && req.method === "POST") return json(res, 200, { ok: true, config: await saveConfig(await readBody(req)) });
@@ -4354,7 +4400,9 @@ const server = createServer(async (req, res) => {
       });
       return json(res, 200, { ...result, data, published });
     }
-    if (url.pathname === "/api/marketing-costs" && req.method === "GET") return json(res, 200, await buildMarketingCostWorkspace());
+    if (url.pathname === "/api/marketing-costs" && req.method === "GET") {
+      return json(res, 200, await buildMarketingCostWorkspace({ refresh: url.searchParams.get("refresh") === "1" }));
+    }
     if (url.pathname === "/api/marketing-costs" && req.method === "POST") {
       const body = await readBody(req);
       const data = await enqueueMarketingCostMutation(() => saveMarketingCost(body));

@@ -843,6 +843,7 @@
             <button class="btn" data-range="7">近七天</button>
             <button class="btn" data-range="lastWeek">上周</button>
             <button class="btn" data-range="month">本月</button>
+            <button class="btn" data-range="30">近30天</button>
             <button class="btn primary" id="applyBtn">查询</button>
           </div>
           <div class="segmented" id="metricTabs">
@@ -1438,7 +1439,7 @@
     }
 
     function mergedPublicFocusData(preset) {
-      const base = state.publicFocusUsers[preset === "custom" ? "65" : preset] || state.publicFocusUsers["7"] || { rows: [], users: [], dates: [] };
+      const base = state.publicFocusUsers[preset === "custom" ? "30" : preset] || state.publicFocusUsers["7"] || { rows: [], users: [], dates: [] };
       const rawLocalItems = readPublicFocusItems();
       const localByUser = new Map();
       rawLocalItems.forEach(item => {
@@ -1545,6 +1546,8 @@
       let end = new Date(today);
       if (type === "7") {
         start.setDate(today.getDate() - 6);
+      } else if (type === "30") {
+        start.setDate(today.getDate() - 29);
       } else if (type === "lastWeek") {
         const day = today.getDay() || 7;
         end.setDate(today.getDate() - day);
@@ -2140,7 +2143,7 @@
       $$("#viewTabs button").forEach(item => item.classList.toggle("active", item.dataset.view === "daily"));
       render();
       $("#listTitle").textContent = `${row.name}｜每日业务数据`;
-      $("#listSubtitle").textContent = "日期范围可使用近7天、上周、本月或自定义查询｜每日业务缓存随业务任务每 10 分钟更新。";
+      $("#listSubtitle").textContent = "日期范围可使用近7天、上周、本月、近30天或自定义查询｜每日业务缓存随业务任务每 10 分钟更新。";
     }
 
     function renderBusinessDailyModal() {
@@ -2164,6 +2167,7 @@
           <button class="btn" data-business-daily-range="7">近七天</button>
           <button class="btn" data-business-daily-range="lastWeek">上周</button>
           <button class="btn" data-business-daily-range="month">本月</button>
+          <button class="btn" data-business-daily-range="30">近30天</button>
           <button class="btn primary" data-business-daily-apply="1">查询</button>
           <span class="muted">${state.refreshing ? "正在刷新，当前保留上次结果" : "每日订单缓存随业务任务每 10 分钟更新"}</span>
         </div>
@@ -3906,7 +3910,7 @@
       else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在读取当前业务的同步用户缓存；点击“刷新用户”时会分页更新该业务全部用户，今日、近7天和本月共用同一批数据。</section>`;
       const today = dayText(new Date());
       const start = new Date();
-      start.setDate(start.getDate() - 64);
+      start.setDate(start.getDate() - 29);
       const params = new URLSearchParams({
         business_id: businessId,
         start_date: dayText(start),
