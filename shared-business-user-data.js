@@ -18,6 +18,7 @@
   const pending = new Map();
   const listeners = new Map();
   const DEFAULT_TTL_MS = 120000;
+  const DEFAULT_TIMEOUT_MS = 20000;
 
   function normalizedKey(rawUrl) {
     const url = new URL(rawUrl, window.location.href);
@@ -40,6 +41,7 @@
     const url = new URL(rawUrl, window.location.href);
     const force = method !== "GET" || options.force === true || url.searchParams.get("refresh") === "1" || url.searchParams.get("force") === "1";
     const ttlMs = Number(options.ttlMs ?? DEFAULT_TTL_MS);
+    const timeoutMs = Number(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
     const saved = cache.get(key);
     if (!force && saved && Date.now() - saved.savedAt < ttlMs) return saved.data;
     if (!force && pending.has(key)) return pending.get(key);
@@ -47,14 +49,29 @@
     const fetchOptions = { ...options };
     delete fetchOptions.force;
     delete fetchOptions.ttlMs;
+    delete fetchOptions.timeoutMs;
     // A shared request must not be cancelled by one iframe changing selection.
-    if (method === "GET") delete fetchOptions.signal;
+    if (method === "GET") {
+      delete fetchOptions.signal;
+      if (Number.isFinite(timeoutMs) && timeoutMs > 0 && typeof AbortSignal?.timeout === "function") {
+        fetchOptions.signal = AbortSignal.timeout(timeoutMs);
+      }
+    }
     const request = fetch(rawUrl, fetchOptions).then(async response => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data.ok === false) throw new Error(data.error || data.message || `接口请求失败：HTTP ${response.status}`);
       if (method === "GET") cache.set(key, { savedAt: Date.now(), data });
       emit("data", { key, data });
       return data;
+    }).catch(error => {
+      if (!force && saved?.data) {
+        emit("stale", { key, data: saved.data, error });
+        return saved.data;
+      }
+      if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+        throw new Error("共享用户数据读取超时，请稍后重试；已保存的数据不会被清空");
+      }
+      throw error;
     }).finally(() => pending.delete(key));
     pending.set(key, request);
     return request;

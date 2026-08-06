@@ -1092,11 +1092,11 @@
 
   <section class="modal" id="helpModal">
     <div class="modal-head">
-      <div><h2>数据与刷新说明</h2><small>接口关系、自动更新时间和用户历史口径</small></div>
+      <div><h2 id="helpTitle">用户内部看板说明</h2><small id="helpSub">业务、用户、历史与刷新口径</small></div>
       <button class="icon-btn" id="closeHelp" type="button" title="关闭说明" aria-label="关闭说明">×</button>
     </div>
     <div class="modal-body">
-      <section class="source">
+      <section class="source" data-help-view="business">
         <strong>订单、佣金和GMV是不是一次请求？</strong>
         <ul>
           <li>业务级订单、佣金和GMV共用中台路径 <code>/api/v2/order-statistic/summary-new</code>，但分别使用订单、佣金、成交金额三个筛选字段，因此是<strong>三次独立请求</strong>。</li>
@@ -1104,7 +1104,7 @@
           <li>用户级订单来自业务用户分页接口；普通全部用户的佣金、GMV不会随用户订单一起返回。重点用户的佣金和GMV会额外通过订单明细接口计算。</li>
         </ul>
       </section>
-      <section class="source">
+      <section class="source" data-help-view="business">
         <strong>每10分钟自动更新：</strong>
         <ul>
           <li>更新全部业务的业务级订单、佣金、GMV、业务目录、每日业务数据和默认小时趋势。</li>
@@ -1113,7 +1113,7 @@
           <li>页面每1分钟检查一次缓存、重新获得焦点时也检查缓存，这两种检查都不会请求中台。</li>
         </ul>
       </section>
-      <section class="source">
+      <section class="source" data-help-view="business">
         <strong>固定时间12:00、17:00、22:00：</strong>
         <ul>
           <li>只处理已勾选的重点业务，不是所有业务。</li>
@@ -1121,7 +1121,7 @@
           <li>随后补充重点用户当天的佣金和GMV；不会刷新该业务全部普通用户的佣金和GMV。</li>
         </ul>
       </section>
-      <section class="source">
+      <section class="source" data-help-view="business">
         <strong>每天00:30历史定稿：</strong>
         <ul>
           <li>只刷新已勾选重点业务中全部用户截至昨天的滚动近30天每日订单。</li>
@@ -1130,7 +1130,7 @@
           <li>分页失败会保留旧完整缓存，每成功5页保存断点，全部成功后才替换。</li>
         </ul>
       </section>
-      <section class="source">
+      <section class="source" data-help-view="business">
         <strong>手动刷新和日期查询：</strong>
         <ul>
           <li>业务用户弹窗的“刷新用户”目前只分页更新当前业务全部用户今天的订单；近7天、本月和近30天读取已经保存的历史缓存。</li>
@@ -1138,7 +1138,7 @@
           <li>自定义日期超出滚动30天缓存时，点击查询后只请求当前业务和所选日期，不刷新全部业务。</li>
         </ul>
       </section>
-      <section class="source warn">
+      <section class="source warn" data-help-view="business">
         <strong>昨日同时刻与每日历史不是同一份数据：</strong>
         <ul>
           <li>昨日同时刻来自每10分钟快照；近30天接口返回的是每天全天结果，不能倒推出昨天某一时刻。</li>
@@ -1146,7 +1146,7 @@
           <li>用户快照必须同时包含该业务和该用户；缺少可信快照时应视为缺失，不能用昨日全天或数字0代替。</li>
         </ul>
       </section>
-      <section class="source warn">
+      <section class="source warn" data-help-view="business">
         <strong>用户分页请求量：</strong>
         <ul>
           <li>中台用户接口固定每页10人，相邻请求至少间隔约5.2秒。</li>
@@ -1154,13 +1154,13 @@
           <li>后台合并相同任务并锁定重复提交，刷新期间继续展示旧完整数据，不使用残缺分页覆盖。</li>
         </ul>
       </section>
-      <section class="source">
+      <section class="source" data-help-view="business">
         <strong>异常与影响订单：</strong>业务和今日用户按同时刻基准判断；缺少可信基准不应纳入异常。10%以内波动按正常处理，超过后再按设置中心的比例和订单数阈值判断轻微、重点、严重或上升。用户弹窗同时展示下降用户、增长抵消、用户净下降和未定位差额，不把缺失差额虚构分摊给某个用户。
       </section>
-      <section class="source">
+      <section class="source" data-help-view="focus">
         <strong>重点用户和备注：</strong>重点用户按用户ID全局关注，日常只刷新已经发现的有单业务。运营标签保存关注关系，同一用户可以出现在多个标签。名称、观察备注和置顶按用户ID统一应用；近7天、本月、近30天和自定义日期只改变每日指标列。
       </section>
-      <section class="source">
+      <section class="source" data-help-view="marketing">
         <strong>营销费用预估：</strong>计费订单直接汇总所选用户在所选业务的每日订单缓存，不会混入其他业务。尚未发生的日期按最近3个完整历史日的平均订单预估，真实数据产生后自动替换。待结算费用随缓存重算；点击“结算”后填写实际金额，已结算费用最终以实际金额为准。旧版“已确认”记录会自动按“已结算”兼容读取。
       </section>
     </div>
@@ -4892,6 +4892,17 @@
       $("#settingsModal").classList.remove("open");
     }
     function openHelp() {
+      const helpView = state.view === "focus" ? "focus" : state.view === "marketing" ? "marketing" : "business";
+      const heading = helpView === "focus"
+        ? ["重点用户看板说明", "关注关系、统一数据源与刷新口径"]
+        : helpView === "marketing"
+          ? ["营销费用预估说明", "费用计算、周期订单与结算口径"]
+          : ["用户内部看板说明", "业务、用户、历史与刷新口径"];
+      $("#helpTitle").textContent = heading[0];
+      $("#helpSub").textContent = heading[1];
+      document.querySelectorAll("[data-help-view]").forEach(section => {
+        section.hidden = section.dataset.helpView !== helpView;
+      });
       $("#modalMask").classList.add("open");
       $("#helpModal").classList.add("open");
     }

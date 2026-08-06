@@ -61,6 +61,8 @@ let lastGood = { businesses: [], users: [], summary: null, hourlyTrend: [] };
 const userDetailCache = new Map();
 const userHistoryRequests = new Map();
 let userDetailCacheSavedAtText = "";
+let userDetailCacheRevision = 0;
+const synchronizedBusinessUsersCaches = new Map();
 const userPhoneCache = new Map();
 const userProfileCache = new Map();
 let userPhoneIndexLoadedAt = 0;
@@ -75,12 +77,28 @@ let highFrequencyUserWarmupPromise = null;
 let userMaintenancePromise = null;
 let focusUserMaintenancePromise = null;
 let snapshotMemoryCache = null;
+const businessUserSnapshotCandidateCaches = new WeakMap();
 let marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null };
 let detailCacheSaveTimer = null;
 let requestStatsSaveTimer = null;
 let requestStats = { day: dayKey(), total: 0, byPath: {}, byName: {}, updatedAt: "" };
 let userRefreshState = { scheduledRuns: {}, top100: {} };
 let publicPublishQueue = Promise.resolve();
+
+function touchUserDetailCache() {
+  userDetailCacheRevision += 1;
+}
+
+function setUserDetailCache(cacheKey, payload) {
+  userDetailCache.set(cacheKey, payload);
+  touchUserDetailCache();
+}
+
+function deleteUserDetailCache(cacheKey) {
+  const deleted = userDetailCache.delete(cacheKey);
+  if (deleted) touchUserDetailCache();
+  return deleted;
+}
 
 const defaultConfig = {
   rules: {
@@ -748,6 +766,7 @@ async function loadUserDetailCacheFromDisk() {
       if (Array.isArray(value?.rows)) userDetailCache.set(key, value);
     });
     userDetailCacheSavedAtText = saved.savedAtText || "";
+    touchUserDetailCache();
     return userDetailCache.size > 0;
   } catch {
     return false;
@@ -1270,8 +1289,8 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
   const partialCacheKey = JSON.stringify({ type: "history-partial", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
   const legacyExactCache = userDetailCache.get(cacheKey);
   if (legacyExactCache && (legacyExactCache.partial === true || legacyExactCache.complete === false)) {
-    userDetailCache.set(partialCacheKey, legacyExactCache);
-    userDetailCache.delete(cacheKey);
+    setUserDetailCache(partialCacheKey, legacyExactCache);
+    deleteUserDetailCache(cacheKey);
   }
   const exactPartialCache = userDetailCache.get(partialCacheKey);
   const covering = cachedBusinessUserHistoryCovering(businessId, startDate, endDate);
@@ -1313,7 +1332,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
       row.days = Object.fromEntries(dates.map(date => [date, number(rawRow[date])]));
       if (row.id) rowsById.set(String(row.id), row);
     });
-    userDetailCache.set(partialCacheKey, {
+    setUserDetailCache(partialCacheKey, {
       ok: true,
       complete: false,
       upstreamOk: false,
@@ -1382,10 +1401,10 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
     return { ...cachedFallback, ok: true, upstreamOk: false, cacheFallback: true };
   }
   const payload = { ok: true, complete: !pageLoadFailed, upstreamOk: !pageLoadFailed, partial: pageLoadFailed, filterFieldFallback: Boolean(result.filterFieldFallback), savedAtText: nowText(), total, totalPages, loadedPages, dates, rows };
-  if (pageLoadFailed) userDetailCache.set(partialCacheKey, payload);
+  if (pageLoadFailed) setUserDetailCache(partialCacheKey, payload);
   else {
-    userDetailCache.set(cacheKey, payload);
-    userDetailCache.delete(partialCacheKey);
+    setUserDetailCache(cacheKey, payload);
+    deleteUserDetailCache(partialCacheKey);
   }
   scheduleUserDetailCacheSave();
   const fallbackComplete = pageLoadFailed && cachedFallback && cachedFallback.partial !== true && cachedFallback.complete !== false;
@@ -1613,7 +1632,7 @@ function latestFocusCurrentRows(businessId, date = dayKey()) {
   return [...rowsById.values()].map(item => item.row);
 }
 
-async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
+async function buildSynchronizedBusinessUsers({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false }, statuses = []) {
   const isT1Business = T1_USER_BUSINESS_IDS.has(String(businessId));
   const history = await fetchBusinessUserHistory({
     businessId,
@@ -1737,6 +1756,61 @@ async function fetchSynchronizedBusinessUsers({ businessId = "", startDate, endD
       total: Math.max(number(history.total), historyRows.length)
     }
   };
+}
+
+function synchronizedBusinessUsersCacheKey({ businessId = "", startDate, endDate, pageSize = 5000 }) {
+  return `${String(businessId)}:${String(startDate)}:${String(endDate)}:${number(pageSize) || 5000}`;
+}
+
+function trimSynchronizedBusinessUsersCaches() {
+  if (synchronizedBusinessUsersCaches.size <= 12) return;
+  [...synchronizedBusinessUsersCaches.entries()]
+    .sort((a, b) => number(a[1]?.lastUsedAt) - number(b[1]?.lastUsedAt))
+    .slice(0, synchronizedBusinessUsersCaches.size - 12)
+    .forEach(([key]) => synchronizedBusinessUsersCaches.delete(key));
+}
+
+function startSynchronizedBusinessUsersBuild(options, statuses, cacheKey) {
+  const current = synchronizedBusinessUsersCaches.get(cacheKey) || {};
+  if (current.promise) return current.promise;
+  const revision = userDetailCacheRevision;
+  const promise = buildSynchronizedBusinessUsers(options, statuses).then(data => {
+    synchronizedBusinessUsersCaches.set(cacheKey, {
+      data,
+      revision,
+      snapshotCount: snapshotMemoryCache?.length || 0,
+      expiresAt: Date.now() + 2 * 60 * 1000,
+      lastUsedAt: Date.now(),
+      promise: null
+    });
+    trimSynchronizedBusinessUsersCaches();
+    return data;
+  }).catch(error => {
+    const latest = synchronizedBusinessUsersCaches.get(cacheKey) || current;
+    synchronizedBusinessUsersCaches.set(cacheKey, { ...latest, promise: null, lastUsedAt: Date.now() });
+    throw error;
+  });
+  synchronizedBusinessUsersCaches.set(cacheKey, { ...current, promise, lastUsedAt: Date.now() });
+  return promise;
+}
+
+async function fetchSynchronizedBusinessUsers(options, statuses = []) {
+  const cacheKey = synchronizedBusinessUsersCacheKey(options);
+  const current = synchronizedBusinessUsersCaches.get(cacheKey) || {};
+  const snapshotCount = snapshotMemoryCache?.length || 0;
+  const stale = current.revision !== userDetailCacheRevision
+    || current.snapshotCount !== snapshotCount
+    || Date.now() >= number(current.expiresAt);
+  if (options.refresh) return startSynchronizedBusinessUsersBuild(options, statuses, cacheKey);
+  if (current.data) {
+    current.lastUsedAt = Date.now();
+    if (stale && !current.promise) {
+      startSynchronizedBusinessUsersBuild(options, [], cacheKey).catch(error => console.error(`[${nowText()}] 后台更新共享用户响应失败：${error.message}`));
+    }
+    statuses.push({ name: "共享用户响应缓存", ok: true, message: stale ? "已立即返回旧完整结果，后台更新中" : "已立即返回内存结果", durationMs: 0 });
+    return { ...current.data, cached: true, refreshing: stale };
+  }
+  return startSynchronizedBusinessUsersBuild(options, statuses, cacheKey);
 }
 
 function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
@@ -1908,7 +1982,7 @@ async function fetchBusinessUsers({ businessId = "", startDate, endDate, page = 
     columns: result.data?.columns || [],
     rows
   };
-  userDetailCache.set(cacheKey, payload);
+  setUserDetailCache(cacheKey, payload);
   scheduleUserDetailCacheSave();
   return payload;
 }
@@ -2113,10 +2187,10 @@ async function refreshFocusUserOrderHistory(item, range) {
   row.phone = plainPhoneValue(row.id, row.phone, item.phone);
   const savedAtText = nowText();
   const cacheKey = JSON.stringify({ type: "focus-order-history", businessId: String(item.businessId), userId: String(item.userId), startDate: range.startDate, endDate: range.endDate });
-  userDetailCache.set(cacheKey, { ok: true, savedAtText, total: 1, dates, rows: [row] });
+  setUserDetailCache(cacheKey, { ok: true, savedAtText, total: 1, dates, rows: [row] });
   if (range.endDate === dayKey()) {
     const currentKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: range.endDate });
-    userDetailCache.set(currentKey, { ok: true, savedAtText, total: 1, rows: [{ ...row, days: { [range.endDate]: row.todayOrders }, realtimeToday: true }] });
+    setUserDetailCache(currentKey, { ok: true, savedAtText, total: 1, rows: [{ ...row, days: { [range.endDate]: row.todayOrders }, realtimeToday: true }] });
   }
   scheduleUserDetailCacheSave();
   return { ok: true, savedAtText };
@@ -2174,7 +2248,7 @@ async function refreshFocusUserToday(item) {
   }
   row.phone = plainPhoneValue(row.id, row.phone);
   const cacheKey = JSON.stringify({ type: "focus-current", businessId: String(item.businessId), userId: String(item.userId), date: today });
-  userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
+  setUserDetailCache(cacheKey, { ok: true, savedAtText: nowText(), total: 1, rows: [{ ...row, realtimeToday: true }] });
   scheduleUserDetailCacheSave();
   return true;
 }
@@ -2239,7 +2313,7 @@ async function refreshFocusUserMetricHistory(item, range = publicHistoryRange())
     todayAmount: number(result.gmvDays[range.endDate])
   };
   const cacheKey = JSON.stringify({ type: "focus-metric-history", businessId: String(item.businessId), userId: String(item.userId), startDate: range.startDate, endDate: range.endDate });
-  userDetailCache.set(cacheKey, { ok: true, savedAtText: nowText(), total: 1, dates, rows: [row] });
+  setUserDetailCache(cacheKey, { ok: true, savedAtText: nowText(), total: 1, dates, rows: [row] });
   scheduleUserDetailCacheSave();
   return { ok: true };
 }
@@ -2508,19 +2582,31 @@ function businessUserSnapshotMatch(snapshots, targetDay, targetMinute, businessI
   const businessKey = String(businessId || "");
   const userKey = String(userId || "");
   const containsUser = match => Boolean(match.snapshot?.businessUsers?.[businessKey]?.[userKey]);
-  const strict = nearbySnapshotCandidates(
-    snapshots.filter(snapshot => snapshot.userDataStrict === true),
-    targetDay,
-    targetMinute,
-    maxOffsetMinutes
-  ).find(containsUser);
+  let cache = businessUserSnapshotCandidateCaches.get(snapshots);
+  if (!cache) {
+    const days = new Map();
+    snapshots.forEach(snapshot => {
+      const day = String(snapshot.day || "");
+      const group = days.get(day) || { strict: [], legacy: [] };
+      group[snapshot.userDataStrict === true ? "strict" : "legacy"].push(snapshot);
+      days.set(day, group);
+    });
+    cache = { days, candidates: new Map() };
+    businessUserSnapshotCandidateCaches.set(snapshots, cache);
+  }
+  const candidateKey = `${targetDay}:${number(targetMinute)}:${number(maxOffsetMinutes)}`;
+  let candidates = cache.candidates.get(candidateKey);
+  if (!candidates) {
+    const day = cache.days.get(String(targetDay)) || { strict: [], legacy: [] };
+    candidates = {
+      strict: nearbySnapshotCandidates(day.strict, targetDay, targetMinute, maxOffsetMinutes),
+      legacy: nearbySnapshotCandidates(day.legacy, targetDay, targetMinute, maxOffsetMinutes)
+    };
+    cache.candidates.set(candidateKey, candidates);
+  }
+  const strict = candidates.strict.find(containsUser);
   if (strict) return strict;
-  const legacy = nearbySnapshotCandidates(
-    snapshots.filter(snapshot => snapshot.userDataStrict !== true),
-    targetDay,
-    targetMinute,
-    maxOffsetMinutes
-  ).find(containsUser);
+  const legacy = candidates.legacy.find(containsUser);
   return legacy ? { ...legacy, quality: "legacy" } : null;
 }
 
@@ -2566,41 +2652,14 @@ function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery()
 function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange = rangeFromQuery(), comparisonMinute = minuteOfDay()) {
   const currentDate = dateFromDay(dateRange.endDate);
   const businessKey = String(businessId || "");
-  const strictSnapshots = snapshots.filter(snapshot => snapshot.userDataStrict === true && Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
-  const legacySnapshots = snapshots.filter(snapshot => snapshot.userDataStrict !== true && Object.keys(snapshot?.businessUsers?.[businessKey] || {}).length > 0);
-  const baselinesByMinute = new Map();
-  const baselinesFor = targetMinute => {
-    if (!Number.isFinite(Number(targetMinute))) return { yesterday: null, lastWeek: null, recent: [] };
-    const key = Number(targetMinute);
-    if (!baselinesByMinute.has(key)) {
-      const candidatesFor = targetDay => ({
-        strict: nearbySnapshotCandidates(strictSnapshots, targetDay, key),
-        legacy: nearbySnapshotCandidates(legacySnapshots, targetDay, key)
-      });
-      baselinesByMinute.set(key, {
-        yesterday: candidatesFor(dayKey(addDays(currentDate, -1))),
-        lastWeek: candidatesFor(dayKey(addDays(currentDate, -7))),
-        recent: Array.from({ length: 7 }, (_, index) => candidatesFor(dayKey(addDays(currentDate, -(index + 1)))))
-      });
-    }
-    return baselinesByMinute.get(key);
-  };
-
-  const findUserMatch = (candidateSet, userId) => {
-    const containsUser = match => Boolean(match.snapshot?.businessUsers?.[businessKey]?.[userId]);
-    const strict = candidateSet?.strict?.find(containsUser);
-    if (strict) return strict;
-    const legacy = candidateSet?.legacy?.find(containsUser);
-    return legacy ? { ...legacy, quality: "legacy" } : null;
-  };
 
   return rows.map(row => {
     const rowMinute = comparisonMinuteFromText(row.currentDataTime || row.userDataTime) ?? comparisonMinute;
     const id = String(row.id || "");
-    const baselineCandidates = baselinesFor(rowMinute);
-    const yesterdayMatch = findUserMatch(baselineCandidates.yesterday, id);
-    const lastWeekMatch = findUserMatch(baselineCandidates.lastWeek, id);
-    const recentMatches = baselineCandidates.recent.map(candidateSet => findUserMatch(candidateSet, id)).filter(Boolean);
+    const matchFor = offset => businessUserSnapshotMatch(snapshots, dayKey(addDays(currentDate, offset)), rowMinute, businessKey, id);
+    const yesterdayMatch = matchFor(-1);
+    const lastWeekMatch = matchFor(-7);
+    const recentMatches = Array.from({ length: 7 }, (_, index) => matchFor(-(index + 1))).filter(Boolean);
     const pick = match => match?.snapshot?.businessUsers?.[businessKey]?.[id] || null;
     const sevenValues = recentMatches.map(pick).filter(Boolean);
     const avg = sevenValues.length
