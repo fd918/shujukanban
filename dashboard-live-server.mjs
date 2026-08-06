@@ -3526,6 +3526,10 @@ function focusUserCacheIndex(userIds = []) {
       const current = index.get(relationKey);
       const primaryCurrent = primaryCurrentById.get(userId);
       if (!current && !primaryCurrent) continue;
+      const primaryHistoryRow = primaryHistoryById.get(userId);
+      const historyDays = primaryHistory && primaryCurrent && !primaryHistoryRow
+        ? Object.fromEntries((primaryHistory.dates || []).map(date => [date, 0]))
+        : {};
       const todayOrders = primaryCurrent
         ? number(primaryCurrent.todayOrders ?? primaryCurrent.days?.[endDate])
         : (full ? 0 : number(current?.days?.[endDate]));
@@ -3534,7 +3538,7 @@ function focusUserCacheIndex(userIds = []) {
         ...(primaryCurrent || {}),
         id: userId,
         todayOrders,
-        days: { ...(current?.days || {}), [endDate]: todayOrders },
+        days: { ...(current?.days || {}), ...historyDays, [endDate]: todayOrders },
         primaryToday: Boolean(primaryCurrent || full),
         cacheSavedAtText: primaryCurrent?.currentDataTime || current?.cacheSavedAtText || ""
       }));
