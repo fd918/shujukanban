@@ -77,7 +77,65 @@
     cache.delete(key);
   }
 
-  const hub = { requestJson, subscribe, publish, invalidate, normalizedKey };
+  function synchronizedUsers(data = {}, today = "") {
+    const reportingMode = data.reportingMode || "realtime";
+    const sameTimeUsers = data.sameTimeUsers || {};
+    const historyRows = (data.history?.rows || []).map(user => ({
+      ...user,
+      sameTime: user.sameTime || sameTimeUsers[String(user.id || user.userId || "")] || undefined
+    }));
+    const historyById = new Map(historyRows.map(user => [String(user.id || user.userId || ""), user]));
+    const synchronizedById = new Map();
+    (data.users || []).forEach(user => {
+      const id = String(user.id || user.userId || "");
+      synchronizedById.set(id, { ...user, sameTime: user.sameTime || sameTimeUsers[id] || undefined });
+    });
+    historyRows.forEach(user => {
+      const id = String(user.id || user.userId || "");
+      if (id && !synchronizedById.has(id)) synchronizedById.set(id, user);
+    });
+    return [...synchronizedById.values()].map(user => {
+      const historyUser = historyById.get(String(user.id || user.userId || ""));
+      const realtimeToday = Boolean(user.realtimeToday);
+      if (reportingMode === "t1") return {
+        ...(historyUser || {}),
+        ...user,
+        days: { ...(historyUser?.days || {}), ...(user.days || {}) },
+        todayOrders: Number(user.todayOrders || 0),
+        realtimeToday: true
+      };
+      if (!historyUser) return user;
+      return {
+        ...historyUser,
+        ...user,
+        days: { ...(historyUser.days || {}), ...(realtimeToday && today ? { [today]: Number(user.todayOrders || 0) } : {}) },
+        todayOrders: realtimeToday ? Number(user.todayOrders || 0) : Number(historyUser.days?.[today] || 0),
+        realtimeToday
+      };
+    });
+  }
+
+  async function copyText(value) {
+    const text = String(value || "");
+    if (!text) return false;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const input = document.createElement("textarea");
+      input.value = text;
+      input.setAttribute("readonly", "");
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.select();
+      const copied = document.execCommand("copy");
+      input.remove();
+      if (!copied) throw new Error("复制失败");
+    }
+    return true;
+  }
+
+  const hub = { requestJson, subscribe, publish, invalidate, normalizedKey, synchronizedUsers, copyText };
   root.__YUNZHAN_BUSINESS_USER_DATA_HUB__ = hub;
   window.BusinessUserDataHub = hub;
 })();

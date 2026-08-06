@@ -1585,16 +1585,7 @@
     async function copyUserId(userId) {
       const value = String(userId || "");
       if (!value) return;
-      try {
-        await navigator.clipboard.writeText(value);
-      } catch {
-        const input = document.createElement("textarea");
-        input.value = value;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand("copy");
-        input.remove();
-      }
+      await window.BusinessUserDataHub.copyText(value);
       toast(`已复制用户ID：${value}`);
     }
 
@@ -4196,39 +4187,9 @@
         state.detailHistoryEnd = state.detailCurrentBusinessDate;
         state.detailHistoryStart = shiftDayText(state.detailCurrentBusinessDate, -6);
       }
-      const sameTimeUsers = data.sameTimeUsers || {};
-      const historyRows = (data.history?.rows || []).map(user => ({
-        ...user,
-        sameTime: user.sameTime || sameTimeUsers[String(user.id || "")] || undefined
-      }));
-      const historyById = new Map(historyRows.map(user => [String(user.id || ""), user]));
-      const synchronizedById = new Map();
-      (data.users || []).forEach(user => synchronizedById.set(String(user.id || ""), user));
-      historyRows.forEach(user => {
-        const id = String(user.id || "");
-        if (id && !synchronizedById.has(id)) synchronizedById.set(id, user);
-      });
-      const synchronizedUsers = [...synchronizedById.values()];
-      state.detailUsers = synchronizedUsers.map(user => {
-        const historyUser = historyById.get(String(user.id || ""));
-        const realtimeToday = Boolean(user.realtimeToday);
-        const synced = reportingMode === "t1"
-          ? {
-              ...(historyUser || {}),
-              ...user,
-              days: { ...(historyUser?.days || {}), ...(user.days || {}) },
-              todayOrders: Number(user.todayOrders || 0),
-              realtimeToday: true
-            }
-          : historyUser ? {
-              ...historyUser,
-              ...user,
-              days: { ...(historyUser.days || {}), ...(realtimeToday ? { [today]: Number(user.todayOrders || 0) } : {}) },
-              todayOrders: realtimeToday ? Number(user.todayOrders || 0) : Number(historyUser.days?.[today] || 0),
-              realtimeToday
-            } : user;
-        return { ...synced, cmp: compareDetailUser(synced) };
-      }).sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || Number(b.cmp.impact || 0) - Number(a.cmp.impact || 0));
+      const synchronizedUsers = window.BusinessUserDataHub?.synchronizedUsers(data, today) || (data.users || []);
+      state.detailUsers = synchronizedUsers.map(user => ({ ...user, cmp: compareDetailUser(user) }))
+        .sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || Number(b.cmp.impact || 0) - Number(a.cmp.impact || 0));
       state.detailMonthAnalysis = buildMonthAnalysis(data.history || { rows: [] });
       state.detailStats = {
         total: data.total || state.detailUsers.length,

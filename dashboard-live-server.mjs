@@ -2722,7 +2722,9 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), ac
 
 async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   const config = await readConfig();
-  const [userAliases, userNotes] = await Promise.all([readUserAliases(), readUnifiedUserNotes()]);
+  const [userAliases, focusSaved] = await Promise.all([readUserAliases(), readFocusUsers()]);
+  const userNotes = await readUnifiedUserNotes(focusSaved);
+  const focusUserIds = [...new Set((focusSaved.items || []).map(item => String(item.userId || "")).filter(Boolean))];
   const dateRange = rangeFromQuery(query);
   const cacheKey = dashboardCacheKey(dateRange);
   if (query.cache === "1" && query.force !== "1") {
@@ -2737,6 +2739,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
         config,
         userAliases: userAliases.aliases,
         userNotes: userNotes.notesText,
+        focusUserIds,
         refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
         source: {
           ...(fallback.payload.source || {}),
@@ -2794,6 +2797,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     config,
     userAliases: userAliases.aliases,
     userNotes: userNotes.notesText,
+    focusUserIds,
     dateRange,
     source: {
       baseUrl: BASE_URL,
@@ -4517,13 +4521,15 @@ async function encryptedPublicBusinessTrends(businesses = []) {
 
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
-  const [userAliases, userNotes] = await Promise.all([readUserAliases(), readUnifiedUserNotes()]);
+  const [userAliases, focusSaved] = await Promise.all([readUserAliases(), readFocusUsers()]);
+  const userNotes = await readUnifiedUserNotes(focusSaved);
   return {
     ok: true,
     latestDataTime: nowText(),
     dateRange,
     userAliases: userAliases.aliases,
     userNotes: userNotes.notesText,
+    focusUserIds: [...new Set((focusSaved.items || []).map(item => String(item.userId || "")).filter(Boolean))],
     config: {
       rules: data.config?.rules || defaultConfig.rules,
       refreshSeconds: data.config?.refreshSeconds || defaultConfig.refreshSeconds,
