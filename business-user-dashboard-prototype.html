@@ -1026,7 +1026,7 @@
 
   <section class="modal cost-modal" id="marketingCostModal">
     <div class="modal-head">
-      <div><h2 id="marketingCostModalTitle">新增费用项</h2><small>可批量选择用户和业务；草稿会随每日订单缓存自动重算</small></div>
+      <div><h2 id="marketingCostModalTitle">新增费用项</h2><small>可批量选择用户和业务；待结算费用会随每日订单缓存自动重算</small></div>
       <button class="icon-btn" id="closeMarketingCostModal">×</button>
     </div>
     <div class="modal-body">
@@ -1155,7 +1155,7 @@
         <strong>重点用户和备注：</strong>重点用户按用户ID全局关注，日常只刷新已经发现的有单业务。运营标签保存关注关系，同一用户可以出现在多个标签。名称、观察备注和置顶按用户ID统一应用；近7天、本月、近30天和自定义日期只改变每日指标列。
       </section>
       <section class="source">
-        <strong>营销费用预估：</strong>计费订单直接汇总所选用户在所选业务的每日订单缓存，不会混入其他业务。点击周期订单可查看周期内每天的订单数，尚未产生或尚未返回的日期按 0 展示；天数包含开始日和结束日。点击用户或业务可查看对应全部费用项；列表默认按预估费用降序，也可点击“周期订单”或“预估费用”表头切换升降序。费用备注默认同步重点用户备注，也可通过铅笔按钮改为该费用项的独立备注。草稿会随缓存重算，确认后锁定订单数和金额；缺少历史数据时会标注并禁止提前确认。
+        <strong>营销费用预估：</strong>计费订单直接汇总所选用户在所选业务的每日订单缓存，不会混入其他业务。尚未发生的日期按最近3个完整历史日的平均订单预估，真实数据产生后自动替换。待结算费用随缓存重算；点击“结算”后填写实际金额，已结算费用最终以实际金额为准。旧版“已确认”记录会自动按“已结算”兼容读取。
       </section>
     </div>
     <div class="modal-foot"><button class="btn" id="closeHelpFoot">关闭</button></div>

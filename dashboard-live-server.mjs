@@ -114,6 +114,10 @@ const defaultConfig = {
   },
   public: {
     autoPush: true
+  },
+  churn: {
+    rules: {},
+    platformOrder: []
   }
 };
 
@@ -357,7 +361,11 @@ async function readConfig() {
         ...savedNotification,
         events: { ...defaultConfig.notification.events, ...(savedNotification.events || {}) }
       },
-      public: { ...defaultConfig.public, ...(saved.public || {}) }
+      public: { ...defaultConfig.public, ...(saved.public || {}) },
+      churn: {
+        rules: saved.churn?.rules && typeof saved.churn.rules === "object" ? saved.churn.rules : {},
+        platformOrder: Array.isArray(saved.churn?.platformOrder) ? saved.churn.platformOrder.map(String) : []
+      }
     };
     const refreshTimes = normalizeRefreshTimes(config.userRefreshTimes);
     config.userRefreshTimes = refreshTimes.length ? refreshTimes : [...defaultConfig.userRefreshTimes];
@@ -379,7 +387,11 @@ async function writeConfig(nextConfig) {
       ...nextNotification,
       events: { ...defaultConfig.notification.events, ...(nextNotification.events || {}) }
     },
-    public: { ...defaultConfig.public, ...(nextConfig.public || {}) }
+    public: { ...defaultConfig.public, ...(nextConfig.public || {}) },
+    churn: {
+      rules: nextConfig.churn?.rules && typeof nextConfig.churn.rules === "object" ? nextConfig.churn.rules : {},
+      platformOrder: Array.isArray(nextConfig.churn?.platformOrder) ? [...new Set(nextConfig.churn.platformOrder.map(item => String(item || "").trim()).filter(Boolean))] : []
+    }
   };
   const refreshTimes = normalizeRefreshTimes(config.userRefreshTimes);
   config.userRefreshTimes = refreshTimes.length ? refreshTimes : [...defaultConfig.userRefreshTimes];
@@ -387,6 +399,32 @@ async function writeConfig(nextConfig) {
   await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
   scheduleSnapshots();
   return config;
+}
+
+function normalizeChurnRule(value = {}) {
+  const allowedModes = new Set(["and", "or", "orders", "rate"]);
+  return {
+    impactThreshold: Math.max(0, Number(value.impactThreshold) || 0),
+    declinePct: Math.max(0, Number(value.declinePct) || 0),
+    risePct: Math.max(0, Number(value.risePct) || 0),
+    fallbackSevenDayDeclinePct: Math.max(0, Number(value.fallbackSevenDayDeclinePct) || 0),
+    mode: allowedModes.has(String(value.mode)) ? String(value.mode) : "and"
+  };
+}
+
+async function saveChurnSettings(body = {}) {
+  const current = await readConfig();
+  const churn = {
+    rules: { ...(current.churn?.rules || {}) },
+    platformOrder: Array.isArray(current.churn?.platformOrder) ? [...current.churn.platformOrder] : []
+  };
+  if (Array.isArray(body.platformOrder)) {
+    churn.platformOrder = [...new Set(body.platformOrder.map(item => String(item || "").trim()).filter(Boolean))].slice(0, 100);
+  }
+  const businessId = String(body.businessId || "").trim();
+  if (businessId) churn.rules[businessId] = normalizeChurnRule(body.rule || {});
+  const config = await writeConfig({ ...current, churn });
+  return config.churn;
 }
 
 function normalizeRefreshTimes(value) {
@@ -4491,7 +4529,8 @@ async function sanitizePublicDashboard(data) {
       refreshSeconds: data.config?.refreshSeconds || defaultConfig.refreshSeconds,
       snapshotMinutes: data.config?.snapshotMinutes || defaultConfig.snapshotMinutes,
       userRefreshTimes: data.config?.userRefreshTimes || defaultConfig.userRefreshTimes,
-      fastUserBusinessIds: data.config?.fastUserBusinessIds || []
+      fastUserBusinessIds: data.config?.fastUserBusinessIds || [],
+      churn: data.config?.churn || defaultConfig.churn
     },
     source: {
       publicSnapshot: true,
@@ -4858,6 +4897,12 @@ const server = createServer(async (req, res) => {
       const data = await enqueueMarketingCostMutation(() => removeMarketingCost(body));
       json(res, 200, { ...data, syncing: true });
       publishLatestCachedDashboard().catch(error => console.error(`[${nowText()}] 营销费用删除公网同步失败：${error.message}`));
+      return;
+    }
+    if (url.pathname === "/api/churn-settings" && req.method === "POST") {
+      const churn = await saveChurnSettings(await readBody(req));
+      json(res, 200, { ok: true, churn, syncing: true });
+      publishLatestCachedDashboard().catch(error => console.error(`[${nowText()}] 流失看板设置公网同步失败：${error.message}`));
       return;
     }
     if (url.pathname === "/api/user-aliases" && req.method === "GET") return json(res, 200, { ok: true, ...(await readUserAliases()) });
