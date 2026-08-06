@@ -1894,7 +1894,7 @@
     function classifyChange({ current, base, labelPrefix = "" }) {
       const today = Number(current || 0);
       if (base === null || base === undefined || base === "") {
-        return { today, base: null, diff: null, impact: null, ratio: null, level: "normal", label: "正常", reason: "缺少对比基准，不参与异常判定" };
+        return { today, base: null, diff: null, impact: null, ratio: null, level: "missing", label: "缺少基准", reason: "缺少对比基准，不参与异常判定" };
       }
       const baseValue = Number(base || 0);
       const diff = today - baseValue;
