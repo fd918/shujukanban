@@ -40,6 +40,11 @@ const PUBLIC_KDF_ITERATIONS = 60000;
 const T1_USER_BUSINESS_IDS = new Set(["2410"]);
 const DEFAULT_USER_HISTORY_DAYS = 30;
 const BUSINESS_USER_STATISTICS_MIN_INTERVAL_MS = 5200;
+const DAILY_HISTORY_FINALIZATION_SLOTS = [
+  { label: "00:30", minute: 30 },
+  { label: "03:00", minute: 3 * 60 },
+  { label: "05:00", minute: 5 * 60 }
+];
 
 let token = process.env.YZ_DASHBOARD_TOKEN || "";
 let tokenExpiresAt = 0;
@@ -3050,6 +3055,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
         userAliases: userAliases.aliases,
         userNotes: userNotes.notesText,
         focusUserIds,
+        historyFinalization: historyFinalizationStatus(),
         refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
         source: {
           ...(fallback.payload.source || {}),
@@ -3070,6 +3076,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
       userAliases: userAliases.aliases,
       userNotes: userNotes.notesText,
       focusUserIds,
+      historyFinalization: historyFinalizationStatus(),
       refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
       dateRange,
       summary: lastGood.summary,
@@ -3126,6 +3133,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     userAliases: userAliases.aliases,
     userNotes: userNotes.notesText,
     focusUserIds,
+    historyFinalization: historyFinalizationStatus(),
     dateRange,
     source: {
       baseUrl: BASE_URL,
@@ -3289,6 +3297,38 @@ function currentRefreshTime(config, date = new Date()) {
   }) || "";
 }
 
+function currentDailyHistoryFinalizationSlot(date = new Date()) {
+  const currentMinute = minuteOfDay(date);
+  return DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => currentMinute >= slot.minute && currentMinute < slot.minute + 10)?.label || "";
+}
+
+function historyFinalizationStatus() {
+  const targetDate = shiftDay(dayKey(), -1);
+  const current = userRefreshState.historyFinalizations?.[targetDate];
+  if (!current) return { targetDate, status: "scheduled", completed: 0, total: 0, failedCount: 0, attempts: [], nextAttempt: "00:30", alert: false };
+  const businessIds = [...new Set((current.businessIds || []).map(String).filter(Boolean))];
+  const completed = new Set((current.completedIds || []).map(String));
+  const attempts = (current.attemptSlots || []).map(item => String(item.slot || item)).filter(Boolean);
+  const total = businessIds.length || Math.max(completed.size, completed.size + Object.keys(current.failures || {}).length);
+  const failedCount = Math.max(0, total - completed.size);
+  const exhausted = failedCount > 0 && (Boolean(current.exhaustedAtText) || attempts.includes(DAILY_HISTORY_FINALIZATION_SLOTS.at(-1).label));
+  const nextAttempt = DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => !attempts.includes(slot.label))?.label || "";
+  return {
+    targetDate,
+    status: current.completedAtText ? "success" : exhausted ? "failed" : attempts.length ? "retrying" : "scheduled",
+    completed: completed.size,
+    total,
+    failedCount,
+    attempts,
+    nextAttempt,
+    startedAtText: current.startedAtText || "",
+    completedAtText: current.completedAtText || "",
+    exhaustedAtText: current.exhaustedAtText || "",
+    alert: exhausted,
+    message: exhausted ? `${targetDate} 近30天历史在00:30、03:00、05:00三次更新后仍有 ${failedCount} 个业务失败，当前继续展示上一次完整缓存。` : ""
+  };
+}
+
 async function runScheduledUserRefresh(businesses, config) {
   const time = currentRefreshTime(config);
   if (!time) return false;
@@ -3307,39 +3347,46 @@ async function runScheduledUserRefresh(businesses, config) {
 }
 
 async function runDailyHistoryFinalization(businesses, config) {
-  if (minuteOfDay() < 30) return false;
+  const attemptSlot = currentDailyHistoryFinalizationSlot();
+  if (!attemptSlot) return false;
   if (dailyHistoryFinalizationPromise) return dailyHistoryFinalizationPromise;
   const targetDate = shiftDay(dayKey(), -1);
   const existingFinalization = userRefreshState.historyFinalizations?.[targetDate];
-  if (minuteOfDay() >= 6 * 60 && !existingFinalization?.startedAtText) return false;
-  const catalog = selectedUserBusinesses(businesses, config).filter(row => row.platformBusinessId || row.businessId);
+  if (existingFinalization?.completedAtText) return false;
+  const configuredIds = [...new Set((config.fastUserBusinessIds || []).map(String).filter(Boolean))];
+  const availableById = new Map((businesses || []).map(row => [String(row.platformBusinessId || row.businessId || ""), row]));
+  const catalog = configuredIds.map(id => availableById.get(id) || { platformBusinessId: id, businessId: id, name: `业务 ${id}` });
   const businessIds = [...new Set(catalog.map(row => String(row.platformBusinessId || row.businessId || "")).filter(Boolean))];
   if (!businessIds.length) return false;
   userRefreshState.historyFinalizations ||= {};
-  const current = userRefreshState.historyFinalizations[targetDate] || { completedIds: [], failures: {}, startedAtText: nowText(), completedAtText: "" };
+  const current = userRefreshState.historyFinalizations[targetDate] || { businessIds, completedIds: [], failures: {}, attemptSlots: [], startedAtText: nowText(), completedAtText: "", exhaustedAtText: "" };
+  current.businessIds = businessIds;
+  current.attemptSlots ||= [];
+  if (current.attemptSlots.some(item => String(item.slot || item) === attemptSlot)) return false;
   const completed = new Set((current.completedIds || []).map(String));
-  const now = Date.now();
-  const pendingIds = businessIds.filter(id => {
-    if (completed.has(id)) return false;
-    const failed = current.failures?.[id];
-    return !failed?.nextRetryAt || Number(failed.nextRetryAt) <= now;
-  });
+  const pendingIds = businessIds.filter(id => !completed.has(id));
   if (!pendingIds.length) {
-    if (completed.size >= businessIds.length && !current.completedAtText) {
-      current.completedAtText = nowText();
-      userRefreshState.historyFinalizations[targetDate] = current;
-      await saveUserRefreshState();
-    }
+    current.completedAtText ||= nowText();
+    userRefreshState.historyFinalizations[targetDate] = current;
+    await saveUserRefreshState();
     return false;
   }
+  current.attemptSlots.push({ slot: attemptSlot, startedAtText: nowText(), completedAtText: "", failedCount: pendingIds.length });
+  userRefreshState.historyFinalizations[targetDate] = current;
+  await saveUserRefreshState();
   dailyHistoryFinalizationPromise = (async () => {
-    console.log(`[${nowText()}] 开始结算 ${targetDate} 全业务用户订单：待处理 ${pendingIds.length}/${businessIds.length}`);
-    const result = await warmBusinessUserHistories(catalog, {
-      refresh: true,
-      range: { startDate: shiftDay(targetDate, -(DEFAULT_USER_HISTORY_DAYS - 1)), endDate: targetDate },
-      businessIds: pendingIds
-    });
-    if (!result) return false;
+    console.log(`[${nowText()}] ${attemptSlot} 开始结算 ${targetDate} 近30天用户订单：待处理 ${pendingIds.length}/${businessIds.length}`);
+    let result;
+    try {
+      result = await warmBusinessUserHistories(catalog, {
+        refresh: true,
+        range: { startDate: shiftDay(targetDate, -(DEFAULT_USER_HISTORY_DAYS - 1)), endDate: targetDate },
+        businessIds: pendingIds
+      });
+    } catch (error) {
+      result = { total: pendingIds.length, complete: 0, failed: pendingIds.map(businessId => ({ businessId, message: error.message || "历史结算失败" })) };
+    }
+    if (!result) result = { total: pendingIds.length, complete: 0, failed: pendingIds.map(businessId => ({ businessId, message: "历史任务仍被上一轮占用" })) };
     const failedById = new Map((result.failed || []).map(item => [String(item.businessId), item]));
     pendingIds.forEach(id => {
       const failure = failedById.get(id);
@@ -3350,20 +3397,28 @@ async function runDailyHistoryFinalization(businesses, config) {
       }
       const previous = current.failures[id] || {};
       const attempts = Number(previous.attempts || 0) + 1;
-      const delayMinutes = [5, 15, 30][Math.min(attempts - 1, 2)];
       current.failures[id] = {
         attempts,
         message: failure.message || "历史结算失败",
-        updatedAtText: nowText(),
-        nextRetryAt: Date.now() + delayMinutes * 60 * 1000
+        updatedAtText: nowText()
       };
     });
     current.completedIds = [...completed];
-    if (completed.size >= businessIds.length) current.completedAtText = nowText();
+    const currentAttempt = current.attemptSlots.find(item => String(item.slot || item) === attemptSlot);
+    if (currentAttempt && typeof currentAttempt === "object") {
+      currentAttempt.completedAtText = nowText();
+      currentAttempt.failedCount = businessIds.length - completed.size;
+    }
+    if (completed.size >= businessIds.length) {
+      current.completedAtText = nowText();
+      current.exhaustedAtText = "";
+    } else if (attemptSlot === DAILY_HISTORY_FINALIZATION_SLOTS.at(-1).label) {
+      current.exhaustedAtText = nowText();
+    }
     userRefreshState.historyFinalizations = Object.fromEntries(Object.entries(userRefreshState.historyFinalizations).filter(([date]) => date >= shiftDay(targetDate, -7)));
     userRefreshState.historyFinalizations[targetDate] = current;
     await saveUserRefreshState();
-    console.log(`[${nowText()}] ${targetDate} 历史结算进度：${completed.size}/${businessIds.length}；待重试 ${Object.keys(current.failures).length}`);
+    console.log(`[${nowText()}] ${attemptSlot} ${targetDate} 历史结算进度：${completed.size}/${businessIds.length}；待后续时间槽重试 ${businessIds.length - completed.size}`);
     return current.completedAtText ? true : false;
   })().finally(() => { dailyHistoryFinalizationPromise = null; });
   return dailyHistoryFinalizationPromise;
@@ -3468,14 +3523,14 @@ async function scheduleSnapshots() {
     if (scheduleVersion !== snapshotScheduleVersion) return;
     const slot = snapshotSlot(new Date(), intervalMinutes);
     scheduleCycle(true);
+    const currentConfig = await readConfig();
+    runDailyHistoryFinalization(lastGood.businesses, currentConfig).catch(error => console.error(`[${nowText()}] 昨日用户历史结算失败：${error.message}`));
     try {
       const data = await liveDashboard({ recordSnapshot: false, query: { cache: "1", cacheOnly: "1" } });
       if (!data.businesses?.length) throw new Error("当前没有可用业务主缓存，本时间槽已跳过且不会等待中台接口");
-      const currentConfig = await readConfig();
       const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { slot });
       console.log(`[${nowText()}] ${recorded ? `已记录业务用户快照：${slot.label}` : `跳过重复快照：${slot.label}`}`);
-      runDailyHistoryFinalization(data.businesses, currentConfig).catch(error => console.error(`[${nowText()}] 昨日用户历史结算失败：${error.message}`));
       startFocusUserMaintenance();
       startUserMaintenance(data.businesses, currentConfig, dateRange);
     } catch (error) {
@@ -4975,6 +5030,7 @@ async function sanitizePublicDashboard(data) {
     userAliases: userAliases.aliases,
     userNotes: userNotes.notesText,
     focusUserIds: [...new Set((focusSaved.items || []).map(item => String(item.userId || "")).filter(Boolean))],
+    historyFinalization: data.historyFinalization || historyFinalizationStatus(),
     config: {
       rules: data.config?.rules || defaultConfig.rules,
       refreshSeconds: data.config?.refreshSeconds || defaultConfig.refreshSeconds,
