@@ -1370,7 +1370,13 @@
     const userIdOf = user => String(user?.id || user?.userId || "");
     const userDisplayName = user => Object.prototype.hasOwnProperty.call(state.userAliases, userIdOf(user)) ? (state.userAliases[userIdOf(user)] || user?.name || "-") : (user?.name || "-");
     const userSearchText = user => `${userDisplayName(user)}${user?.name || ""}${userIdOf(user)}`.toLowerCase();
-    const aliasEditButton = user => `<button class="alias-edit" data-edit-user-alias="${escapeHtml(userIdOf(user))}" title="修改用户备注名" aria-label="修改用户备注名">✎</button>`;
+    const unifiedNoteEditButton = user => {
+      if (state.view === "focus") return "";
+      const userId = userIdOf(user);
+      const note = (state.userNotes?.[userId] || []).join("\n");
+      return `<button class="alias-edit" data-edit-unified-note="${escapeHtml(userId)}" title="${escapeHtml(note || "添加用户备注")}" aria-label="修改用户备注">记</button>`;
+    };
+    const aliasEditButton = user => `<button class="alias-edit" data-edit-user-alias="${escapeHtml(userIdOf(user))}" title="修改用户备注名" aria-label="修改用户备注名">✎</button>${unifiedNoteEditButton(user)}`;
     const addFocusButton = user => `<button class="add-focus-icon" data-add-detail-focus="${escapeHtml(userIdOf(user))}" title="加入重点用户" aria-label="加入重点用户">+</button>`;
     const copyUserIdButton = user => `<button class="copy-user-id" data-copy-user-id="${escapeHtml(userIdOf(user))}" title="点击复制用户ID">ID：${escapeHtml(userIdOf(user) || "-")}</button>`;
     const pad = n => String(n).padStart(2, "0");
@@ -4210,9 +4216,7 @@
         _: Date.now()
       });
       try {
-        const res = await fetch(apiUrl(`/api/business-users-sync?${params.toString()}`));
-        const data = await res.json();
-        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || `用户同步失败：HTTP ${res.status}`);
+        const data = await requestJson(apiUrl(`/api/business-users-sync?${params.toString()}`));
         applySynchronizedUserData(data, row, Boolean(data.cached));
       } catch (error) {
         state.detailRefreshing = false;
@@ -4296,9 +4300,7 @@
         _: Date.now()
       });
       try {
-        const res = await fetch(apiUrl(`/api/business-users-history?${params.toString()}`));
-        const data = await res.json();
-        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || `用户历史查询失败：HTTP ${res.status}`);
+        const data = await requestJson(apiUrl(`/api/business-users-history?${params.toString()}`));
         state.detailHistory = mergeBusinessUserHistory(state.detailHistory || {}, data);
         if (state.detailSyncedData && state.detailRow) {
           const mergedHistory = mergeBusinessUserHistory(state.detailSyncedData.history || {}, data);
