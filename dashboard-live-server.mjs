@@ -62,6 +62,8 @@ const userDetailCache = new Map();
 const userHistoryRequests = new Map();
 let userDetailCacheSavedAtText = "";
 let userDetailCacheRevision = 0;
+let parsedUserDetailEntriesCache = { revision: -1, entries: [], byBusinessId: new Map() };
+const latestPositiveOrderCaches = new Map();
 const synchronizedBusinessUsersCaches = new Map();
 const userPhoneCache = new Map();
 const userProfileCache = new Map();
@@ -87,6 +89,8 @@ let publicPublishQueue = Promise.resolve();
 
 function touchUserDetailCache() {
   userDetailCacheRevision += 1;
+  parsedUserDetailEntriesCache = { revision: -1, entries: [], byBusinessId: new Map() };
+  latestPositiveOrderCaches.clear();
 }
 
 function setUserDetailCache(cacheKey, payload) {
@@ -98,6 +102,30 @@ function deleteUserDetailCache(cacheKey) {
   const deleted = userDetailCache.delete(cacheKey);
   if (deleted) touchUserDetailCache();
   return deleted;
+}
+
+function parsedUserDetailEntries() {
+  if (parsedUserDetailEntriesCache.revision === userDetailCacheRevision) return parsedUserDetailEntriesCache.entries;
+  const entries = [];
+  const byBusinessId = new Map();
+  for (const [cacheKey, payload] of userDetailCache.entries()) {
+    try {
+      const entry = { cacheKey, key: JSON.parse(cacheKey), payload };
+      entries.push(entry);
+      const businessId = String(entry.key.businessId || "");
+      if (businessId) {
+        if (!byBusinessId.has(businessId)) byBusinessId.set(businessId, []);
+        byBusinessId.get(businessId).push(entry);
+      }
+    } catch {}
+  }
+  parsedUserDetailEntriesCache = { revision: userDetailCacheRevision, entries, byBusinessId };
+  return entries;
+}
+
+function userDetailEntriesForBusiness(businessId) {
+  parsedUserDetailEntries();
+  return parsedUserDetailEntriesCache.byBusinessId.get(String(businessId)) || [];
 }
 
 const defaultConfig = {
