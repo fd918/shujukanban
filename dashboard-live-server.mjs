@@ -2172,7 +2172,6 @@ async function warmBusinessUserDetails(businesses, dateRange, { refresh = false,
   let warmed = 0;
   let complete = 0;
   let failed = 0;
-  const snapshotEntries = [];
   await mapLimit(rows, 4, async row => {
     const statuses = [];
     try {
@@ -2190,7 +2189,7 @@ async function warmBusinessUserDetails(businesses, dateRange, { refresh = false,
       if (result?.ok) warmed += 1;
       if (result?.ok && result.complete !== false && result.partial !== true) {
         complete += 1;
-        if (dateRange.endDate === dayKey()) snapshotEntries.push({ businessId: row.platformBusinessId || row.businessId, rows: result.rows, savedAtText: result.savedAtText });
+        if (dateRange.endDate === dayKey()) await maybeRecordBusinessUserSnapshotSupplements([{ businessId: row.platformBusinessId || row.businessId, rows: result.rows, savedAtText: result.savedAtText }], "fixed_full_refresh");
       }
       else failed += 1;
     } catch (error) {
@@ -2198,7 +2197,6 @@ async function warmBusinessUserDetails(businesses, dateRange, { refresh = false,
       console.error(`[${nowText()}] 预热业务用户失败：${row.name} ${error.message}`);
     }
   });
-  if (snapshotEntries.length) await maybeRecordBusinessUserSnapshotSupplements(snapshotEntries, "fixed_full_refresh");
   console.log(`[${nowText()}] 已预热业务用户明细缓存：${warmed}/${rows.length}；完整 ${complete}；失败或部分 ${failed}`);
   return { total: rows.length, warmed, complete, failed };
 }
@@ -2229,7 +2227,6 @@ async function warmTopBusinessUsersRun(businesses, dateRange, config) {
   if (!rows.length) return { businesses: 0, users: 0, newTop100: 0 };
   let users = 0;
   let newTop100 = 0;
-  const snapshotEntries = [];
   await mapLimit(rows, 3, async row => {
     const businessId = String(row.platformBusinessId || row.businessId || "");
     const statuses = [];
@@ -2261,9 +2258,8 @@ async function warmTopBusinessUsersRun(businesses, dateRange, config) {
     };
     users += result.rows?.length || 0;
     newTop100 += previousIds.size ? entered.length : 0;
-    snapshotEntries.push({ businessId, rows: topRows, savedAtText: result.savedAtText });
+    await maybeRecordBusinessUserSnapshotSupplements([{ businessId, rows: topRows, savedAtText: result.savedAtText }], "top100_refresh");
   });
-  if (snapshotEntries.length) await maybeRecordBusinessUserSnapshotSupplements(snapshotEntries, "top100_refresh");
   await saveUserRefreshState();
   console.log(`[${nowText()}] 已刷新重点业务前100用户：${rows.length} 个业务，${users} 个用户；前100新进 ${newTop100} 人。`);
   return { businesses: rows.length, users, newTop100 };
@@ -2636,7 +2632,7 @@ async function warmStartupData() {
   }
 }
 
-async function readSnapshots(limit = 5000) {
+async function readSnapshots(limit = 7000) {
   if (!existsSync(SNAPSHOT_PATH)) return [];
   if (!snapshotMemoryCache) {
     const text = await readFile(SNAPSHOT_PATH, "utf8");
@@ -2759,8 +2755,11 @@ function nearestSnapshotMatch(snapshots, targetDay, targetMinute, maxOffsetMinut
 
 function entitySnapshotMatch(snapshots, targetDay, targetMinute, type, id, maxOffsetMinutes = 20) {
   const key = String(id || "");
-  return nearbySnapshotCandidates(snapshots, targetDay, targetMinute, maxOffsetMinutes)
-    .find(match => Boolean(match.snapshot?.[type]?.[key])) || null;
+  const containsEntity = match => Boolean(match.snapshot?.[type]?.[key]);
+  const nearby = nearbySnapshotCandidates(snapshots, targetDay, targetMinute, maxOffsetMinutes).find(containsEntity);
+  if (nearby) return nearby;
+  const historical = nearbySnapshotCandidates(snapshots, targetDay, targetMinute, 1440).find(containsEntity);
+  return historical ? { ...historical, quality: "historical_nearest" } : null;
 }
 
 function snapshotReference(match, quality = match?.quality) {
@@ -3829,6 +3828,14 @@ function mergeNonRegressiveMetricDays(base = {}, incoming = {}) {
   return merged;
 }
 
+function mergePrimaryBusinessUserDays(currentDays = {}, primaryCurrentDays = {}, historyDays = {}, endDate = "", todayOrders = 0) {
+  return {
+    ...mergeNonRegressiveMetricDays(currentDays, primaryCurrentDays),
+    ...historyDays,
+    ...(endDate ? { [endDate]: todayOrders } : {})
+  };
+}
+
 function focusUserCacheIndex(userIds = []) {
   const wanted = new Set([...userIds].map(String));
   const index = new Map();
@@ -3978,7 +3985,9 @@ function focusUserCacheIndex(userIds = []) {
         ...(primaryCurrent || {}),
         id: userId,
         todayOrders,
-        days: { ...(current?.days || {}), ...historyDays, [endDate]: todayOrders },
+        // 重点用户直接复用“用户列表”当前主缓存携带的全部日期；
+        // 非零新值覆盖旧快照，异常零值仍不能把已有历史冲掉。
+        days: mergePrimaryBusinessUserDays(current?.days, primaryCurrent?.days, historyDays, endDate, todayOrders),
         primaryToday: Boolean(primaryCurrent || full),
         cacheSavedAtText: primaryCurrent?.currentDataTime || current?.cacheSavedAtText || ""
       }));
