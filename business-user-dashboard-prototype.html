@@ -4270,20 +4270,39 @@
       state.detailRefreshing = true;
       state.detailLoadingLabel = "全部用户数据";
       if (state.detailUsers.length > 0) renderDetail(false);
-      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在读取当前业务的同步用户缓存；点击“刷新用户”时会分页更新该业务今天的全部用户，近7天、本月和近30天读取历史缓存。</section>`;
+      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在并行读取当前业务的两个近7天缓存；点击“刷新用户”时只更新本业务今天的全部用户，近30天在选择后按需查询。</section>`;
       const today = dayText(new Date());
-      const start = new Date();
-      start.setDate(start.getDate() - 29);
-      const params = new URLSearchParams({
+      const currentStart = shiftDayText(today, -6);
+      const previousEnd = shiftDayText(currentStart, -1);
+      const previousStart = shiftDayText(previousEnd, -6);
+      const currentParams = new URLSearchParams({
         business_id: businessId,
-        start_date: dayText(start),
+        start_date: currentStart,
         end_date: today,
         page_size: 5000,
         refresh: refresh ? "1" : "0",
         _: Date.now()
       });
+      const previousParams = new URLSearchParams({
+        business_id: businessId,
+        start_date: previousStart,
+        end_date: previousEnd,
+        page_size: 5000,
+        refresh: "0",
+        _: Date.now()
+      });
       try {
-        const data = await requestJson(apiUrl(`/api/business-users-sync?${params.toString()}`));
+        const [currentData, previousData] = await Promise.all([
+          requestJson(apiUrl(`/api/business-users-sync?${currentParams.toString()}`)),
+          requestJson(apiUrl(`/api/business-users-sync?${previousParams.toString()}`))
+        ]);
+        const mergedHistory = mergeBusinessUserHistory(previousData.history || {}, currentData.history || {});
+        const data = {
+          ...currentData,
+          history: mergedHistory,
+          total: Math.max(Number(currentData.total || 0), Number(previousData.total || 0), Number(mergedHistory.total || 0)),
+          historyLatestDataTime: currentData.historyLatestDataTime || previousData.historyLatestDataTime || mergedHistory.latestDataTime || "-"
+        };
         applySynchronizedUserData(data, row, Boolean(data.cached));
       } catch (error) {
         state.detailRefreshing = false;
