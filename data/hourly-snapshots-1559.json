@@ -8175,5 +8175,22 @@
     "todayRedemptionAmount": 7316.88,
     "cumulativeRedemptionOrders": 25416,
     "cumulativeRedemptionAmount": 657480.4999999999
+  },
+  {
+    "activityId": "1559",
+    "title": "【8.1-8.10外卖企业媒体大新客激励-第13期】",
+    "metric": "amount",
+    "date": "2026-08-06",
+    "hour": 9,
+    "slotMinute": 50,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-06 09:50",
+    "recordedAt": "2026/8/6 09:58:57",
+    "todayValidOrders": 445,
+    "todayRedemptionOrders": 302,
+    "todayActualPayment": 11096.87,
+    "todayRedemptionAmount": 7594.35,
+    "cumulativeRedemptionOrders": 25426,
+    "cumulativeRedemptionAmount": 657744.57
   }
 ]
