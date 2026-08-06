@@ -1173,23 +1173,15 @@ async function fetchBusinessUserHistory(options = {}, statuses = []) {
   }
 }
 
-async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
-  const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
-  const partialCacheKey = JSON.stringify({ type: "history-partial", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
-  const legacyExactCache = userDetailCache.get(cacheKey);
-  if (legacyExactCache && (legacyExactCache.partial === true || legacyExactCache.complete === false)) {
-    userDetailCache.set(partialCacheKey, legacyExactCache);
-    userDetailCache.delete(cacheKey);
-  }
-  const exactPartialCache = userDetailCache.get(partialCacheKey);
+function cachedBusinessUserHistoryCovering(businessId, startDate, endDate) {
   const historyCandidates = [...userDetailCache.entries()]
     .map(([key, payload]) => {
-        try {
-          return { key: JSON.parse(key), payload };
-        } catch {
-          return null;
-        }
-      })
+      try {
+        return { key: JSON.parse(key), payload };
+      } catch {
+        return null;
+      }
+    })
     .filter(item => ["history", "history-partial"].includes(item?.key?.type)
       && String(item.key.businessId) === String(businessId)
       && item.key.startDate <= startDate)
@@ -1205,28 +1197,42 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
       return timeB - timeA || (b.payload.dates?.length || 0) - (a.payload.dates?.length || 0);
     });
   const isCompleteHistory = item => item.payload.partial !== true && item.payload.complete !== false;
-  const covering = historyCandidates.find(item => isCompleteHistory(item) && item.key.endDate >= endDate)
+  return historyCandidates.find(item => isCompleteHistory(item) && item.key.endDate >= endDate)
     || historyCandidates.find(item => isCompleteHistory(item) && item.key.endDate < endDate && shiftDay(item.key.endDate, 1) >= endDate)
     || historyCandidates.find(item => item.key.endDate >= endDate)
     || historyCandidates.find(item => item.key.endDate < endDate && shiftDay(item.key.endDate, 1) >= endDate)
     || null;
-  const cachedSlice = () => {
-    if (!covering) return null;
-      const dates = dayList(startDate, endDate);
-      const rows = (covering.payload.rows || []).map(row => attachPlainPhone({
-        ...row,
-        days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
-        todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
-      }));
-    return {
-      ...covering.payload,
-      dates,
-      rows,
-      total: rows.length,
-      cached: true,
-      staleThroughDate: covering.key.endDate < endDate ? covering.key.endDate : ""
-    };
+}
+
+function sliceCachedBusinessUserHistory(covering, startDate, endDate) {
+  if (!covering) return null;
+  const dates = dayList(startDate, endDate);
+  const rows = (covering.payload.rows || []).map(row => attachPlainPhone({
+    ...row,
+    days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
+    todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
+  }));
+  return {
+    ...covering.payload,
+    dates,
+    rows,
+    total: rows.length,
+    cached: true,
+    staleThroughDate: covering.key.endDate < endDate ? covering.key.endDate : ""
   };
+}
+
+async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
+  const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
+  const partialCacheKey = JSON.stringify({ type: "history-partial", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
+  const legacyExactCache = userDetailCache.get(cacheKey);
+  if (legacyExactCache && (legacyExactCache.partial === true || legacyExactCache.complete === false)) {
+    userDetailCache.set(partialCacheKey, legacyExactCache);
+    userDetailCache.delete(cacheKey);
+  }
+  const exactPartialCache = userDetailCache.get(partialCacheKey);
+  const covering = cachedBusinessUserHistoryCovering(businessId, startDate, endDate);
+  const cachedSlice = () => sliceCachedBusinessUserHistory(covering, startDate, endDate);
   if (!refresh && covering) {
     const cached = cachedSlice();
     statuses.push({ name: "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${cached.rows.length} 个用户、${cached.dates.length} 天${cached.staleThroughDate ? `（完整历史截至 ${cached.staleThroughDate}，今日由实时分页补齐）` : ""}`, durationMs: 0 });
@@ -1504,12 +1510,16 @@ function mergeFocusOrderHistoryRows(businessId, baseRows = []) {
     for (const focusRow of payload.rows || []) {
       const id = String(focusRow.id || "");
       if (!id) continue;
-      const current = rowsById.get(id) || {};
+      const current = rowsById.get(id);
+      if (!current) {
+        rowsById.set(id, attachPlainPhone({ ...focusRow, days: { ...(focusRow.days || {}) }, currentDataTime: payload.savedAtText || "" }));
+        continue;
+      }
       rowsById.set(id, attachPlainPhone({
-        ...current,
         ...focusRow,
-        days: { ...(current.days || {}), ...(focusRow.days || {}) },
-        currentDataTime: payload.savedAtText || current.currentDataTime || ""
+        ...current,
+        days: { ...(focusRow.days || {}), ...(current.days || {}) },
+        currentDataTime: current.currentDataTime || payload.savedAtText || ""
       }));
     }
   }
@@ -3429,6 +3439,73 @@ function focusUserCacheIndex(userIds = []) {
       cacheSavedAtText: savedAtText || current.cacheSavedAtText || ""
     }));
   });
+  const startDate = shiftDay(dayKey(), -(DEFAULT_USER_HISTORY_DAYS - 1));
+  const endDate = dayKey();
+  const businessIds = new Set();
+  for (const cacheKey of userDetailCache.keys()) {
+    try {
+      const businessId = String(JSON.parse(cacheKey).businessId || "");
+      if (businessId) businessIds.add(businessId);
+    } catch {}
+  }
+  for (const businessId of businessIds) {
+    const covering = cachedBusinessUserHistoryCovering(businessId, startDate, endDate);
+    const primaryHistory = sliceCachedBusinessUserHistory(covering, startDate, endDate);
+    const primaryHistoryById = new Map((primaryHistory?.rows || []).map(row => [String(row.id || ""), row]));
+    const completeHistory = primaryHistory && primaryHistory.partial !== true && primaryHistory.complete !== false;
+    for (const userId of wanted) {
+      const row = primaryHistoryById.get(userId);
+      if (!row && !completeHistory) continue;
+      const relationKey = `${businessId}:${userId}`;
+      const current = index.get(relationKey) || {};
+      const primaryDays = row?.days || Object.fromEntries((primaryHistory?.dates || []).map(date => [date, 0]));
+      index.set(relationKey, attachPlainPhone({
+        ...current,
+        ...(row || {}),
+        id: userId,
+        days: { ...(current.days || {}), ...primaryDays },
+        cacheSavedAtText: primaryHistory?.savedAtText || current.cacheSavedAtText || ""
+      }));
+    }
+
+    const full = latestFullBusinessUsers(businessId, endDate);
+    const partial = latestPartialBusinessUsers(businessId, endDate);
+    const fast = latestFastBusinessUsers(businessId, endDate);
+    const timeValue = value => Date.parse(String(value || "").replace(/\//g, "-")) || 0;
+    const fullTime = timeValue(full?.savedAtText);
+    const partialIsNewer = partial && (!full || timeValue(partial.savedAtText) > fullTime);
+    const currentBaseTime = Math.max(fullTime, timeValue(partialIsNewer ? partial?.savedAtText : ""));
+    const fastIsNewer = timeValue(fast?.savedAtText) > currentBaseTime;
+    const primaryCurrentById = new Map((full?.rows || []).map(row => [String(row.id || ""), { ...row, currentDataTime: full.savedAtText || "" }]));
+    if (partialIsNewer) {
+      for (const row of partial.rows || []) primaryCurrentById.set(String(row.id || ""), { ...row, currentDataTime: partial.savedAtText || "" });
+    }
+    if (fastIsNewer) {
+      for (const row of fast.rows || []) primaryCurrentById.set(String(row.id || ""), { ...row, currentDataTime: fast.savedAtText || "" });
+    }
+    for (const row of latestFocusCurrentRows(businessId, endDate)) {
+      const userId = String(row.id || "");
+      const existing = primaryCurrentById.get(userId);
+      if (!existing || timeValue(row.currentDataTime) >= timeValue(existing.currentDataTime)) primaryCurrentById.set(userId, row);
+    }
+    for (const userId of wanted) {
+      const relationKey = `${businessId}:${userId}`;
+      const current = index.get(relationKey);
+      const primaryCurrent = primaryCurrentById.get(userId);
+      if (!current && !primaryCurrent) continue;
+      const todayOrders = primaryCurrent
+        ? number(primaryCurrent.todayOrders ?? primaryCurrent.days?.[endDate])
+        : (full ? 0 : number(current?.days?.[endDate]));
+      index.set(relationKey, attachPlainPhone({
+        ...(current || {}),
+        ...(primaryCurrent || {}),
+        id: userId,
+        todayOrders,
+        days: { ...(current?.days || {}), [endDate]: todayOrders },
+        cacheSavedAtText: primaryCurrent?.currentDataTime || current?.cacheSavedAtText || ""
+      }));
+    }
+  }
   return index;
 }
 
