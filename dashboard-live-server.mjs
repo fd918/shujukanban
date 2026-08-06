@@ -3698,6 +3698,15 @@ function cachedUserForBusiness(businessId, userId) {
   return found ? attachPlainPhone(found) : null;
 }
 
+function mergeNonRegressiveMetricDays(base = {}, incoming = {}) {
+  const merged = { ...base };
+  Object.entries(incoming || {}).forEach(([date, value]) => {
+    if (number(value) === 0 && number(merged[date]) > 0) return;
+    merged[date] = value;
+  });
+  return merged;
+}
+
 function focusUserCacheIndex(userIds = []) {
   const wanted = new Set([...userIds].map(String));
   const index = new Map();
@@ -3721,13 +3730,13 @@ function focusUserCacheIndex(userIds = []) {
       const incomingIsNewer = incomingTime >= currentTime;
       const merged = incomingIsNewer ? { ...current, ...row } : { ...row, ...current };
       merged.days = incomingIsNewer
-        ? { ...(current.days || {}), ...(row.days || {}) }
+        ? mergeNonRegressiveMetricDays(current.days, row.days)
         : { ...(row.days || {}), ...(current.days || {}) };
       merged.commissionDays = incomingIsNewer
-        ? { ...(current.commissionDays || {}), ...(row.commissionDays || {}) }
+        ? mergeNonRegressiveMetricDays(current.commissionDays, row.commissionDays)
         : { ...(row.commissionDays || {}), ...(current.commissionDays || {}) };
       merged.gmvDays = incomingIsNewer
-        ? { ...(current.gmvDays || {}), ...(row.gmvDays || {}) }
+        ? mergeNonRegressiveMetricDays(current.gmvDays, row.gmvDays)
         : { ...(row.gmvDays || {}), ...(current.gmvDays || {}) };
       merged.cacheSavedAtText = incomingIsNewer ? (payload.savedAtText || current.cacheSavedAtText || "") : current.cacheSavedAtText;
       index.set(key, attachPlainPhone(merged));
@@ -3753,7 +3762,8 @@ function focusUserCacheIndex(userIds = []) {
       const dates = orderHistoryByDate.get(relationKey) || new Map();
       Object.entries(row.days || {}).forEach(([date, value]) => {
         const current = dates.get(date);
-        if (!current || savedAt >= current.savedAt) dates.set(date, { value: number(value), savedAt });
+        const incomingValue = number(value);
+        if (!current || (savedAt >= current.savedAt && (incomingValue > 0 || number(current.value) === 0))) dates.set(date, { value: incomingValue, savedAt });
       });
       orderHistoryByDate.set(relationKey, dates);
     }
@@ -3797,7 +3807,7 @@ function focusUserCacheIndex(userIds = []) {
         ...current,
         ...(row || {}),
         id: userId,
-        days: { ...(current.days || {}), ...primaryDays },
+        days: mergeNonRegressiveMetricDays(current.days, primaryDays),
         cacheSavedAtText: primaryHistory?.savedAtText || current.cacheSavedAtText || ""
       }));
     }

@@ -1262,7 +1262,7 @@
   <script>
     const detailOnlyMode = new URLSearchParams(location.search).get("detail_only") === "1";
     if (detailOnlyMode) document.body.classList.add("detail-only");
-    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusOperatorGroupId: "", focusMetric: "orders", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
+    const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailLoadVersion: 0, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, focusLoadVersion: 0, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusOperatorGroupId: "", focusMetric: "orders", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
     state.userNotes = {};
     try {
       const savedFocusMetric = localStorage.getItem("yunzhan_focus_metric_v1");
@@ -2596,12 +2596,44 @@
       $("#focusSummaryBody").innerHTML = rows.length ? `<tr><td colspan="${baseColumns}">当前列表合计（${fmt(rows.length)}项）</td><td class="focus-order-col">${metricMeta.formatter(todaySum)}</td><td class="focus-order-col">${yesterdayComparable.length ? metricMeta.formatter(yesterdaySum) : "-"}</td><td class="${todayDiff < 0 ? "down" : todayDiff > 0 ? "up" : ""}">${yesterdaySum ? pctValue(todayDiff / yesterdaySum * 100) : "-"}</td><td>${todayDiff === null ? "-" : metricMeta.formatter(Math.abs(todayDiff))}</td><td>-</td>${dates.map(date => `<td>${metricMeta.formatter(dailySums[date])}</td>`).join("")}<td>${metricMeta.formatter(periodSum)}</td><td>${metricMeta.formatter(previousSum)}</td><td class="${periodDiff < 0 ? "down" : periodDiff > 0 ? "up" : ""}">${pctValue(periodRatio)}</td><td>${metricMeta.formatter(Math.abs(periodDiff))}</td></tr>` : "";
     }
 
+    function focusDataRangeKey(data = {}) {
+      const range = data.range || {};
+      return `${range.preset || ""}:${range.startDate || ""}:${range.endDate || ""}`;
+    }
+
+    function focusDataQuality(data = {}) {
+      const rows = data.businessRows || data.rows || [];
+      let positiveCells = 0;
+      let historySum = 0;
+      rows.forEach(row => {
+        const days = row.metrics?.orders?.days || row.days || {};
+        Object.values(days).forEach(value => {
+          const amount = Number(value || 0);
+          if (amount > 0) positiveCells += 1;
+          historySum += amount;
+        });
+      });
+      return { users: (data.users || []).length, relations: rows.length, positiveCells, historySum };
+    }
+
+    function focusDataRegressed(current, incoming) {
+      if (!current || !incoming || focusDataRangeKey(current) !== focusDataRangeKey(incoming)) return false;
+      const oldQuality = focusDataQuality(current);
+      const nextQuality = focusDataQuality(incoming);
+      if (oldQuality.relations > 0 && nextQuality.relations === 0) return true;
+      if (oldQuality.users >= 4 && nextQuality.users < oldQuality.users * 0.5) return true;
+      if (oldQuality.positiveCells >= 8 && nextQuality.positiveCells < oldQuality.positiveCells * 0.3) return true;
+      return oldQuality.historySum > 100 && nextQuality.historySum < oldQuality.historySum * 0.15;
+    }
+
     async function loadFocusUsers() {
       if (state.publicMode) {
         state.focusData = mergedPublicFocusData(state.focusRange);
         renderFocusUsers();
         return;
       }
+      const loadVersion = ++state.focusLoadVersion;
+      const lastGoodData = state.focusData;
       state.focusLoading = true;
       renderFocusUsers();
       try {
@@ -2610,11 +2642,19 @@
           params.set("start_date", state.focusStart);
           params.set("end_date", state.focusEnd);
         }
-        state.focusData = await requestJson(apiUrl(`/api/focus-users?${params}`));
+        const incoming = await requestJson(apiUrl(`/api/focus-users?${params}`));
+        if (loadVersion !== state.focusLoadVersion) return;
+        if (focusDataRegressed(lastGoodData, incoming)) {
+          toast("重点用户本轮缓存不完整，已继续保留上一份非零数据");
+          return;
+        }
+        state.focusData = incoming;
         state.focusUpdatedAt = state.focusData.focusUpdatedAt || state.focusUpdatedAt;
       } finally {
-        state.focusLoading = false;
-        renderFocusUsers();
+        if (loadVersion === state.focusLoadVersion) {
+          state.focusLoading = false;
+          renderFocusUsers();
+        }
       }
     }
 
@@ -4153,11 +4193,9 @@
     }
 
     function refreshOpenBusinessUsersIfStale() {
-      if (state.publicMode || !state.detailRow || state.detailRefreshing || state.detailMode === "history") return;
-      const businessTime = dataTimeValue(state.source?.latestDataTime);
-      const fullUserTime = dataTimeValue(state.detailStats?.fullCurrentLatestDataTime);
-      if (!businessTime || (fullUserTime && businessTime - fullUserTime < 9 * 60 * 1000)) return;
-      loadBusinessUsers(state.detailRow, true).catch(error => toast(error.message || "当前业务全量用户刷新失败"));
+      // 自动检查只能读取主缓存。中台强制刷新必须由用户点击“刷新用户”明确触发，
+      // 避免分页超时后以残缺日期段覆盖刚展示的完整历史。
+      return;
     }
 
     function syncOpenDetailAfterDataUpdate(previousDataTime, forceRefresh = false) {
@@ -4176,9 +4214,7 @@
         loadBusinessUserHistory(forceRefresh).catch(error => toast(error.message || "用户历史刷新失败"));
         return;
       }
-      state.detailSyncedData = null;
-      state.detailSyncedBusinessId = "";
-      loadBusinessUsers(state.detailRow, forceRefresh)
+      loadBusinessUsers(state.detailRow, forceRefresh, true)
         .then(() => refreshOpenBusinessUsersIfStale())
         .catch(error => toast(error.message || "用户明细刷新失败"));
     }
@@ -4238,12 +4274,14 @@
       renderDetail(cached);
     }
 
-    async function loadBusinessUsers(row, refresh = false) {
+    async function loadBusinessUsers(row, refresh = false, reloadCache = false) {
       const businessId = String(row.platformBusinessId || row.businessId || "");
-      if (!refresh && state.detailSyncedData && state.detailSyncedBusinessId === businessId) {
+      const lastGoodData = state.detailSyncedData && state.detailSyncedBusinessId === businessId ? state.detailSyncedData : null;
+      if (!refresh && !reloadCache && lastGoodData) {
         applySynchronizedUserData(state.detailSyncedData, row, true);
         return;
       }
+      const loadVersion = ++state.detailLoadVersion;
       if (state.publicMode) {
         const primaryId = String(row.platformBusinessId || row.businessId);
         const fallbackId = String(row.businessId || "");
@@ -4298,18 +4336,32 @@
           requestJson(apiUrl(`/api/business-users-sync?${currentParams.toString()}`)),
           requestJson(apiUrl(`/api/business-users-sync?${previousParams.toString()}`))
         ]);
+        if (loadVersion !== state.detailLoadVersion || String(state.detailRow?.platformBusinessId || state.detailRow?.businessId || "") !== businessId) return;
         if (currentResult.status === "rejected" && previousResult.status === "rejected") throw currentResult.reason;
+        if (currentResult.status === "rejected" && !lastGoodData) throw currentResult.reason;
         const currentData = currentResult.status === "fulfilled" ? currentResult.value : { users: [], history: { rows: [], dates: [] } };
         const previousData = previousResult.status === "fulfilled" ? previousResult.value : { users: [], history: { rows: [], dates: [] } };
-        const mergedHistory = mergeBusinessUserHistory(previousData.history || {}, currentData.history || {});
+        const mergedHistory = mergeBusinessUserHistory(
+          mergeBusinessUserHistory(lastGoodData?.history || {}, previousData.history || {}),
+          currentData.history || {}
+        );
+        const usersById = new Map((lastGoodData?.users || []).map(user => [String(user.id || user.userId || ""), user]));
+        (currentData.users || []).forEach(user => {
+          const id = String(user.id || user.userId || "");
+          if (!id) return;
+          const old = usersById.get(id) || {};
+          usersById.set(id, { ...old, ...user, days: { ...(old.days || {}), ...(user.days || {}) } });
+        });
         const data = {
+          ...(lastGoodData || {}),
           ...currentData,
+          users: [...usersById.values()],
           history: mergedHistory,
-          total: Math.max(Number(currentData.total || 0), Number(previousData.total || 0), Number(mergedHistory.total || 0)),
-          historyLatestDataTime: currentData.historyLatestDataTime || previousData.historyLatestDataTime || mergedHistory.latestDataTime || "-"
+          total: Math.max(Number(lastGoodData?.total || 0), Number(currentData.total || 0), Number(previousData.total || 0), Number(mergedHistory.total || 0)),
+          historyLatestDataTime: latestDataTimeText(currentData.historyLatestDataTime, previousData.historyLatestDataTime, mergedHistory.latestDataTime, lastGoodData?.historyLatestDataTime)
         };
         applySynchronizedUserData(data, row, Boolean(data.cached));
-        if (currentResult.status === "rejected" || previousResult.status === "rejected") toast("部分日期缓存暂时不可用，已先展示可用的用户主数据");
+        if (currentResult.status === "rejected" || previousResult.status === "rejected") toast("部分日期缓存暂时不可用，已保留当前完整数据，不会变成0");
       } catch (error) {
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";
@@ -4325,7 +4377,12 @@
         const id = String(row.id || row.userId || "");
         if (!id) return;
         const current = rowsById.get(id) || {};
-        rowsById.set(id, { ...current, ...row, days: { ...(current.days || {}), ...(row.days || {}) } });
+        const days = { ...(current.days || {}) };
+        Object.entries(row.days || {}).forEach(([date, value]) => {
+          if (Number(value || 0) === 0 && Number(days[date] || 0) > 0) return;
+          days[date] = value;
+        });
+        rowsById.set(id, { ...current, ...row, days });
       });
       return {
         ...base,
@@ -4333,8 +4390,12 @@
         dates,
         rows: [...rowsById.values()],
         total: Math.max(Number(base.total || 0), Number(incoming.total || 0), rowsById.size),
-        latestDataTime: incoming.latestDataTime || base.latestDataTime || "-"
+        latestDataTime: latestDataTimeText(incoming.latestDataTime, base.latestDataTime)
       };
+    }
+
+    function latestDataTimeText(...values) {
+      return values.filter(Boolean).sort((a, b) => dataTimeValue(a) - dataTimeValue(b)).at(-1) || "-";
     }
 
     async function loadBusinessUserHistory(refresh = false) {
