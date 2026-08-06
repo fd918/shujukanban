@@ -1267,7 +1267,7 @@ async function fetchBusinessUserHistory(options = {}, statuses = []) {
   }
 }
 
-function cachedBusinessUserHistoryCovering(businessId, startDate, endDate, sourceEntries = userDetailCache.entries()) {
+function cachedBusinessUserHistoryCovering(businessId, startDate, endDate, sourceEntries = userDetailEntriesForBusiness(businessId)) {
   const historyCandidates = [...sourceEntries]
     .map(entry => {
       if (entry?.key && entry?.payload) return entry;
@@ -1288,9 +1288,15 @@ function cachedBusinessUserHistoryCovering(businessId, startDate, endDate, sourc
       const usableA = (a.payload.rows || []).length ? 1 : 0;
       const usableB = (b.payload.rows || []).length ? 1 : 0;
       if (usableA !== usableB) return usableB - usableA;
+      const rowsA = (a.payload.rows || []).length;
+      const rowsB = (b.payload.rows || []).length;
+      if (rowsA !== rowsB) return rowsB - rowsA;
+      const datesA = a.payload.dates?.length || 0;
+      const datesB = b.payload.dates?.length || 0;
+      if (datesA !== datesB) return datesB - datesA;
       const timeA = Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0;
       const timeB = Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0;
-      return timeB - timeA || (b.payload.dates?.length || 0) - (a.payload.dates?.length || 0);
+      return timeB - timeA;
     });
   const isCompleteHistory = item => item.payload.partial !== true && item.payload.complete !== false;
   return historyCandidates.find(item => isCompleteHistory(item) && item.key.endDate >= endDate)
@@ -1530,9 +1536,8 @@ function buildT1BusinessUserDetail(history, businessId) {
 function latestFastBusinessUsers(businessId, date = dayKey()) {
   let latest = null;
   let latestAt = 0;
-  for (const [cacheKey, payload] of userDetailCache.entries()) {
+  for (const { key, payload } of userDetailEntriesForBusiness(businessId)) {
     try {
-      const key = JSON.parse(cacheKey);
       if (String(key.businessId) !== String(businessId)) continue;
       if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
       if (key.filterField !== "order_valid") continue;
@@ -1551,9 +1556,8 @@ function latestFastBusinessUsers(businessId, date = dayKey()) {
 function latestFullBusinessUsers(businessId, date = dayKey()) {
   let latest = null;
   let latestAt = 0;
-  for (const [cacheKey, payload] of userDetailCache.entries()) {
+  for (const { key, payload } of userDetailEntriesForBusiness(businessId)) {
     try {
-      const key = JSON.parse(cacheKey);
       if (String(key.businessId) !== String(businessId)) continue;
       if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
       if (key.filterField !== "order_valid") continue;
@@ -1572,9 +1576,8 @@ function latestFullBusinessUsers(businessId, date = dayKey()) {
 function latestPartialBusinessUsers(businessId, date = dayKey()) {
   let latest = null;
   let latestAt = 0;
-  for (const [cacheKey, payload] of userDetailCache.entries()) {
+  for (const { key, payload } of userDetailEntriesForBusiness(businessId)) {
     try {
-      const key = JSON.parse(cacheKey);
       if (String(key.businessId) !== String(businessId)) continue;
       if (key.startDate !== date || key.endDate !== date || key.includePrevious !== false) continue;
       if (key.filterField !== "order_valid" || number(key.pageSize) < 5000) continue;
@@ -1594,9 +1597,7 @@ function mergeFocusOrderHistoryRows(businessId, baseRows = []) {
   const rowsById = new Map(baseRows.map(row => [String(row.id || ""), { ...row, days: { ...(row.days || {}) } }]));
   let latestDataTime = "";
   let latestAt = 0;
-  for (const [cacheKey, payload] of userDetailCache.entries()) {
-    let key;
-    try { key = JSON.parse(cacheKey); } catch { continue; }
+  for (const { key, payload } of userDetailEntriesForBusiness(businessId)) {
     if (key.type !== "focus-order-history" || String(key.businessId) !== String(businessId)) continue;
     const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
     let usedFallback = false;
@@ -1627,28 +1628,33 @@ function mergeFocusOrderHistoryRows(businessId, baseRows = []) {
 }
 
 function latestKnownPositiveOrder(businessId, userId, date = dayKey()) {
-  let latest = null;
-  for (const [cacheKey, payload] of userDetailCache.entries()) {
-    let key;
-    try { key = JSON.parse(cacheKey); } catch { continue; }
-    if (String(key.businessId || "") !== String(businessId)) continue;
-    const row = (payload.rows || []).find(item => String(item.id || item.userId || "") === String(userId));
-    if (!row) continue;
-    const hasDateValue = Object.prototype.hasOwnProperty.call(row.days || {}, date);
-    const isCurrentRange = key.startDate === date && key.endDate === date;
-    const value = hasDateValue ? number(row.days[date]) : (isCurrentRange ? number(row.todayOrders) : 0);
-    if (value <= 0) continue;
-    const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
-    if (!latest || savedAt >= latest.savedAt) latest = { value, savedAt };
+  const memoKey = `${String(businessId)}:${date}`;
+  let memo = latestPositiveOrderCaches.get(memoKey);
+  if (!memo || memo.revision !== userDetailCacheRevision) {
+    const values = new Map();
+    for (const { key, payload } of userDetailEntriesForBusiness(businessId)) {
+      const savedAt = Date.parse(String(payload.savedAtText || "").replace(/\//g, "-")) || 0;
+      const isCurrentRange = key.startDate === date && key.endDate === date;
+      for (const row of payload.rows || []) {
+        const currentUserId = String(row.id || row.userId || "");
+        if (!currentUserId) continue;
+        const hasDateValue = Object.prototype.hasOwnProperty.call(row.days || {}, date);
+        const value = hasDateValue ? number(row.days[date]) : (isCurrentRange ? number(row.todayOrders) : 0);
+        if (value <= 0) continue;
+        const current = values.get(currentUserId);
+        if (!current || savedAt >= current.savedAt) values.set(currentUserId, { value, savedAt });
+      }
+    }
+    memo = { revision: userDetailCacheRevision, values };
+    latestPositiveOrderCaches.set(memoKey, memo);
+    if (latestPositiveOrderCaches.size > 32) latestPositiveOrderCaches.delete(latestPositiveOrderCaches.keys().next().value);
   }
-  return latest?.value || 0;
+  return memo.values.get(String(userId))?.value || 0;
 }
 
 function latestFocusCurrentRows(businessId, date = dayKey()) {
   const rowsById = new Map();
-  for (const [cacheKey, payload] of userDetailCache.entries()) {
-    let key;
-    try { key = JSON.parse(cacheKey); } catch { continue; }
+  for (const { key, payload } of userDetailEntriesForBusiness(businessId)) {
     if (key.type !== "focus-current" || String(key.businessId) !== String(businessId) || key.date !== date) continue;
     for (const row of payload.rows || []) {
       const id = String(row.id || "");
