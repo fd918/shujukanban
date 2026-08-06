@@ -147,14 +147,20 @@ const mime = {
 };
 
 function json(res, status, data) {
+  const body = JSON.stringify(data);
+  const acceptsGzip = /(?:^|,)\s*gzip\s*(?:,|$)/i.test(String(res.req?.headers?.["accept-encoding"] || ""));
+  const shouldCompress = acceptsGzip && Buffer.byteLength(body) >= 32 * 1024;
+  const responseBody = shouldCompress ? gzipSync(body) : body;
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
+    "content-length": Buffer.byteLength(responseBody),
+    ...(shouldCompress ? { "content-encoding": "gzip", vary: "Accept-Encoding" } : {}),
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,OPTIONS",
     "access-control-allow-headers": "content-type",
     "access-control-allow-private-network": "true"
   });
-  res.end(JSON.stringify(data));
+  res.end(responseBody);
 }
 
 function nowText() {
