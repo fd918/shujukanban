@@ -4032,7 +4032,7 @@
       const rules = cfg.rules || {};
       for (const key of ["minorPct","minorOrders","majorPct","majorOrders","criticalPct","criticalOrders","upPct","upOrders"]) if ($("#" + key)) $("#" + key).value = rules[key] ?? "";
       $("#refreshSeconds").value = cfg.refreshSeconds || 60;
-      $("#snapshotMinutes").value = cfg.snapshotMinutes || 30;
+      $("#snapshotMinutes").value = cfg.snapshotMinutes || 10;
       $("#userRefreshTimes").value = (cfg.userRefreshTimes || ["12:00", "17:00", "22:00"]).join(",");
       $("#notifyEnabled").checked = Boolean(cfg.notification?.enabled);
       document.querySelectorAll("[data-notification-event]").forEach(input => {
@@ -4292,10 +4292,13 @@
         _: Date.now()
       });
       try {
-        const [currentData, previousData] = await Promise.all([
+        const [currentResult, previousResult] = await Promise.allSettled([
           requestJson(apiUrl(`/api/business-users-sync?${currentParams.toString()}`)),
           requestJson(apiUrl(`/api/business-users-sync?${previousParams.toString()}`))
         ]);
+        if (currentResult.status === "rejected" && previousResult.status === "rejected") throw currentResult.reason;
+        const currentData = currentResult.status === "fulfilled" ? currentResult.value : { users: [], history: { rows: [], dates: [] } };
+        const previousData = previousResult.status === "fulfilled" ? previousResult.value : { users: [], history: { rows: [], dates: [] } };
         const mergedHistory = mergeBusinessUserHistory(previousData.history || {}, currentData.history || {});
         const data = {
           ...currentData,
@@ -4304,6 +4307,7 @@
           historyLatestDataTime: currentData.historyLatestDataTime || previousData.historyLatestDataTime || mergedHistory.latestDataTime || "-"
         };
         applySynchronizedUserData(data, row, Boolean(data.cached));
+        if (currentResult.status === "rejected" || previousResult.status === "rejected") toast("部分日期缓存暂时不可用，已先展示可用的用户主数据");
       } catch (error) {
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";

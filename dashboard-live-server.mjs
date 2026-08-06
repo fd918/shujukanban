@@ -47,6 +47,8 @@ let middlePlatformCookie = "";
 let loginPromise = null;
 let performanceSessionPromise = null;
 let snapshotTimer = null;
+let snapshotRefreshTimer = null;
+let snapshotRefreshPromise = null;
 let snapshotScheduleVersion = 0;
 let snapshotRecordQueue = Promise.resolve();
 let marketingCostMutationQueue = Promise.resolve();
@@ -140,7 +142,7 @@ const defaultConfig = {
     upOrders: 500
   },
   refreshSeconds: 60,
-  snapshotMinutes: 30,
+  snapshotMinutes: 10,
   userRefreshTimes: ["12:00", "17:00", "22:00"],
   fastUserBusinessIds: [],
   notification: {
@@ -1252,7 +1254,8 @@ async function fetchBusinessUserHistory(options = {}, statuses = []) {
     endDate: options.endDate,
     pageSize: number(options.pageSize) || 5000,
     refresh: Boolean(options.refresh),
-    enrichPhones: options.enrichPhones !== false
+    enrichPhones: options.enrichPhones !== false,
+    cacheOnly: options.cacheOnly === true
   });
   if (userHistoryRequests.has(requestKey)) {
     statuses.push({ name: "业务用户历史合并请求", ok: true, message: "复用正在进行的相同业务历史请求", durationMs: 0 });
@@ -1367,7 +1370,73 @@ function mergeCachedBusinessUserHistoryRange(businessId, startDate, endDate) {
   return { ok: true, complete: true, partial: false, cached: true, mergedCache: true, savedAtText, dates, rows, total: rows.length };
 }
 
-async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
+function bestAvailableCachedBusinessUserHistoryRange(businessId, startDate, endDate) {
+  const dates = dayList(startDate, endDate);
+  const candidates = userDetailEntriesForBusiness(businessId).filter(item =>
+    ["history", "history-partial"].includes(item.key.type)
+    && (item.payload.rows || []).length
+    && item.key.startDate <= endDate
+    && item.key.endDate >= startDate
+  ).sort((a, b) => {
+    const completeA = a.payload.partial === true || a.payload.complete === false ? 0 : 1;
+    const completeB = b.payload.partial === true || b.payload.complete === false ? 0 : 1;
+    if (completeA !== completeB) return completeB - completeA;
+    const rowsDiff = (b.payload.rows || []).length - (a.payload.rows || []).length;
+    if (rowsDiff) return rowsDiff;
+    const datesDiff = (b.payload.dates?.length || 0) - (a.payload.dates?.length || 0);
+    if (datesDiff) return datesDiff;
+    return (Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0)
+      - (Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0);
+  });
+  if (!candidates.length) return null;
+  const sourceByDate = new Map();
+  for (const date of dates) {
+    const source = candidates.find(item => item.key.startDate <= date
+      && item.key.endDate >= date
+      && (item.payload.dates || []).includes(date));
+    if (source) sourceByDate.set(date, source);
+  }
+  const rowsById = new Map();
+  for (const candidate of candidates) {
+    for (const sourceRow of candidate.payload.rows || []) {
+      const id = String(sourceRow.id || "");
+      if (!id || rowsById.has(id)) continue;
+      rowsById.set(id, attachPlainPhone({ ...sourceRow, days: {} }));
+    }
+  }
+  for (const [date, source] of sourceByDate.entries()) {
+    for (const sourceRow of source.payload.rows || []) {
+      const id = String(sourceRow.id || "");
+      if (!id) continue;
+      const row = rowsById.get(id) || attachPlainPhone({ ...sourceRow, days: {} });
+      row.days[date] = number(sourceRow.days?.[date]);
+      rowsById.set(id, row);
+    }
+  }
+  const rows = [...rowsById.values()].map(row => ({
+    ...row,
+    days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
+    todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
+  }));
+  const selected = [...new Set(sourceByDate.values())];
+  const missingDates = dates.filter(date => !sourceByDate.has(date));
+  const savedAtText = [...candidates].map(item => item.payload.savedAtText || "").sort().at(-1) || "";
+  return {
+    ok: true,
+    complete: missingDates.length === 0 && selected.every(item => item.payload.partial !== true && item.payload.complete !== false),
+    partial: missingDates.length > 0 || selected.some(item => item.payload.partial === true || item.payload.complete === false),
+    cached: true,
+    cacheOnly: true,
+    mergedCache: true,
+    savedAtText,
+    dates,
+    rows,
+    total: rows.length,
+    missingDates
+  };
+}
+
+async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true, cacheOnly = false }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
   const partialCacheKey = JSON.stringify({ type: "history-partial", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
   const legacyExactCache = userDetailCache.get(cacheKey);
@@ -1376,6 +1445,7 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
     deleteUserDetailCache(cacheKey);
   }
   const exactPartialCache = userDetailCache.get(partialCacheKey);
+  const dates = dayList(startDate, endDate);
   const covering = cachedBusinessUserHistoryCovering(businessId, startDate, endDate);
   const cachedSlice = () => sliceCachedBusinessUserHistory(covering, startDate, endDate);
   if (!refresh && covering) {
@@ -1392,7 +1462,15 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
       return merged;
     }
   }
-  const dates = dayList(startDate, endDate);
+  if (!refresh && cacheOnly) {
+    const available = bestAvailableCachedBusinessUserHistoryRange(businessId, startDate, endDate);
+    if (available) {
+      statuses.push({ name: "业务用户主缓存", ok: true, message: `直接复用已保存用户主数据：${available.rows.length} 个用户；缺少 ${available.missingDates.length} 个日期，不等待中台队列`, durationMs: 0 });
+      return available;
+    }
+    statuses.push({ name: "业务用户主缓存", ok: false, message: "当前业务尚无可用用户缓存，页面不等待中台长任务", durationMs: 0 });
+    return { ok: true, complete: false, partial: true, cached: true, cacheOnly: true, savedAtText: userDetailCacheSavedAtText || "-", total: 0, dates, rows: [], missingDates: dates };
+  }
   const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate, filter_field: "order_valid" };
   const result = await businessUserStatisticsCall("业务用户历史", params, 30000);
   statuses.push(result);
@@ -1732,7 +1810,8 @@ async function buildSynchronizedBusinessUsers({ businessId = "", startDate, endD
     endDate,
     pageSize,
     refresh: isT1Business && refresh,
-    enrichPhones: true
+    enrichPhones: true,
+    cacheOnly: !refresh
   }, statuses);
   const baseHistoryRows = deduplicateBusinessUsers(history.rows || []).map(row => ({ ...row, currentDataTime: history.savedAtText || "" }));
   const focusHistory = mergeFocusOrderHistoryRows(businessId, baseHistoryRows);
@@ -2610,13 +2689,13 @@ function comparisonMinuteFromText(value) {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function snapshotCacheMatches(savedAtText, targetDate, targetMinute, actualMinute = targetMinute) {
+function snapshotCacheMatches(savedAtText, targetDate, targetMinute, actualMinute = targetMinute, lookbackMinutes = 0) {
   const match = String(savedAtText || "").match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})\s+(\d{1,2}):(\d{2})/);
   if (!match) return false;
   const savedDate = `${match[1]}-${String(match[2]).padStart(2, "0")}-${String(match[3]).padStart(2, "0")}`;
   if (savedDate !== targetDate) return false;
   const savedMinute = Number(match[4]) * 60 + Number(match[5]);
-  const startMinute = Number(targetMinute);
+  const startMinute = Number(targetMinute) - Math.max(0, Number(lookbackMinutes) || 0);
   const endMinute = Math.max(startMinute, Number(actualMinute));
   return savedMinute >= startMinute && savedMinute <= endMinute;
 }
@@ -2778,7 +2857,7 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
   });
 }
 
-function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), actualMinute = targetMinute) {
+function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), actualMinute = targetMinute, lookbackMinutes = 0) {
   const targetDate = dateRange.endDate;
   const candidates = new Map();
   const focusCurrent = new Map();
@@ -2789,7 +2868,7 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), ac
       if (!businessId || !Array.isArray(payload.rows)) continue;
       if (payload.partial === true || payload.complete === false) continue;
       if (key.type === "focus-current") {
-        if (key.date === targetDate && snapshotCacheMatches(payload.savedAtText, targetDate, targetMinute, actualMinute)) {
+        if (key.date === targetDate && snapshotCacheMatches(payload.savedAtText, targetDate, targetMinute, actualMinute, lookbackMinutes)) {
           const rows = focusCurrent.get(businessId) || [];
           rows.push(...payload.rows);
           focusCurrent.set(businessId, rows);
@@ -2819,8 +2898,8 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), ac
     const full = latestFullBusinessUsers(businessId, targetDate);
     if (full) {
       const fast = latestFastBusinessUsers(businessId, targetDate);
-      const fullMatchesSlot = snapshotCacheMatches(full.savedAtText, targetDate, targetMinute, actualMinute);
-      const fastMatchesSlot = snapshotCacheMatches(fast?.savedAtText, targetDate, targetMinute, actualMinute);
+      const fullMatchesSlot = snapshotCacheMatches(full.savedAtText, targetDate, targetMinute, actualMinute, lookbackMinutes);
+      const fastMatchesSlot = snapshotCacheMatches(fast?.savedAtText, targetDate, targetMinute, actualMinute, lookbackMinutes);
       const currentById = new Map((fullMatchesSlot ? deduplicateBusinessUsers(full.rows || []) : []).map(row => [String(row.id || ""), row]));
       if (fastMatchesSlot) {
         for (const row of deduplicateBusinessUsers(fast.rows || [])) currentById.set(String(row.id || ""), row);
@@ -2835,7 +2914,7 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), ac
       }]));
       continue;
     }
-    const historyRows = (snapshotCacheMatches(group.history?.payload.savedAtText, targetDate, targetMinute, actualMinute) ? group.history?.payload.rows || [] : []).map(row => ({
+    const historyRows = (snapshotCacheMatches(group.history?.payload.savedAtText, targetDate, targetMinute, actualMinute, lookbackMinutes) ? group.history?.payload.rows || [] : []).map(row => ({
       ...row,
       todayOrders: number(row.days?.[targetDate]),
       todayCommission: 0
@@ -2846,7 +2925,7 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), ac
       if (!userId) continue;
       byUser[userId] = { name: row.name, phone: plainPhoneValue(userId, row.phone), version: row.version, orders: number(row.todayOrders), commission: number(row.todayCommission), amount: number(row.todayAmount) };
     }
-    if (snapshotCacheMatches(group.exact?.payload.savedAtText, targetDate, targetMinute, actualMinute)) {
+    if (snapshotCacheMatches(group.exact?.payload.savedAtText, targetDate, targetMinute, actualMinute, lookbackMinutes)) {
       for (const row of deduplicateBusinessUsers(group.exact?.payload.rows || [])) {
         const userId = String(row.id || "");
         if (!userId) continue;
@@ -2905,6 +2984,24 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
         }
       };
     }
+  }
+  if (query.cacheOnly === "1") {
+    return {
+      ok: Boolean(lastGood.businesses.length),
+      latestDataTime: nowText(),
+      config,
+      userAliases: userAliases.aliases,
+      userNotes: userNotes.notesText,
+      focusUserIds,
+      refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
+      dateRange,
+      summary: lastGood.summary,
+      hourlyTrend: lastGood.hourlyTrend,
+      businesses: attachBusinessUserSearchText(lastGood.businesses),
+      users: lastGood.users,
+      businessDaily: null,
+      source: { cached: true, cacheFallback: true, missing: ["当前没有可用的业务主缓存，本时间槽不等待中台接口"] }
+    };
   }
   const statuses = [];
   const [userStats, userIndex, businessSummary, businessPages, businessDaily] = await Promise.all([
@@ -2980,7 +3077,7 @@ async function maybeRecordSnapshot(...args) {
 
 async function recordSnapshot(businesses, users, force = false, businessDaily = null, summary = null, options = {}) {
   const config = await readConfig();
-  const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
+  const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 10));
   const interval = intervalMinutes * 60 * 1000;
   const slot = options.manual ? manualSnapshotSlot() : (options.slot || snapshotSlot(new Date(), intervalMinutes));
   if (!force && Date.now() - lastSnapshotAt < interval) return false;
@@ -3004,7 +3101,7 @@ async function recordSnapshot(businesses, users, force = false, businessDaily = 
     userDataStrict: true,
     business: Object.fromEntries(businesses.map(row => [String(row.businessId), { name: row.name, platform: row.platform, orders: row.todayOrders, commission: row.todayCommission, amount: row.todayAmount }])),
     users: Object.fromEntries(users.map(row => [String(row.id), { name: row.name, phone: row.phone, orders: row.todayOrders, commission: row.todayCommission, amount: row.todayAmount }])),
-    businessUsers: cachedBusinessUsersSnapshot(dateRange, slot.minuteOfDay, minuteOfDay())
+    businessUsers: cachedBusinessUsersSnapshot(dateRange, slot.minuteOfDay, minuteOfDay(), intervalMinutes)
   };
   await checkSnapshotHealth(snapshot, previousSnapshot, config);
   await appendFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot)}\n`);
@@ -3183,18 +3280,36 @@ async function scheduleSnapshots() {
     clearTimeout(snapshotTimer);
     snapshotTimer = null;
   }
+  if (snapshotRefreshTimer) {
+    clearTimeout(snapshotRefreshTimer);
+    snapshotRefreshTimer = null;
+  }
   const config = await readConfig();
   if (scheduleVersion !== snapshotScheduleVersion) return;
-  const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
+  const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 10));
+  const prepareNextSlot = () => {
+    if (scheduleVersion !== snapshotScheduleVersion || snapshotRefreshPromise) return false;
+    snapshotRefreshPromise = liveDashboard({ recordSnapshot: false, query: { force: "1" } })
+      .catch(error => console.error(`[${nowText()}] 下一快照槽业务数据预更新失败：${error.message}`))
+      .finally(() => { snapshotRefreshPromise = null; });
+    return true;
+  };
+  const scheduleCycle = () => {
+    if (scheduleVersion !== snapshotScheduleVersion) return;
+    const delay = nextSnapshotDelayMs(intervalMinutes);
+    const prepareDelay = Math.max(1000, delay - 60 * 1000);
+    snapshotRefreshTimer = setTimeout(prepareNextSlot, prepareDelay);
+    snapshotTimer = setTimeout(run, delay);
+    console.log(`[${nowText()}] 快照调度已对齐自然时间槽：每 ${intervalMinutes} 分钟；提前约 60 秒更新主数据，时间槽到达后只读缓存落盘。`);
+  };
   const run = async () => {
     if (scheduleVersion !== snapshotScheduleVersion) return;
     const slot = snapshotSlot(new Date(), intervalMinutes);
+    scheduleCycle();
     try {
-      const data = await liveDashboard({ recordSnapshot: false });
+      const data = await liveDashboard({ recordSnapshot: false, query: { cache: "1", cacheOnly: "1" } });
+      if (!data.businesses?.length) throw new Error("当前没有可用业务主缓存，本时间槽已跳过且不会等待中台接口");
       const currentConfig = await readConfig();
-      if (data.source?.missing?.length) {
-        await notifyOperationalIssue("apiDataMissing", "快照异常：接口数据缺失", data.source.missing.join("；"), currentConfig);
-      }
       const dateRange = rangeFromQuery({ preset: "today", start_date: dayKey(), end_date: dayKey() });
       const recorded = await maybeRecordSnapshot(data.businesses, data.users, true, data.businessDaily, data.summary, { slot });
       console.log(`[${nowText()}] ${recorded ? `已记录业务用户快照：${slot.label}` : `跳过重复快照：${slot.label}`}`);
@@ -3206,16 +3321,9 @@ async function scheduleSnapshots() {
       readConfig()
         .then(config => notifyOperationalIssue("snapshotRecordFailed", "快照异常：记录失败", error.message, config))
         .catch(notifyError => console.error(`[${nowText()}] 飞书通知失败：${notifyError.message}`));
-    } finally {
-      if (scheduleVersion === snapshotScheduleVersion) {
-        snapshotTimer = setTimeout(run, nextSnapshotDelayMs(intervalMinutes));
-      }
     }
   };
-  const delay = nextSnapshotDelayMs(intervalMinutes);
-  if (scheduleVersion !== snapshotScheduleVersion) return;
-  snapshotTimer = setTimeout(run, delay);
-  console.log(`[${nowText()}] 快照调度已对齐自然时间槽：每 ${intervalMinutes} 分钟，约 ${Math.round(delay / 1000)} 秒后执行下一次。`);
+  scheduleCycle();
 }
 
 async function getPublicConfig() {
@@ -4947,7 +5055,8 @@ const server = createServer(async (req, res) => {
         startDate,
         endDate,
         pageSize: number(url.searchParams.get("page_size")) || 5000,
-        refresh: url.searchParams.get("refresh") === "1"
+        refresh: url.searchParams.get("refresh") === "1",
+        cacheOnly: url.searchParams.get("refresh") !== "1"
       }, statuses);
       return json(res, 200, {
         ok: result.ok,
@@ -5116,7 +5225,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/snapshot-slots") {
       const config = await readConfig();
       const day = parseDay(url.searchParams.get("day") || dayKey());
-      const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 30));
+      const intervalMinutes = Math.max(1, Number(config.snapshotMinutes || 10));
       const snapshots = (await readSnapshots()).filter(item => item.day === day);
       const bySlot = new Map(snapshots.map(item => [item.snapshotSlotKey || `${item.day}-${String(item.minuteOfDay).padStart(4, "0")}`, item]));
       const slots = expectedSnapshotSlots(day, intervalMinutes).map(slot => {
