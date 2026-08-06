@@ -3311,7 +3311,7 @@ function historyFinalizationStatus() {
   const attempts = (current.attemptSlots || []).map(item => String(item.slot || item)).filter(Boolean);
   const total = businessIds.length || Math.max(completed.size, completed.size + Object.keys(current.failures || {}).length);
   const failedCount = Math.max(0, total - completed.size);
-  const exhausted = failedCount > 0 && (Boolean(current.exhaustedAtText) || attempts.includes(DAILY_HISTORY_FINALIZATION_SLOTS.at(-1).label));
+  const exhausted = failedCount > 0 && Boolean(current.exhaustedAtText);
   const nextAttempt = DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => !attempts.includes(slot.label))?.label || "";
   return {
     targetDate,

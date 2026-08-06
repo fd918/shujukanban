@@ -76,6 +76,7 @@
     .danger { background: #fff1f2; border-color: #fecdd3; color: var(--red); }
 
     .content { width: 100%; padding: 16px 18px 28px; }
+    .history-finalization-alert { margin: 12px 18px 0; padding: 10px 14px; border: 1px solid #fda4af; border-radius: 8px; background: #fff1f2; color: #b42318; font-weight: 700; line-height: 1.5; }
 
     .filters, .panel, .kpi {
       background: var(--panel);
@@ -859,6 +860,8 @@
     </div>
   </header>
 
+  <div class="history-finalization-alert hidden" id="historyFinalizationAlert" role="alert"></div>
+
   <main class="content">
     <select class="hidden" id="platformSelect" aria-hidden="true"><option value="all">全部平台</option></select>
 
@@ -1129,6 +1132,8 @@
           <li>不包含今天；今天由每10分钟前100、重点用户和固定时间全部用户对账共同维护。</li>
           <li>近30天用户历史只包含每日订单，不包含全部普通用户的逐日佣金和GMV。</li>
           <li>分页失败会保留旧完整缓存，每成功5页保存断点，全部成功后才替换。</li>
+          <li>00:30未完成的业务会在03:00、05:00只补失败部分，不重复处理已经成功的业务。</li>
+          <li>三次都未完成时，用户内部、重点用户和流失看板顶部会显示红色告警，并继续展示上一次完整缓存。</li>
         </ul>
       </section>
       <section class="source" data-help-view="business">
@@ -1263,6 +1268,7 @@
     const detailOnlyMode = new URLSearchParams(location.search).get("detail_only") === "1";
     if (detailOnlyMode) document.body.classList.add("detail-only");
     const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailLoadVersion: 0, detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, focusLoadVersion: 0, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusOperatorGroupId: "", focusMetric: "orders", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
+    state.historyFinalization = null;
     state.userNotes = {};
     try {
       const savedFocusMetric = localStorage.getItem("yunzhan_focus_metric_v1");
@@ -2142,6 +2148,9 @@
         ? `缓存数据：${state.source.cacheSavedAt || state.source.latestDataTime || "未知时间"}`
         : (state.source.latestDataTime ? `最新数据：${state.source.latestDataTime}` : "最新数据：等待刷新");
       $("#snapshotInfo").textContent = `页面检查：${state.config?.refreshSeconds || 60} 秒（只读缓存）｜业务与趋势：每 ${state.config?.snapshotMinutes || 10} 分钟`;
+      const historyAlert = $("#historyFinalizationAlert");
+      historyAlert.classList.toggle("hidden", !state.historyFinalization?.alert);
+      historyAlert.textContent = state.historyFinalization?.message || "";
     }
 
     function renderBusinessMobileCards(rows) {
@@ -3773,6 +3782,7 @@
         state.userAliases = data.userAliases || state.userAliases || {};
         state.userNotes = data.userNotes || state.userNotes || {};
         state.dateRange = data.dateRange || null;
+        state.historyFinalization = data.historyFinalization || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
         state.detailCache = {};
         if (!state.trendBusinessId || !state.businesses.some(row => String(row.platformBusinessId || row.businessId) === state.trendBusinessId)) {
@@ -3825,6 +3835,7 @@
       state.marketingCosts = mergePublicMarketingCosts(data.marketingCosts || state.marketingCosts);
       if (state.publicFocusNotesUpdatedAt) state.focusData = mergedPublicFocusData(state.focusRange);
       state.dateRange = data.dateRange || null;
+      state.historyFinalization = data.historyFinalization || null;
       state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
       if (previousDataTime && previousDataTime !== state.source.latestDataTime) {
         state.detailCache = {};

@@ -18,6 +18,7 @@
   </style>
   <style>
     .table-tools .search input{width:340px}
+    .hidden{display:none!important}.history-finalization-alert{margin:0 0 12px;padding:10px 14px;border:1px solid #fda4af;border-radius:8px;background:#fff1f2;color:#b42318;font-weight:700;line-height:1.5}
     .user-action.focused{border-color:#f0bd61;background:#fff7e6;color:#c87800;cursor:default}
     .user-action.focused:disabled{opacity:1}
     .note-mask{display:none;position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:80;align-items:center;justify-content:center;padding:20px}
@@ -45,6 +46,8 @@
       <div class="title-wrap"><div class="mark">失</div><div><h1>全业务流失监控</h1><p class="subtitle">选择平台与业务，直接查看实时流失、高风险与回流用户</p></div></div>
       <div class="top-actions"><span class="fresh" id="freshness">数据时间：加载中</span><button class="btn" id="reloadBtn">刷新当前业务</button><button class="btn" id="helpBtn">说明</button><button class="btn primary" id="ruleBtn">设置当前业务规则</button></div>
     </header>
+
+    <div class="history-finalization-alert hidden" id="historyFinalizationAlert" role="alert"></div>
 
     <section class="card selector-card">
       <div class="selector-head"><div class="selector-title"><h2>选择平台</h2><span>可用鼠标滚轮、触控板或左右按钮滑动</span></div><div class="selector-actions"><span id="platformHint" class="subtitle"></span><button class="small-btn" id="platformOrderBtn">调整平台顺序</button></div></div>
@@ -86,7 +89,7 @@
     const SERVER_RUNTIME=window.__DASHBOARD_SERVER_RUNTIME__||null;
     const CAN_MANAGE=!PUBLIC_MODE&&(!SERVER_RUNTIME?.server||Boolean(SERVER_RUNTIME.canManage));
     const fmt=new Intl.NumberFormat('zh-CN');
-    const state={catalog:null,platform:'全部平台',platformOrder:[],orderDraft:[],businessId:'',businessSearch:'',userSearch:'',filter:'attention',sortKey:'impact',sortDir:'desc',rawUsers:[],users:[],businessDataCache:{},userNotes:{},userAliases:{},focusUserIds:new Set(),noteTarget:'',loading:false,rules:{},visitedStats:{},request:null,publicDetails:{},publicEnvelopeUpdatedAt:''};
+    const state={catalog:null,platform:'全部平台',platformOrder:[],orderDraft:[],businessId:'',businessSearch:'',userSearch:'',filter:'attention',sortKey:'impact',sortDir:'desc',rawUsers:[],users:[],businessDataCache:{},userNotes:{},userAliases:{},focusUserIds:new Set(),noteTarget:'',loading:false,rules:{},visitedStats:{},request:null,publicDetails:{},publicEnvelopeUpdatedAt:'',historyFinalization:null,autoRefreshTimer:null,catalogRefreshing:false};
     const $=id=>document.getElementById(id); const n=value=>Number(value??0)||0;
     const esc=value=>String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     const dayShift=(day,offset)=>{const d=new Date(`${day}T12:00:00`);d.setDate(d.getDate()+offset);return d.toISOString().slice(0,10)};
@@ -232,7 +235,21 @@
     $('orderList').addEventListener('dragover',event=>{if(draggedOrderIndex<0)return;event.preventDefault();event.dataTransfer.dropEffect='move'});
     $('orderList').addEventListener('drop',event=>{event.preventDefault();const target=event.target.closest('[data-order-index]');if(!target||draggedOrderIndex<0)return;const targetIndex=Number(target.dataset.orderIndex);if(targetIndex===draggedOrderIndex)return;const next=[...state.orderDraft],[item]=next.splice(draggedOrderIndex,1);next.splice(targetIndex,0,item);state.orderDraft=next;renderOrderList();draggedOrderIndex=-1});
     async function init(){try{document.body.classList.toggle('readonly',!CAN_MANAGE);state.catalog=PUBLIC_MODE?await loadPublicCatalog():await requestJson(`${API_ROOT}/api/live-dashboard?cache=1`,{cache:'no-store',ttlMs:30000});state.catalog.businesses=state.catalog.businesses||[];state.rules=state.catalog.config?.churn?.rules||{};state.platformOrder=state.catalog.config?.churn?.platformOrder||[];state.userNotes=state.catalog.userNotes||{};state.userAliases=state.catalog.userAliases||{};state.focusUserIds=new Set((state.catalog.focusUserIds||[]).map(String));state.businessId=String(state.catalog.businesses.find(b=>String(b.platformBusinessId)==='2505')?.platformBusinessId||state.catalog.businesses[0]?.platformBusinessId||'');$('freshness').textContent=`业务数据：${state.catalog.latestDataTime||'—'}`;renderPlatforms();renderBusinesses();notifyReady();loadBusiness().catch(error=>notifyLoadFailed(error.message||'用户数据加载失败'))}catch(error){notifyLoadFailed(error.message||'看板加载失败');document.body.innerHTML=`<div class="empty" style="margin-top:120px"><strong>看板加载失败</strong>${esc(error.message)}<br>${PUBLIC_MODE?'请返回统一入口重新验证访问密码。':'请确认业务看板服务已经启动。'}</div>`}}
-    init();
+    function renderHistoryAlert(){const alert=$('historyFinalizationAlert');alert.classList.toggle('hidden',!state.historyFinalization?.alert);alert.textContent=state.historyFinalization?.message||''}
+    async function refreshChurnCache(){
+      if(document.hidden||state.loading||state.catalogRefreshing)return;
+      state.catalogRefreshing=true;
+      try{
+        const currentId=String(state.businessId||''),catalog=PUBLIC_MODE?await loadPublicCatalog(true):await requestJson(`${API_ROOT}/api/live-dashboard?cache=1&_=${Date.now()}`,{cache:'no-store',ttlMs:0,force:true,timeoutMs:20000});
+        state.catalog=catalog;state.catalog.businesses=state.catalog.businesses||[];state.rules=state.catalog.config?.churn?.rules||state.rules;state.platformOrder=state.catalog.config?.churn?.platformOrder||state.platformOrder;state.userNotes=state.catalog.userNotes||state.userNotes;state.userAliases=state.catalog.userAliases||state.userAliases;state.focusUserIds=new Set((state.catalog.focusUserIds||[]).map(String));state.historyFinalization=state.catalog.historyFinalization||null;if(PUBLIC_MODE)state.publicDetails={};
+        if(!state.catalog.businesses.some(row=>String(row.platformBusinessId)===currentId))state.businessId=String(state.catalog.businesses.find(row=>String(row.platformBusinessId)==='2505')?.platformBusinessId||state.catalog.businesses[0]?.platformBusinessId||'');
+        $('freshness').textContent=`业务数据：${state.catalog.latestDataTime||'—'}`;renderHistoryAlert();renderPlatforms();renderBusinesses();await loadBusiness(false);
+      }catch(error){console.warn('流失看板自动刷新失败：',error.message)}finally{state.catalogRefreshing=false}
+    }
+    function setupAutoRefresh(){clearInterval(state.autoRefreshTimer);const seconds=PUBLIC_MODE?Math.max(300,Number(state.catalog?.config?.refreshSeconds||60)):Math.max(10,Number(state.catalog?.config?.refreshSeconds||60));state.autoRefreshTimer=setInterval(()=>refreshChurnCache(),seconds*1000)}
+    function refreshVisibleChurn(){if(!document.hidden)refreshChurnCache()}
+    document.addEventListener('visibilitychange',refreshVisibleChurn);window.addEventListener('focus',refreshVisibleChurn);
+    init().then(()=>{state.historyFinalization=state.catalog?.historyFinalization||null;renderHistoryAlert()}).finally(setupAutoRefresh);
   </script>
 </body>
 </html>
