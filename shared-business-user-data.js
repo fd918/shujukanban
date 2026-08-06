@@ -102,15 +102,17 @@
         ...user,
         days: { ...(historyUser?.days || {}), ...(user.days || {}) },
         todayOrders: Number(user.todayOrders || 0),
-        realtimeToday: true
+        realtimeToday: true,
+        _hasHistory: Boolean(historyUser)
       };
-      if (!historyUser) return user;
+      if (!historyUser) return { ...user, _hasHistory: false };
       return {
         ...historyUser,
         ...user,
         days: { ...(historyUser.days || {}), ...(realtimeToday && today ? { [today]: Number(user.todayOrders || 0) } : {}) },
         todayOrders: realtimeToday ? Number(user.todayOrders || 0) : Number(historyUser.days?.[today] || 0),
-        realtimeToday
+        realtimeToday,
+        _hasHistory: true
       };
     });
   }
