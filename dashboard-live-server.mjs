@@ -3226,7 +3226,9 @@ async function writeFocusUsers(items, operatorGroups = null) {
 function normalizeMarketingCostItem(item = {}) {
   const startDate = parseDay(item.startDate || item.start_date || dayKey());
   const endDate = parseDay(item.endDate || item.end_date || startDate);
-  const status = item.status === "confirmed" ? "confirmed" : "draft";
+  const status = item.status === "settled" || item.status === "confirmed" ? "settled" : "pending";
+  const hasNumber = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+  const actualAmount = item.actualAmount ?? item.finalAmount ?? item.lockedAmount;
   return {
     id: String(item.id || randomBytes(8).toString("hex")),
     userId: String(item.userId || "").trim(),
@@ -3241,10 +3243,11 @@ function normalizeMarketingCostItem(item = {}) {
     noteCustomized: item.noteCustomized === true || (item.noteCustomized !== false && Boolean(String(item.note || "").trim())),
     batchId: String(item.batchId || "").trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 100),
     status,
-    lockedOrders: status === "confirmed" && Number.isFinite(Number(item.lockedOrders)) ? Number(item.lockedOrders) : null,
-    lockedAmount: status === "confirmed" && Number.isFinite(Number(item.lockedAmount)) ? Number(item.lockedAmount) : null,
-    confirmedAt: status === "confirmed" ? String(item.confirmedAt || "") : "",
-    confirmedAtText: status === "confirmed" ? String(item.confirmedAtText || "") : "",
+    lockedOrders: status === "settled" && hasNumber(item.lockedOrders) ? Number(item.lockedOrders) : null,
+    lockedAmount: status === "settled" && hasNumber(item.lockedAmount) ? Number(item.lockedAmount) : null,
+    actualAmount: status === "settled" && hasNumber(actualAmount) ? Math.round(Number(actualAmount) * 100) / 100 : null,
+    settledAt: status === "settled" ? String(item.settledAt || item.confirmedAt || "") : "",
+    settledAtText: status === "settled" ? String(item.settledAtText || item.confirmedAtText || "") : "",
     createdAt: String(item.createdAt || new Date().toISOString()),
     createdAtText: String(item.createdAtText || nowText()),
     updatedAt: String(item.updatedAt || new Date().toISOString()),
@@ -3920,26 +3923,44 @@ function calculateMarketingCostItem(item, context) {
   const cached = context.cacheIndex.get(`${normalized.businessId}:${normalized.userId}`) || {};
   const current = cachedFocusCurrentUser(normalized.businessId, normalized.userId);
   const dates = dayList(normalized.startDate, normalized.endDate);
+  const today = dayKey();
+  const referenceDays = Object.entries(cached.days || {})
+    .filter(([date, value]) => date < today && Number.isFinite(Number(value)))
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, 3);
+  const referenceAverageOrders = referenceDays.length === 3
+    ? Math.round(referenceDays.reduce((sum, [, value]) => sum + number(value), 0) / 3)
+    : null;
   const dailyOrders = {};
+  const estimatedDates = [];
   const missingDates = [];
   for (const date of dates) {
-    if (date === dayKey() && T1_USER_BUSINESS_IDS.has(normalized.businessId)) {
-      missingDates.push(date);
+    if (date === today && T1_USER_BUSINESS_IDS.has(normalized.businessId)) {
+      if (referenceAverageOrders === null) missingDates.push(date);
+      else {
+        dailyOrders[date] = referenceAverageOrders;
+        estimatedDates.push(date);
+      }
       continue;
     }
-    if (date === dayKey() && current) {
+    if (date === today && current) {
       dailyOrders[date] = number(current.todayOrders);
       continue;
     }
-    if (cached.days && Object.prototype.hasOwnProperty.call(cached.days, date)) {
+    if (date <= today && cached.days && Object.prototype.hasOwnProperty.call(cached.days, date)) {
       dailyOrders[date] = number(cached.days[date]);
+      continue;
+    }
+    if (date > today && referenceAverageOrders !== null) {
+      dailyOrders[date] = referenceAverageOrders;
+      estimatedDates.push(date);
       continue;
     }
     missingDates.push(date);
   }
   const liveOrders = Object.values(dailyOrders).reduce((sum, value) => sum + number(value), 0);
   const liveAmount = Math.round(liveOrders * normalized.unitPrice * 100) / 100;
-  const confirmed = normalized.status === "confirmed" && normalized.lockedOrders !== null && normalized.lockedAmount !== null;
+  const settled = normalized.status === "settled" && normalized.lockedOrders !== null && normalized.actualAmount !== null;
   const dataTimes = [current?.savedAtText, cached.cacheSavedAtText].filter(Boolean).sort();
   const focusNote = String(user.note || (Array.isArray(user.notes) ? user.notes.join("；") : "")).trim().slice(0, 200);
   const inheritedNote = !normalized.noteCustomized && Boolean(focusNote);
@@ -3948,15 +3969,19 @@ function calculateMarketingCostItem(item, context) {
     userName: context.aliases[normalized.userId] || user.name || cached.name || normalized.userName || `用户 ${normalized.userId}`,
     businessName: business.businessName || normalized.businessName || "未命名业务",
     platform: business.platform || normalized.platform || "-",
-    orderCount: confirmed ? normalized.lockedOrders : liveOrders,
-    estimatedAmount: confirmed ? normalized.lockedAmount : liveAmount,
+    orderCount: settled ? normalized.lockedOrders : liveOrders,
+    estimatedAmount: liveAmount,
+    finalAmount: settled ? normalized.actualAmount : liveAmount,
     dayCount: dates.length,
     liveOrders,
     liveAmount,
     dailyOrders,
+    estimatedDates,
+    estimateReferenceDates: referenceDays.map(([date]) => date).sort(),
+    estimateReferenceAverageOrders: referenceAverageOrders,
     missingDates,
     complete: missingDates.length === 0,
-    t1Pending: T1_USER_BUSINESS_IDS.has(normalized.businessId) && missingDates.includes(dayKey()),
+    t1Pending: T1_USER_BUSINESS_IDS.has(normalized.businessId) && missingDates.includes(today),
     note: inheritedNote ? focusNote : normalized.note,
     focusNote,
     noteInherited: inheritedNote,
@@ -3987,7 +4012,8 @@ async function buildMarketingCostWorkspaceFresh() {
     itemCount: items.length,
     userCount: new Set(items.map(item => item.userId)).size,
     orderCount: items.reduce((sum, item) => sum + number(item.orderCount), 0),
-    estimatedAmount: Math.round(items.reduce((sum, item) => sum + Number(item.estimatedAmount || 0), 0) * 100) / 100
+    estimatedAmount: Math.round(items.reduce((sum, item) => sum + Number(item.estimatedAmount || 0), 0) * 100) / 100,
+    finalAmount: Math.round(items.reduce((sum, item) => sum + Number(item.finalAmount ?? item.estimatedAmount ?? 0), 0) * 100) / 100
   };
   return {
     ok: true,
@@ -4062,17 +4088,21 @@ async function saveMarketingCost(body) {
     if (!(item.unitPrice > 0)) throw new Error("单价必须大于0。");
     if (dayList(item.startDate, item.endDate).length > 65) throw new Error("单个费用周期最多支持65天。");
     const calculated = calculateMarketingCostItem(item, context);
-    if (item.status === "confirmed") {
-      if (!calculated.complete) throw new Error(calculated.t1Pending ? "该T+1业务仍有日期待更新，暂不能确认费用。" : `缺少 ${calculated.missingDates.length} 天订单数据，暂不能确认费用。`);
+    if (item.status === "settled") {
+      if (!calculated.complete) throw new Error(calculated.t1Pending ? "该T+1业务缺少近3个完整历史日，暂不能结算。" : `缺少 ${calculated.missingDates.length} 天订单数据，暂不能结算。`);
+      const actualAmount = source.actualAmount ?? source.finalAmount;
+      if (actualAmount === null || actualAmount === undefined || actualAmount === "" || !Number.isFinite(Number(actualAmount)) || Number(actualAmount) < 0) throw new Error("请输入有效的实际结算金额。");
       item.lockedOrders = calculated.liveOrders;
       item.lockedAmount = calculated.liveAmount;
-      item.confirmedAt = new Date().toISOString();
-      item.confirmedAtText = nowText();
+      item.actualAmount = Math.round(Number(actualAmount) * 100) / 100;
+      item.settledAt = existing.settledAt || new Date().toISOString();
+      item.settledAtText = existing.settledAtText || nowText();
     } else {
       item.lockedOrders = null;
       item.lockedAmount = null;
-      item.confirmedAt = "";
-      item.confirmedAtText = "";
+      item.actualAmount = null;
+      item.settledAt = "";
+      item.settledAtText = "";
     }
     if (existingIndex >= 0) {
       saved.items.splice(existingIndex, 1, item);
