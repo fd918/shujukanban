@@ -1232,6 +1232,7 @@
 
   <script>
     const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusOperatorGroupId: "", focusMetric: "orders", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
+    state.userNotes = {};
     try {
       const savedFocusMetric = localStorage.getItem("yunzhan_focus_metric_v1");
       if (["orders", "commission", "gmv"].includes(savedFocusMetric)) state.focusMetric = savedFocusMetric;
@@ -1502,6 +1503,8 @@
     }
 
     function focusNoteLines(row = {}) {
+      const userId = String(row.userId || row.id || "");
+      if (userId && Object.prototype.hasOwnProperty.call(state.userNotes || {}, userId)) return (state.userNotes[userId] || []).map(value => String(value || "").trim()).filter(Boolean);
       const values = Array.isArray(row.notes) ? row.notes : String(row.note || "").split("\n");
       return values.map(value => String(value?.text || value || "").trim()).filter(Boolean);
     }
@@ -1509,6 +1512,42 @@
     function focusNoteText(row = {}) {
       return focusNoteLines(row).join("\n");
     }
+
+    async function editUnifiedUserNote(userId) {
+      const id = String(userId || "");
+      if (!id) return;
+      const current = (state.userNotes?.[id] || []).join("\n");
+      const next = window.prompt("填写用户备注；每行一条。留空并确定可删除备注。", current);
+      if (next === null) return;
+      const notes = next.split("\n").map(value => value.trim().slice(0, 200)).filter(Boolean).slice(0, 20);
+      const result = await requestJson(apiUrl("/api/user-notes"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: id, notes })
+      });
+      state.userNotes = result.notes || { ...(state.userNotes || {}), [id]: notes };
+      window.BusinessUserDataHub?.publish("user-note", { userId: id, notes });
+      if (state.focusData) state.focusData = applyFocusNoteToData(state.focusData, { userId: id }, notes);
+      render();
+      if ($("#detailModal")?.classList.contains("open")) renderDetail(true);
+      toast(notes.length ? "用户备注已同步到全部看板" : "用户备注已删除");
+    }
+
+    window.BusinessUserDataHub?.subscribe("user-note", ({ userId, notes }) => {
+      const id = String(userId || "");
+      if (!id) return;
+      state.userNotes = { ...(state.userNotes || {}), [id]: notes || [] };
+      if (state.focusData) state.focusData = applyFocusNoteToData(state.focusData, { userId: id }, notes || []);
+      render();
+      if ($("#detailModal")?.classList.contains("open")) renderDetail(true);
+    });
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest("[data-edit-unified-note]");
+      if (!button) return;
+      event.preventDefault();
+      editUnifiedUserNote(button.dataset.editUnifiedNote).catch(error => toast(error.message || "备注保存失败"));
+    });
 
     function latestPublicFocusUser(item, businessId = item.businessId) {
       const business = state.businesses.find(row => String(row.platformBusinessId || row.businessId) === String(businessId) || String(row.businessId) === String(businessId));
@@ -3436,6 +3475,8 @@
           body: JSON.stringify({ ...target, notes })
         });
         state.focusUpdatedAt = result.saved?.updatedAt || state.focusUpdatedAt;
+        state.userNotes = { ...(state.userNotes || {}), [target.userId]: notes };
+        window.BusinessUserDataHub?.publish("user-note", { userId: target.userId, notes });
         state.focusData = applyFocusNoteToData(state.focusData, target, notes);
         Object.keys(state.publicFocusUsers).forEach(key => {
           state.publicFocusUsers[key] = applyFocusNoteToData(state.publicFocusUsers[key], target, notes);
@@ -3460,6 +3501,7 @@
         aliases[id] = next.trim();
         localStorage.setItem(PUBLIC_USER_ALIASES_KEY, JSON.stringify(aliases));
         state.userAliases = { ...state.userAliases, [id]: next.trim() };
+        window.BusinessUserDataHub?.publish("user-alias", { userId: id, name: next.trim() });
         render();
         if ($("#detailModal").classList.contains("open")) renderDetail(true);
         if ($("#globalUserModal").classList.contains("open")) renderGlobalUserSearch();
@@ -3472,6 +3514,7 @@
         body: JSON.stringify({ userId: id, name: next.trim() })
       });
       state.userAliases = data.aliases || {};
+      window.BusinessUserDataHub?.publish("user-alias", { userId: id, name: next.trim() });
       render();
       if ($("#detailModal").classList.contains("open")) renderDetail(true);
       if ($("#globalUserModal").classList.contains("open")) renderGlobalUserSearch();
@@ -3582,6 +3625,7 @@
         state.users = data.users || [];
         state.businessDaily = data.businessDaily || null;
         state.userAliases = data.userAliases || state.userAliases || {};
+        state.userNotes = data.userNotes || state.userNotes || {};
         state.dateRange = data.dateRange || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
         state.detailCache = {};

@@ -23,6 +23,7 @@ const FOCUS_USERS_PATH = join(ROOT, "data/business-focus-users.json");
 const FOCUS_USERS_BACKUP_PATH = join(ROOT, "data/business-focus-users.pre-global-backup.json");
 const MARKETING_COSTS_PATH = join(ROOT, "data/business-marketing-costs.json");
 const USER_ALIASES_PATH = join(ROOT, "data/business-user-aliases.json");
+const USER_NOTES_PATH = join(ROOT, "data/business-user-notes.json");
 const USER_REFRESH_STATE_PATH = join(ROOT, "data/business-user-refresh-state.json");
 const API_REQUEST_STATS_PATH = join(ROOT, "data/business-api-request-stats.json");
 const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.json");
@@ -2647,7 +2648,7 @@ function cachedBusinessUsersSnapshot(dateRange, targetMinute = minuteOfDay(), ac
 
 async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
   const config = await readConfig();
-  const userAliases = await readUserAliases();
+  const [userAliases, userNotes] = await Promise.all([readUserAliases(), readUnifiedUserNotes()]);
   const dateRange = rangeFromQuery(query);
   const cacheKey = dashboardCacheKey(dateRange);
   if (query.cache === "1" && query.force !== "1") {
@@ -2661,6 +2662,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
         latestDataTime: fallback.savedAtText || fallback.payload.latestDataTime,
         config,
         userAliases: userAliases.aliases,
+        userNotes: userNotes.notesText,
         refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
         source: {
           ...(fallback.payload.source || {}),
@@ -2717,6 +2719,7 @@ async function liveDashboard({ recordSnapshot = true, query = {} } = {}) {
     refreshIntervalSeconds: Math.max(10, Number(config.refreshSeconds || 60)),
     config,
     userAliases: userAliases.aliases,
+    userNotes: userNotes.notesText,
     dateRange,
     source: {
       baseUrl: BASE_URL,
@@ -3249,6 +3252,82 @@ async function readUserAliases() {
   }
 }
 
+function userNoteTexts(value) {
+  const values = Array.isArray(value) ? value : String(value || "").split("\n");
+  return values.map(item => String(item?.text || item || "").trim().slice(0, 200)).filter(Boolean).slice(0, 20);
+}
+
+function publicUserNotes(saved = {}) {
+  return Object.fromEntries(Object.entries(saved.notes || {}).map(([userId, values]) => [String(userId), userNoteTexts(values)]));
+}
+
+async function readUserNotesFile() {
+  try {
+    const saved = JSON.parse(await readFile(USER_NOTES_PATH, "utf8"));
+    return { notes: saved.notes && typeof saved.notes === "object" ? saved.notes : {}, updatedAt: saved.updatedAt || "", updatedAtText: saved.updatedAtText || "" };
+  } catch {
+    return { notes: {}, updatedAt: "", updatedAtText: "" };
+  }
+}
+
+async function writeUserNoteFile(userId, texts) {
+  const saved = await readUserNotesFile();
+  const previous = new Map((saved.notes[userId] || []).map(item => [String(item?.text || item || ""), item]));
+  if (texts.length) {
+    saved.notes[userId] = texts.map(text => previous.get(text) || { text, createdAt: new Date().toISOString(), createdAtText: nowText() });
+  } else {
+    delete saved.notes[userId];
+  }
+  const payload = { notes: saved.notes, updatedAt: new Date().toISOString(), updatedAtText: nowText() };
+  await mkdir(join(ROOT, "data"), { recursive: true });
+  await writeFile(USER_NOTES_PATH, JSON.stringify(payload, null, 2));
+  return payload;
+}
+
+async function readUnifiedUserNotes(focusSaved = null) {
+  const saved = await readUserNotesFile();
+  const focus = focusSaved || await readFocusUsers();
+  let changed = false;
+  for (const item of focus.items || []) {
+    const userId = String(item.userId || "");
+    if (!userId || Object.prototype.hasOwnProperty.call(saved.notes, userId)) continue;
+    const texts = userNoteTexts(item.notes || item.note);
+    if (!texts.length) continue;
+    saved.notes[userId] = texts.map(text => ({ text }));
+    changed = true;
+  }
+  if (changed) {
+    saved.updatedAt = new Date().toISOString();
+    saved.updatedAtText = nowText();
+    await mkdir(join(ROOT, "data"), { recursive: true });
+    await writeFile(USER_NOTES_PATH, JSON.stringify(saved, null, 2));
+  }
+  return { ...saved, notesText: publicUserNotes(saved) };
+}
+
+async function saveUnifiedUserNote(body) {
+  const userId = String(body.userId || "").trim();
+  if (!userId) throw new Error("缺少用户ID。");
+  const texts = userNoteTexts(body.notes ?? body.note);
+  const noteSaved = await writeUserNoteFile(userId, texts);
+  const focusSaved = await readFocusUsers();
+  const index = focusSaved.items.findIndex(item => String(item.userId) === userId);
+  let focusUpdatedAt = focusSaved.updatedAt || "";
+  if (index >= 0) {
+    const previous = new Map((focusSaved.items[index].notes || []).map(item => [String(item?.text || item || ""), item]));
+    focusSaved.items[index] = {
+      ...focusSaved.items[index],
+      note: texts.join("\n"),
+      notes: texts.map(text => previous.get(text) || { text, createdAt: new Date().toISOString(), createdAtText: nowText() }),
+      noteUpdatedAt: new Date().toISOString(),
+      noteUpdatedAtText: nowText()
+    };
+    const writtenFocus = await writeFocusUsers(focusSaved.items, focusSaved.operatorGroups);
+    focusUpdatedAt = writtenFocus.updatedAt;
+  }
+  return { notes: publicUserNotes(noteSaved), updatedAt: noteSaved.updatedAt, updatedAtText: noteSaved.updatedAtText, focusUpdatedAt };
+}
+
 async function saveUserAlias(body) {
   const userId = String(body.userId || "").trim();
   const name = String(body.name || "").trim().slice(0, 40);
@@ -3598,7 +3677,15 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
 }
 
 async function buildFocusUsers(query = {}) {
-  const saved = await readFocusUsers();
+  const rawSaved = await readFocusUsers();
+  const unifiedNotes = await readUnifiedUserNotes(rawSaved);
+  const saved = {
+    ...rawSaved,
+    items: rawSaved.items.map(item => {
+      const texts = unifiedNotes.notesText[String(item.userId)];
+      return texts === undefined ? item : { ...item, note: texts.join("\n"), notes: texts.map(text => ({ text })) };
+    })
+  };
   const range = focusRange(query);
   const dates = dayList(range.startDate, range.endDate);
   const previousDates = dayList(range.comparisonStartDate, range.comparisonEndDate);
@@ -3971,7 +4058,9 @@ async function saveFocusUserNote(body) {
     noteUpdatedAt: new Date().toISOString(),
     noteUpdatedAtText: nowText()
   };
-  return writeFocusUsers(saved.items);
+  const written = await writeFocusUsers(saved.items);
+  await writeUserNoteFile(userId, texts);
+  return written;
 }
 
 async function saveFocusUserPin(body) {
@@ -4414,8 +4503,8 @@ async function publishPublicFocusNotes() {
 }
 
 async function pushPublicDashboard() {
-  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
-  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
+  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "business-churn-dashboard-prototype.html", "shared-business-user-data.js", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
+  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "business-churn-dashboard-prototype.html", "shared-business-user-data.js", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
   if (!status) {
     console.log(`[${nowText()}] 业务看板公开文件没有变化，跳过 GitHub 推送。`);
     return false;
@@ -4427,7 +4516,7 @@ async function pushPublicDashboard() {
 }
 
 async function pushPublicFocusNotes() {
-  const paths = ["business-user-dashboard-prototype.html", "dashboard-live-server.mjs", "README.md", "data/business-focus-notes-public.enc.json"];
+  const paths = ["business-user-dashboard-prototype.html", "business-churn-dashboard-prototype.html", "shared-business-user-data.js", "dashboard-live-server.mjs", "README.md", "data/business-focus-notes-public.enc.json"];
   await runCommand("git", ["add", ...paths]);
   const status = await runCommand("git", ["status", "--short", "--", ...paths]);
   if (!status) return false;
@@ -4633,6 +4722,16 @@ const server = createServer(async (req, res) => {
         return false;
       });
       return json(res, 200, { ok: true, ...saved, published });
+    }
+    if (url.pathname === "/api/user-notes" && req.method === "GET") {
+      const saved = await readUnifiedUserNotes();
+      return json(res, 200, { ok: true, notes: saved.notesText, updatedAt: saved.updatedAt, updatedAtText: saved.updatedAtText });
+    }
+    if (url.pathname === "/api/user-notes" && req.method === "POST") {
+      const saved = await saveUnifiedUserNote(await readBody(req));
+      json(res, 200, { ok: true, ...saved, syncing: true });
+      publishPublicFocusNotes().catch(error => console.error(`[${nowText()}] 用户统一备注公网同步失败：${error.message}`));
+      return;
     }
     if (url.pathname === "/api/request-stats") return json(res, 200, { ok: true, stats: requestStats });
     if (url.pathname === "/api/feishu/test" && req.method === "POST") {
