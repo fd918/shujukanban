@@ -4445,12 +4445,13 @@ async function encryptedPublicBusinessTrends(businesses = []) {
 
 async function sanitizePublicDashboard(data) {
   const dateRange = data.dateRange || rangeFromQuery();
-  const userAliases = await readUserAliases();
+  const [userAliases, userNotes] = await Promise.all([readUserAliases(), readUnifiedUserNotes()]);
   return {
     ok: true,
     latestDataTime: nowText(),
     dateRange,
     userAliases: userAliases.aliases,
+    userNotes: userNotes.notesText,
     config: {
       rules: data.config?.rules || defaultConfig.rules,
       refreshSeconds: data.config?.refreshSeconds || defaultConfig.refreshSeconds,
@@ -4841,7 +4842,9 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/user-notes" && req.method === "POST") {
       const saved = await saveUnifiedUserNote(await readBody(req));
       json(res, 200, { ok: true, ...saved, syncing: true });
-      publishPublicFocusNotes().catch(error => console.error(`[${nowText()}] 用户统一备注公网同步失败：${error.message}`));
+      publishPublicFocusNotes()
+        .then(() => publishLatestCachedDashboard())
+        .catch(error => console.error(`[${nowText()}] 用户统一备注公网同步失败：${error.message}`));
       return;
     }
     if (url.pathname === "/api/request-stats") return json(res, 200, { ok: true, stats: requestStats });

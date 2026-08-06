@@ -475,7 +475,7 @@
             <span class="nav-desc">业务异常与用户明细</span>
           </span>
         </button>
-        <button class="nav-btn local-only-board" type="button" data-board="churn" aria-selected="false" title="全业务流失监控" hidden>
+        <button class="nav-btn" type="button" data-board="churn" aria-selected="false" title="全业务流失监控">
           <span class="nav-icon">失</span>
           <span class="nav-text">
             <span class="nav-title">全业务流失监控</span>
@@ -528,18 +528,18 @@
       },
       business: {
         title: "用户内部看板",
-        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&v=20260806-business-layout-v3",
-        publicUrl: "./business-user-dashboard-prototype.html?embed=1&v=20260806-business-layout-v3"
+        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&v=20260806-user-drill-v4",
+        publicUrl: "./business-user-dashboard-prototype.html?embed=1&v=20260806-user-drill-v4"
       },
       churn: {
         title: "全业务流失监控",
-        localUrl: "http://127.0.0.1:8791/business-churn-dashboard-prototype.html?embed=1&v=20260806-shared-user-v3",
-        publicUrl: "about:blank"
+        localUrl: "http://127.0.0.1:8791/business-churn-dashboard-prototype.html?embed=1&v=20260806-public-user-v4",
+        publicUrl: "./business-churn-dashboard-prototype.html?embed=1&v=20260806-public-user-v4"
       },
       focus: {
         title: "重点用户看板",
-        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&view=focus&v=20260806-business-layout-v3",
-        publicUrl: "./business-user-dashboard-prototype.html?embed=1&view=focus&v=20260806-business-layout-v3"
+        localUrl: "http://127.0.0.1:8791/business-user-dashboard-prototype.html?embed=1&view=focus&v=20260806-user-drill-v4",
+        publicUrl: "./business-user-dashboard-prototype.html?embed=1&view=focus&v=20260806-user-drill-v4"
       },
       profit: {
         title: "开放平台毛利看板",
@@ -569,6 +569,7 @@
     let publicUnlocked = isLocalAccess;
     let transientPublicPassword = "";
     let activeBoardKey = "activity";
+    let pendingUserDetailId = "";
     let loadingDelayTimer = null;
     const frameReadyTimers = new Map();
     const loadedBoards = new Set();
@@ -630,6 +631,10 @@
       clearFrameReadyTimer(boardKey);
       loadedBoards.add(boardKey);
       if (activeBoardKey === boardKey) hideFrameLoading();
+      if (boardKey === "business" && pendingUserDetailId) {
+        frames.business.contentWindow?.postMessage({ type: "business-dashboard-show-user", userId: pendingUserDetailId }, "*");
+        pendingUserDetailId = "";
+      }
     }
 
     function resetPublicAccess(message) {
@@ -807,6 +812,16 @@
         markFrameReady(boardKey);
         return;
       }
+      if (event.data?.type === "business-dashboard-open-user") {
+        pendingUserDetailId = String(event.data.userId || "");
+        if (!pendingUserDetailId) return;
+        setBoard("business");
+        if (loadedBoards.has("business")) {
+          frames.business.contentWindow?.postMessage({ type: "business-dashboard-show-user", userId: pendingUserDetailId }, "*");
+          pendingUserDetailId = "";
+        }
+        return;
+      }
       if (event.data?.type === "business-dashboard-auth-failed" && !isLocalAccess) {
         resetPublicAccess("已保存的访问凭证已失效，请重新输入密码。重新输入一次后，后续会自动进入。");
         return;
@@ -863,7 +878,7 @@
     let sidebarCollapsed = false;
     if (!isLocalAccess) {
       document.querySelectorAll(".local-only-board").forEach((item) => { item.hidden = true; });
-      if (["#profit", "#churn"].includes(location.hash)) history.replaceState(null, "", "#activity");
+      if (location.hash === "#profit") history.replaceState(null, "", "#activity");
     }
     try { sidebarCollapsed = localStorage.getItem("dashboardSidebarCollapsed") === "1"; } catch {}
     applySidebarState(sidebarCollapsed);

@@ -3278,6 +3278,17 @@
       $("#modalMask").classList.remove("open");
     }
 
+    function showUserAllBusinessOrders(userId) {
+      const id = String(userId || "").trim();
+      if (!id) return;
+      openGlobalUserSearch(id, { fromFocus: true });
+    }
+
+    window.addEventListener("message", event => {
+      if (event.data?.type !== "business-dashboard-show-user") return;
+      showUserAllBusinessOrders(event.data.userId);
+    });
+
     function openFocusModal(userId = "", businessHint = "") {
       state.focusAddBusinessHint = String(businessHint || (state.focusMode === "business" ? state.focusGroup : ""));
       $("#focusAddUserId").value = userId;
@@ -5440,6 +5451,8 @@
         return;
       }
       notifyDashboardShell("business-dashboard-ready");
+      const requestedUserId = new URLSearchParams(location.search).get("user_id");
+      if (requestedUserId) showUserAllBusinessOrders(requestedUserId);
     }).catch(() => {
       notifyDashboardShell("business-dashboard-load-failed", "页面初始化失败，请重新加载。");
     });
