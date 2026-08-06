@@ -2535,7 +2535,7 @@
           saveOverridesToService(activity);
           updateMetrics();
         });
-        input.addEventListener("change", () => {
+        input.addEventListener("blur", () => {
           const sourceDate = input.dataset.estimateDate || "";
           const syncedCount = propagateEstimateToFollowingWeekdays(sourceDate, input.value);
           activity.overrides = getEstimatesFromDom();
