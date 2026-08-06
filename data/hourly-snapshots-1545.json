@@ -10283,5 +10283,22 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 80,
     "cumulativeRedemptionAmount": 2373.13
+  },
+  {
+    "activityId": "1545",
+    "title": "7.31-8.2【美团闪购】企业超市便利店专场",
+    "metric": "orders",
+    "date": "2026-08-06",
+    "hour": 17,
+    "slotMinute": 0,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-06 17:00",
+    "recordedAt": "2026/8/6 17:08:38",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 80,
+    "cumulativeRedemptionAmount": 2373.13
   }
 ]
