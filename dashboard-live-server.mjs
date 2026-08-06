@@ -3299,20 +3299,28 @@ function currentRefreshTime(config, date = new Date()) {
 
 function currentDailyHistoryFinalizationSlot(date = new Date()) {
   const currentMinute = minuteOfDay(date);
-  return DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => currentMinute >= slot.minute && currentMinute < slot.minute + 10)?.label || "";
+  return [...DAILY_HISTORY_FINALIZATION_SLOTS].reverse().find(slot => currentMinute >= slot.minute)?.label || "";
 }
 
 function historyFinalizationStatus() {
   const targetDate = shiftDay(dayKey(), -1);
   const current = userRefreshState.historyFinalizations?.[targetDate];
-  if (!current) return { targetDate, status: "scheduled", completed: 0, total: 0, failedCount: 0, attempts: [], nextAttempt: "00:30", alert: false };
+  if (!current) {
+    const nextAttempt = currentDailyHistoryFinalizationSlot() || DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => slot.minute > minuteOfDay(new Date()))?.label || "00:30";
+    return { targetDate, status: "scheduled", completed: 0, total: 0, failedCount: 0, attempts: [], nextAttempt, alert: false };
+  }
   const businessIds = [...new Set((current.businessIds || []).map(String).filter(Boolean))];
   const completed = new Set((current.completedIds || []).map(String));
   const attempts = (current.attemptSlots || []).map(item => String(item.slot || item)).filter(Boolean);
   const total = businessIds.length || Math.max(completed.size, completed.size + Object.keys(current.failures || {}).length);
   const failedCount = Math.max(0, total - completed.size);
   const exhausted = failedCount > 0 && Boolean(current.exhaustedAtText);
-  const nextAttempt = DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => !attempts.includes(slot.label))?.label || "";
+  const currentSlot = currentDailyHistoryFinalizationSlot();
+  const nextAttempt = current.completedAtText ? "" : (currentSlot && !attempts.includes(currentSlot)
+    ? currentSlot
+    : DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => slot.minute > minuteOfDay(new Date()) && !attempts.includes(slot.label))?.label
+      || DAILY_HISTORY_FINALIZATION_SLOTS.find(slot => !attempts.includes(slot.label))?.label
+      || "");
   return {
     targetDate,
     status: current.completedAtText ? "success" : exhausted ? "failed" : attempts.length ? "retrying" : "scheduled",
