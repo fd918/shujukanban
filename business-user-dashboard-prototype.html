@@ -324,7 +324,7 @@
     .trend-toolbar .field { width:min(420px,42vw); min-width:260px; }
     .trend-toolbar .btn { white-space:nowrap; }
     .list-panel-head { align-items:center; flex-wrap:nowrap; }
-    .list-panel-head > div:first-child { flex:0 0 150px; padding-top:3px; }
+    .list-panel-head > div:first-child { flex:0 0 110px; }
     #listToolbar { flex:1; flex-wrap:nowrap; justify-content:flex-end; min-width:0; overflow-x:auto; scrollbar-width:none; }
     #listToolbar::-webkit-scrollbar { display:none; }
     .unified-search { display:grid; grid-template-columns:minmax(190px,1fr) auto; gap:8px; align-items:center; flex:0 1 300px; min-width:240px; max-width:320px; }
@@ -883,7 +883,7 @@
       <div class="panel-head list-panel-head">
         <div>
           <h2 id="listTitle">业务列表</h2>
-          <small id="listSubtitle">默认展示全部业务，可在列表内筛选异常类型和排序</small>
+          <small class="hidden" id="listSubtitle"></small>
         </div>
         <div class="toolbar" id="listToolbar">
           <div class="unified-search" id="unifiedSearch">
@@ -2180,11 +2180,12 @@
 
     function renderTable() {
       $("#listTitle").textContent = state.view === "focus" ? (state.focusWorkspace === "costs" ? "营销费用预估" : "重点用户") : state.view === "daily" ? "每日业务数据" : "业务列表";
+      $("#listSubtitle").classList.toggle("hidden", state.view === "list");
       $("#listSubtitle").textContent = state.view === "focus"
         ? (state.focusWorkspace === "costs" ? "按重点用户、业务、日期和单价计算营销费用；确认后锁定订单数与金额" : `订单、佣金与 GMV 可切换；历史订单在 ${userRefreshTimesText()} 更新，历史金额可手动刷新`)
         : state.view === "daily"
           ? `按日期查看各业务订单或佣金｜每 10 分钟随业务缓存更新`
-          : "默认展示全部业务，可在列表内筛选异常类型和排序｜每 10 分钟更新";
+          : "";
       $("#businessTable").classList.toggle("hidden", state.view !== "list");
       $("#businessMobileCards").classList.toggle("hidden", state.view !== "list");
       $("#dailyMobileMatrix").classList.toggle("hidden", state.view !== "daily");
