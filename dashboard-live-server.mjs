@@ -3294,9 +3294,10 @@ async function scheduleSnapshots() {
       .finally(() => { snapshotRefreshPromise = null; });
     return true;
   };
-  const scheduleCycle = () => {
+  const scheduleCycle = (afterCurrentSlot = false) => {
     if (scheduleVersion !== snapshotScheduleVersion) return;
-    const delay = nextSnapshotDelayMs(intervalMinutes);
+    let delay = nextSnapshotDelayMs(intervalMinutes);
+    if (afterCurrentSlot && delay < 15 * 1000) delay += intervalMinutes * 60 * 1000;
     const prepareDelay = Math.max(1000, delay - 60 * 1000);
     snapshotRefreshTimer = setTimeout(prepareNextSlot, prepareDelay);
     snapshotTimer = setTimeout(run, delay);
@@ -3305,7 +3306,7 @@ async function scheduleSnapshots() {
   const run = async () => {
     if (scheduleVersion !== snapshotScheduleVersion) return;
     const slot = snapshotSlot(new Date(), intervalMinutes);
-    scheduleCycle();
+    scheduleCycle(true);
     try {
       const data = await liveDashboard({ recordSnapshot: false, query: { cache: "1", cacheOnly: "1" } });
       if (!data.businesses?.length) throw new Error("当前没有可用业务主缓存，本时间槽已跳过且不会等待中台接口");
