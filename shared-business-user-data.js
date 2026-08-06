@@ -183,7 +183,7 @@
       if (reportingMode === "t1") return {
         ...(historyUser || {}),
         ...user,
-        days: { ...(historyUser?.days || {}), ...(user.days || {}) },
+        days: mergeHistoricalDays(historyUser?.days, user.days),
         todayOrders: Number(user.todayOrders || 0),
         realtimeToday: true,
         _hasHistory: Boolean(historyUser)
@@ -192,7 +192,12 @@
       return {
         ...historyUser,
         ...user,
-        days: { ...(historyUser.days || {}), ...(realtimeToday && today ? { [today]: Number(user.todayOrders || 0) } : {}) },
+        // 当前用户接口本身也会携带已发生日期。它可能比 history 对象更新，
+        // 但异常分页也可能返回 0；统一按“非零优先”合并，避免二次渲染归零。
+        days: mergeHistoricalDays(
+          mergeHistoricalDays(historyUser.days, user.days),
+          realtimeToday && today ? { [today]: Number(user.todayOrders || 0) } : {}
+        ),
         todayOrders: realtimeToday ? Number(user.todayOrders || 0) : Number(historyUser.days?.[today] || 0),
         realtimeToday,
         _hasHistory: true

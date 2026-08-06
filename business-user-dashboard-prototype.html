@@ -1386,12 +1386,12 @@
       if (options.compactMajority && dominantMinute !== null && !differsFromMajority) return formatted;
       if (!quality || quality === "missing" || quality === "complete_day" || (quality === "exact" && !differsFromMajority)) return formatted;
       const offset = Math.abs(Number(reference.comparisonOffsetMinutes || 0));
-      const kind = quality === "legacy" ? "历史参考" : "参考";
+      const kind = quality === "legacy" || quality === "historical_nearest" ? "历史参考" : "参考";
       const majorityOffset = differsFromMajority ? actualMinute - dominantMinute : 0;
       const detail = differsFromMajority
         ? ` · 较多数${majorityOffset < 0 ? "早" : "晚"} ${Math.abs(majorityOffset)} 分钟`
         : (offset ? ` · 相差 ${offset} 分钟` : "");
-      return `${formatted}<small class="comparison-ref ${quality === "legacy" ? "legacy" : ""}" title="目标时刻 ${minuteText(reference.comparisonTargetMinute) || "-"}，实际使用 ${actualTime}">${actualTime} ${kind}${detail}</small>`;
+      return `${formatted}<small class="comparison-ref ${quality === "legacy" || quality === "historical_nearest" ? "legacy" : ""}" title="目标时刻 ${minuteText(reference.comparisonTargetMinute) || "-"}，实际使用 ${actualTime}">${actualTime} ${kind}${detail}</small>`;
     }
     function sevenDayReferenceCell(value, same = {}, formatter = fmt) {
       if (value === null || value === undefined) return "-";
@@ -4351,7 +4351,10 @@
           const id = String(user.id || user.userId || "");
           if (!id) return;
           const old = usersById.get(id) || {};
-          usersById.set(id, { ...old, ...user, days: { ...(old.days || {}), ...(user.days || {}) } });
+          const days = window.BusinessUserDataHub?.mergeHistoricalDays
+            ? window.BusinessUserDataHub.mergeHistoricalDays(old.days, user.days)
+            : { ...(old.days || {}), ...(user.days || {}) };
+          usersById.set(id, { ...old, ...user, days });
         });
         const data = {
           ...(lastGoodData || {}),
