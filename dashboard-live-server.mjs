@@ -1324,6 +1324,49 @@ function sliceCachedBusinessUserHistory(covering, startDate, endDate) {
   };
 }
 
+function mergeCachedBusinessUserHistoryRange(businessId, startDate, endDate) {
+  const dates = dayList(startDate, endDate);
+  const candidates = userDetailEntriesForBusiness(businessId).filter(item =>
+    item.key.type === "history"
+    && item.payload.partial !== true
+    && item.payload.complete !== false
+    && (item.payload.rows || []).length
+    && item.key.startDate <= endDate
+    && item.key.endDate >= startDate
+  ).sort((a, b) => {
+    const rowsDiff = (b.payload.rows || []).length - (a.payload.rows || []).length;
+    if (rowsDiff) return rowsDiff;
+    const datesDiff = (b.payload.dates?.length || 0) - (a.payload.dates?.length || 0);
+    if (datesDiff) return datesDiff;
+    return (Date.parse(String(b.payload.savedAtText || "").replace(/\//g, "-")) || 0)
+      - (Date.parse(String(a.payload.savedAtText || "").replace(/\//g, "-")) || 0);
+  });
+  const sourceByDate = new Map();
+  for (const date of dates) {
+    const source = candidates.find(item => item.key.startDate <= date && item.key.endDate >= date && (item.payload.dates || []).includes(date));
+    if (!source) return null;
+    sourceByDate.set(date, source);
+  }
+  const rowsById = new Map();
+  for (const [date, source] of sourceByDate.entries()) {
+    for (const sourceRow of source.payload.rows || []) {
+      const id = String(sourceRow.id || "");
+      if (!id) continue;
+      const row = rowsById.get(id) || attachPlainPhone({ ...sourceRow, days: {} });
+      row.days[date] = number(sourceRow.days?.[date]);
+      rowsById.set(id, row);
+    }
+  }
+  const rows = [...rowsById.values()].map(row => ({
+    ...row,
+    days: Object.fromEntries(dates.map(date => [date, number(row.days?.[date])])),
+    todayOrders: dates.reduce((sum, date) => sum + number(row.days?.[date]), 0)
+  }));
+  const selected = [...new Set(sourceByDate.values())];
+  const savedAtText = selected.map(item => item.payload.savedAtText || "").sort().at(-1) || "";
+  return { ok: true, complete: true, partial: false, cached: true, mergedCache: true, savedAtText, dates, rows, total: rows.length };
+}
+
 async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, endDate, pageSize = 5000, refresh = false, enrichPhones = true }, statuses = []) {
   const cacheKey = JSON.stringify({ type: "history", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
   const partialCacheKey = JSON.stringify({ type: "history-partial", businessId, startDate, endDate, pageSize, filterField: "order_valid" });
@@ -1337,8 +1380,17 @@ async function fetchBusinessUserHistoryRequest({ businessId = "", startDate, end
   const cachedSlice = () => sliceCachedBusinessUserHistory(covering, startDate, endDate);
   if (!refresh && covering) {
     const cached = cachedSlice();
-    statuses.push({ name: "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${cached.rows.length} 个用户、${cached.dates.length} 天${cached.staleThroughDate ? `（完整历史截至 ${cached.staleThroughDate}，今日由实时分页补齐）` : ""}`, durationMs: 0 });
-    return cached;
+    const merged = mergeCachedBusinessUserHistoryRange(businessId, startDate, endDate);
+    const preferred = merged && merged.rows.length > cached.rows.length ? merged : cached;
+    statuses.push({ name: preferred === merged ? "业务用户历史分段缓存" : "业务用户历史覆盖缓存", ok: true, message: `从已保存历史切片：${preferred.rows.length} 个用户、${preferred.dates.length} 天${cached.staleThroughDate ? `（完整历史截至 ${cached.staleThroughDate}，今日由实时分页补齐）` : ""}`, durationMs: 0 });
+    return preferred;
+  }
+  if (!refresh) {
+    const merged = mergeCachedBusinessUserHistoryRange(businessId, startDate, endDate);
+    if (merged) {
+      statuses.push({ name: "业务用户历史分段缓存", ok: true, message: `已合并保存的相邻历史：${merged.rows.length} 个用户、${merged.dates.length} 天`, durationMs: 0 });
+      return merged;
+    }
   }
   const dates = dayList(startDate, endDate);
   const params = { order_type: businessId, page: 1, pre_page: pageSize, start_date: startDate, end_date: endDate, filter_field: "order_valid" };
