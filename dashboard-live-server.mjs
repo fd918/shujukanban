@@ -1992,6 +1992,46 @@ async function fetchSynchronizedBusinessUsers(options, statuses = []) {
   return startSynchronizedBusinessUsersBuild(options, statuses, cacheKey);
 }
 
+async function alignFocusIndexWithSynchronizedBusinessUsers(cacheIndex, userIds, range) {
+  const wantedUserIds = new Set((userIds || []).map(String).filter(Boolean));
+  if (!wantedUserIds.size || !cacheIndex.size) return cacheIndex;
+  const businessIds = [...new Set(
+    [...cacheIndex.keys()]
+      .map(key => String(key).split(":")[0])
+      .filter(Boolean)
+  )];
+  const dates = dayList(range.startDate, range.endDate);
+  await mapLimit(businessIds, 4, async businessId => {
+    const data = await fetchSynchronizedBusinessUsers({
+      businessId,
+      startDate: range.startDate,
+      endDate: range.endDate,
+      pageSize: 5000,
+      refresh: false
+    }, []);
+    for (const row of data.users || []) {
+      const userId = String(row.id || row.userId || "");
+      if (!wantedUserIds.has(userId)) continue;
+      const relationKey = `${businessId}:${userId}`;
+      const current = cacheIndex.get(relationKey);
+      if (!current) continue;
+      const days = { ...(current.days || {}) };
+      for (const date of dates) {
+        if (Object.prototype.hasOwnProperty.call(row.days || {}, date)) days[date] = number(row.days[date]);
+      }
+      cacheIndex.set(relationKey, attachPlainPhone({
+        ...current,
+        ...row,
+        id: userId,
+        days,
+        primaryToday: true,
+        cacheSavedAtText: row.currentDataTime || data.currentLatestDataTime || data.latestDataTime || current.cacheSavedAtText || ""
+      }));
+    }
+  });
+  return cacheIndex;
+}
+
 function mergeBusinessCatalog(catalogRows, summaryRows, dateRange) {
   const byStatId = new Map(summaryRows.map(row => [String(row.businessId), row]));
   const merged = [];
@@ -4256,6 +4296,7 @@ async function buildFocusUsers(query = {}) {
   const snapshots = await readSnapshots();
   const catalog = await focusBusinessCatalog();
   const cacheIndex = focusUserCacheIndex(saved.items.map(item => item.userId));
+  await alignFocusIndexWithSynchronizedBusinessUsers(cacheIndex, saved.items.map(item => item.userId), range);
   const businessRows = [];
   for (const item of saved.items) {
     const hintMap = new Map(catalog.map(row => [row.businessId, row]));
