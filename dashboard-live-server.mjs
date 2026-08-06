@@ -407,8 +407,11 @@ function normalizeChurnRule(value = {}) {
     impactThreshold: Math.max(0, Number(value.impactThreshold) || 0),
     declinePct: Math.max(0, Number(value.declinePct) || 0),
     risePct: Math.max(0, Number(value.risePct) || 0),
+    fallbackImpactThreshold: Math.max(0, Number(value.fallbackImpactThreshold ?? value.impactThreshold) || 0),
     fallbackSevenDayDeclinePct: Math.max(0, Number(value.fallbackSevenDayDeclinePct) || 0),
-    mode: allowedModes.has(String(value.mode)) ? String(value.mode) : "and"
+    fallbackSevenDayRisePct: Math.max(0, Number(value.fallbackSevenDayRisePct ?? value.risePct) || 0),
+    mode: allowedModes.has(String(value.mode)) ? String(value.mode) : "and",
+    fallbackMode: allowedModes.has(String(value.fallbackMode)) ? String(value.fallbackMode) : (allowedModes.has(String(value.mode)) ? String(value.mode) : "and")
   };
 }
 

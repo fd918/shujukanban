@@ -377,9 +377,15 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .hidden { display: none !important; }
+    body.detail-only { overflow:hidden; background:#fff; }
+    body.detail-only > .topbar, body.detail-only > .content { visibility:hidden; }
+    body.detail-only #modalMask { display:none !important; }
+    body.detail-only .modal.global-user-modal { left:0; top:0; width:100%; max-width:none; height:100dvh; max-height:none; border-radius:0; box-shadow:none; transform:none; visibility:visible; }
+    body.detail-only .modal.global-user-modal.open { transform:none; }
+    body.detail-only #closeGlobalUser { display:none; }
     .refresh-switch { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
     .refresh-switch input { width:34px; height:18px; accent-color:var(--orange); cursor:pointer; }
-    .focus-shell { min-height:480px; }
+    .focus-shell { min-height:360px; }
     .focus-main { min-width:0; }
     .focus-compact-toolbar { display:flex; align-items:center; gap:6px; min-height:42px; padding:5px 10px; border-bottom:1px solid var(--line); background:#fff; }
     .focus-compact-toolbar .segmented { flex:0 0 auto; padding:2px; }
@@ -562,8 +568,8 @@
 
     @media (min-width: 961px) {
       .panel > .table-wrap.focus-table-active {
-        height: calc(100dvh - 104px);
-        min-height: 480px;
+        height: calc(100dvh - 182px);
+        min-height: 360px;
         max-height: none;
         overflow: hidden;
         background: #fff;
@@ -1252,6 +1258,8 @@
   <div class="focus-note-tooltip" id="focusNoteTooltip" role="tooltip" aria-hidden="true"></div>
 
   <script>
+    const detailOnlyMode = new URLSearchParams(location.search).get("detail_only") === "1";
+    if (detailOnlyMode) document.body.classList.add("detail-only");
     const state = { metric: "orders", level: "all", view: new URLSearchParams(location.search).get("view") === "focus" ? "focus" : "list", sort: "today", sortDir: "desc", platform: "all", search: "", dailyStart: "", dailyEnd: "", dailyBusinessId: "", mobileDailyMode: "date", businessDailyModalRow: null, config: null, summary: null, businesses: [], users: [], userAliases: {}, businessDaily: null, source: {}, dateRange: null, settingsTab: "rules", refreshTimer: null, focusSyncTimer: null, publicFocusNotesTimer: null, focusUpdatedAt: "", loading: false, refreshing: false, filtersCollapsed: false, overviewCollapsed: false, trendCollapsed: true, detailMode: "abnormal", detailScope: "today", detailSearch: "", detailSort: "impact", detailSortDir: "desc", detailExpandedUserId: "", detailMobileLimit: 80, detailHistoryUserId: "", detailReturnMode: "abnormal", detailReturnScope: "today", detailReturnSearch: "", detailRow: null, detailUsers: [], detailHistory: null, detailHistoryStart: "", detailHistoryEnd: "", detailDisplayRange: "7", detailMonthAnalysis: null, detailSyncedData: null, detailSyncedBusinessId: "", detailRefreshing: false, detailLoadingLabel: "", detailLatestTime: "", detailStats: null, detailReportingMode: "realtime", detailCurrentBusinessDate: "", detailComparisonBusinessDate: "", detailLastWeekBusinessDate: "", detailCache: {}, trendBusinessId: "", trendData: null, trendLoading: false, trendLoadedAt: 0, publicMode: false, publicEnvelopeUpdatedAt: "", publicUserDetails: {}, publicBusinessTrends: {}, publicPublishedFocusNotes: {}, publicPublishedFocusPins: {}, publicFocusNotesUpdatedAt: "", publicFocusNotesEnvelopeUpdatedAt: "", publicGlobalUserIndexManifest: null, publicGlobalUserIndexData: null, publicSnapshotRefreshInFlight: false, focusData: null, publicFocusUsers: {}, focusRange: "7", focusStart: "", focusEnd: "", focusSearch: "", focusMode: "business", focusGroup: "", focusOperatorGroupId: "", focusMetric: "orders", focusSelectedUserId: "", focusAddBusinessHint: "", focusDefaultApplied: false, focusLoading: false, focusNoteTarget: null, globalUserQuery: "", globalUserRange: "7", globalUserSelectedId: "", globalUserData: null, globalUserLoading: false };
     state.userNotes = {};
     try {
