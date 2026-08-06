@@ -25,13 +25,7 @@
 http://127.0.0.1:8791/business-churn-dashboard-prototype.html
 ```
 
-当前原型读取本机业务看板缓存 `data/business-dashboard-cache.json` 与业务用户历史缓存 `data/business-user-detail-cache.json`。重新生成本机私有原型数据时，在 macOS 终端进入项目根目录，执行：
-
-```bash
-/Users/tanwenjie/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/build-business-churn-prototype-data.py
-```
-
-生成的数据保存在 `data/private/`，已经被 `.gitignore` 排除，不会进入 GitHub。页面中业务订单展示当天实时值；用户流失判定排除当天，以最近完整自然日对比此前 7 日均值。业务规则暂时保存在当前浏览器本地，用于确认原型交互，不会改动正式配置。
+当前原型直接读取本机业务看板接口：先从 `/api/live-dashboard` 获取平台与业务列表，选择业务后再从 `/api/business-users-sync` 获取该业务的实时用户数据。用户表以“今日订单－昨日同期”计算变动比例和影响订单数；严格昨日同期快照缺失时，使用接口返回的昨日基线并在页面明确标记。每个业务的判定规则暂时保存在当前浏览器本地，用于确认原型交互，不会改动正式配置。
 
 ## 刷新接口数据
 
