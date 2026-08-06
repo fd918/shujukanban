@@ -94,6 +94,72 @@
     cache.delete(key);
   }
 
+  function dataTimeValue(value) {
+    return Date.parse(String(value || "").replace(/\//g, "-")) || 0;
+  }
+
+  function mergeHistoricalDays(base = {}, incoming = {}) {
+    const merged = { ...base };
+    Object.entries(incoming || {}).forEach(([date, value]) => {
+      if (Number(value || 0) === 0 && Number(merged[date] || 0) > 0) return;
+      merged[date] = value;
+    });
+    return merged;
+  }
+
+  function mergeHistory(base = {}, incoming = {}) {
+    const dates = [...new Set([...(base.dates || []), ...(incoming.dates || [])])].sort();
+    const rowsById = new Map((base.rows || []).map(row => [String(row.id || row.userId || ""), { ...row, days: { ...(row.days || {}) } }]));
+    (incoming.rows || []).forEach(row => {
+      const id = String(row.id || row.userId || "");
+      if (!id) return;
+      const current = rowsById.get(id) || {};
+      rowsById.set(id, { ...current, ...row, days: mergeHistoricalDays(current.days, row.days) });
+    });
+    const latestDataTime = [incoming.latestDataTime, base.latestDataTime]
+      .filter(Boolean)
+      .sort((a, b) => dataTimeValue(a) - dataTimeValue(b))
+      .at(-1) || "-";
+    return {
+      ...base,
+      ...incoming,
+      dates,
+      rows: [...rowsById.values()],
+      total: Math.max(Number(base.total || 0), Number(incoming.total || 0), rowsById.size),
+      latestDataTime
+    };
+  }
+
+  function focusDataRangeKey(data = {}) {
+    const range = data.range || {};
+    return `${range.preset || ""}:${range.startDate || ""}:${range.endDate || ""}`;
+  }
+
+  function focusDataQuality(data = {}) {
+    const rows = data.businessRows || data.rows || [];
+    let positiveCells = 0;
+    let historySum = 0;
+    rows.forEach(row => {
+      const days = row.metrics?.orders?.days || row.days || {};
+      Object.values(days).forEach(value => {
+        const amount = Number(value || 0);
+        if (amount > 0) positiveCells += 1;
+        historySum += amount;
+      });
+    });
+    return { users: (data.users || []).length, relations: rows.length, positiveCells, historySum };
+  }
+
+  function focusDataRegressed(current, incoming) {
+    if (!current || !incoming || focusDataRangeKey(current) !== focusDataRangeKey(incoming)) return false;
+    const oldQuality = focusDataQuality(current);
+    const nextQuality = focusDataQuality(incoming);
+    if (oldQuality.relations > 0 && nextQuality.relations === 0) return true;
+    if (oldQuality.users >= 4 && nextQuality.users < oldQuality.users * 0.5) return true;
+    if (oldQuality.positiveCells >= 8 && nextQuality.positiveCells < oldQuality.positiveCells * 0.3) return true;
+    return oldQuality.historySum > 100 && nextQuality.historySum < oldQuality.historySum * 0.15;
+  }
+
   function synchronizedUsers(data = {}, today = "") {
     const reportingMode = data.reportingMode || "realtime";
     const sameTimeUsers = data.sameTimeUsers || {};
@@ -154,7 +220,7 @@
     return true;
   }
 
-  const hub = { requestJson, subscribe, publish, invalidate, normalizedKey, synchronizedUsers, copyText };
+  const hub = { requestJson, subscribe, publish, invalidate, normalizedKey, mergeHistoricalDays, mergeHistory, focusDataRegressed, synchronizedUsers, copyText };
   root.__YUNZHAN_BUSINESS_USER_DATA_HUB__ = hub;
   window.BusinessUserDataHub = hub;
 })();

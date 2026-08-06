@@ -2617,6 +2617,7 @@
     }
 
     function focusDataRegressed(current, incoming) {
+      if (window.BusinessUserDataHub?.focusDataRegressed) return window.BusinessUserDataHub.focusDataRegressed(current, incoming);
       if (!current || !incoming || focusDataRangeKey(current) !== focusDataRangeKey(incoming)) return false;
       const oldQuality = focusDataQuality(current);
       const nextQuality = focusDataQuality(incoming);
@@ -4371,6 +4372,7 @@
     }
 
     function mergeBusinessUserHistory(base = {}, incoming = {}) {
+      if (window.BusinessUserDataHub?.mergeHistory) return window.BusinessUserDataHub.mergeHistory(base, incoming);
       const dates = [...new Set([...(base.dates || []), ...(incoming.dates || [])])].sort();
       const rowsById = new Map((base.rows || []).map(row => [String(row.id || row.userId || ""), { ...row, days: { ...(row.days || {}) } }]));
       (incoming.rows || []).forEach(row => {
