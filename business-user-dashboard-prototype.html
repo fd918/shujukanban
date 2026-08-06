@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>业务异常监控</title>
   <script src="vendor/fflate.min.js"></script>
+  <script src="./shared-business-user-data.js"></script>
   <script>
     (() => {
       const params = new URLSearchParams(location.search);
@@ -116,7 +117,7 @@
     .source code { padding: 1px 4px; border-radius: 4px; background: rgba(255,255,255,.72); color: inherit; overflow-wrap: anywhere; }
 
     .kpis { margin-top: 14px; display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }
-    .kpis.overview-collapsed, #trendPanel.overview-collapsed { display: none; }
+    #trendPanel.overview-collapsed { display: none; }
     .kpi { padding: 14px; display: grid; gap: 8px; }
     .kpi label { color: var(--muted); font-size: 12px; }
     .kpi strong { font-size: 24px; }
@@ -307,12 +308,28 @@
     .notification-item small { color: var(--muted); line-height: 1.45; }
     .inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .mobile-filter-toggle { display: none; margin-bottom: 10px; }
-    .chart-wrap { padding: 14px; }
-    .chart-stage { width: 100%; height: 300px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(#fff, #fbfcfe); }
+    .trend-panel-head { flex-wrap: nowrap; }
+    .trend-heading { min-width: 150px; }
+    .trend-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .trend-pane { min-width:0; padding:12px 14px 14px; }
+    .trend-pane + .trend-pane { border-left:1px solid var(--line); }
+    .trend-pane-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; min-height:38px; margin-bottom:7px; }
+    .trend-pane-title strong { display:block; font-size:13px; }
+    .trend-pane-title small { display:block; margin-top:3px; }
+    .chart-stage { width: 100%; height: 240px; background: linear-gradient(#fff, #fbfcfe); }
     .chart-stage svg { width: 100%; height: 100%; display: block; }
     .chart-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-    .trend-toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) auto; gap: 8px; align-items: center; }
+    .trend-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; flex:1; }
+    .trend-toolbar .field { width:min(420px,42vw); min-width:260px; }
+    .trend-toolbar .btn { white-space:nowrap; }
+    .list-panel-head { align-items:flex-start; }
+    .list-panel-head > div:first-child { flex:0 0 190px; padding-top:3px; }
+    #listToolbar { flex:1; justify-content:flex-end; min-width:0; }
+    .unified-search { display:grid; grid-template-columns:minmax(250px,1fr) auto; gap:8px; align-items:center; flex:1 1 430px; min-width:300px; }
+    .unified-search .search-with-clear { max-width:none; }
+    .unified-search .field { min-width:0; }
+    #levelTabs { flex:1 1 100%; justify-content:flex-end; }
     .daily-controls { display: none; gap: 8px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); background: #f8fafc; border-radius: 8px; padding: 8px; }
     .daily-controls.open { display: flex; }
     .daily-controls .field { width: 154px; }
@@ -638,7 +655,15 @@
       .topbar.mobile-header-collapsed .top-actions { width:auto; margin-left:auto; }
       .content { padding: 14px; }
       .panel-head { align-items:flex-start; }
+      .trend-panel-head { flex-wrap:wrap; }
+      .trend-heading { min-width:0; }
+      .trend-toolbar { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto auto; }
+      .trend-toolbar .field { width:100%; min-width:0; }
+      .trend-grid { grid-template-columns:1fr; }
+      .trend-pane + .trend-pane { border-left:0; border-top:1px solid var(--line); }
+      .list-panel-head > div:first-child { flex:0 0 auto; width:100%; }
       #listToolbar { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+      #listToolbar > .unified-search { grid-column:1/-1; width:100%; min-width:0; }
       #listToolbar > #viewTabs { grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; }
       #listToolbar > #viewTabs button { min-height:44px; }
       #dailyControls.open { grid-column:1/-1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); width:100%; gap:7px; }
@@ -651,7 +676,7 @@
       .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .kpi { padding: 11px; }
       .kpi strong { font-size: 20px; }
-      .chart-stage { height: 240px; }
+      .chart-stage { height: 220px; }
       .focus-add-grid { grid-template-columns:1fr; }
       .focus-workspace-tabs { flex-wrap:wrap; }
       .focus-group-bar { width:100%; flex-basis:100%; }
@@ -814,59 +839,55 @@
       <div id="topbarStatus"><strong id="latestTime">最新数据：等待刷新</strong><span id="snapshotInfo">快照：等待记录</span></div>
       <button class="btn mobile-header-toggle" id="mobileHeaderToggle" type="button" aria-expanded="true" aria-controls="pageSubtitle topbarStatus">收起页头</button>
       <button class="icon-btn primary" id="refreshBtn" title="刷新">↻</button>
-      <button class="btn" id="overviewToggle">收起概览</button>
       <button class="btn" id="helpBtn">说明</button>
       <button class="btn hidden" id="settingsBtn">设置中心</button>
     </div>
   </header>
 
   <main class="content">
-    <button class="btn mobile-filter-toggle" id="filterToggle">展开筛选和提示</button>
-    <section class="filters" id="businessFilters">
-      <select class="field" id="platformSelect"><option value="all">全部平台</option></select>
-      <input class="field" id="searchInput" placeholder="搜索业务名称、平台或业务ID">
-      <div class="global-user-search">
-        <div class="search-with-clear"><input class="field" id="globalUserSearchInput" placeholder="查询用户ID或名称（跨业务）"><button class="search-clear hidden" id="globalUserSearchClear" title="清空用户搜索">×</button></div>
-        <button class="btn primary" id="globalUserSearchBtn">查询用户</button>
-      </div>
-    </section>
-
-    <section class="source" id="sourceBox">
-      <strong>数据状态：</strong><span id="sourceText">等待接口返回。</span><span class="muted">｜业务指标与列表：每 10 分钟更新</span>
-    </section>
-
-    <section class="kpis" id="businessKpis">
-      <article class="kpi"><label>全部业务</label><strong id="kpiTotalBusiness">0</strong><span>每 10 分钟更新</span></article>
-      <article class="kpi"><label>全部订单数</label><strong id="kpiTotalOrders">0</strong><span>今日数据｜每 10 分钟更新</span></article>
-      <article class="kpi"><label>全部GMV</label><strong id="kpiTotalGmv">0</strong><span>今日数据｜每 10 分钟更新</span></article>
-      <article class="kpi"><label>异常业务</label><strong id="kpiAbnormal">0</strong><span>按规则计算｜每 10 分钟更新</span></article>
-    </section>
+    <select class="hidden" id="platformSelect" aria-hidden="true"><option value="all">全部平台</option></select>
 
     <section class="panel" id="trendPanel">
-      <div class="panel-head">
-        <div>
-          <h2>业务小时趋势</h2>
-          <small>今日、昨日、上周同期 24 小时订单走势｜每 10 分钟更新</small>
+      <div class="panel-head trend-panel-head">
+        <div class="trend-heading">
+          <h2>业务趋势</h2>
+          <small>小时走势与近七日变化｜每 10 分钟更新</small>
         </div>
         <div class="trend-toolbar">
-          <button class="btn" id="trendToggle">展开趋势</button>
-          <select class="field" id="trendBusinessSelect" style="min-width:260px;"></select>
-          <button class="btn" id="trendRefreshBtn">刷新趋势</button>
+          <select class="field" id="trendBusinessSelect" aria-label="选择趋势业务"></select>
+          <button class="btn" id="trendRefreshBtn" title="刷新当前业务趋势">↻ 刷新</button>
+          <button class="btn" id="trendToggle">展开</button>
         </div>
       </div>
-      <div class="chart-wrap hidden" id="trendContent">
-        <div class="chart-legend" id="trendLegend"></div>
-        <div class="chart-stage" id="trendChart"></div>
+      <div class="trend-grid hidden" id="trendContent">
+        <section class="trend-pane">
+          <div class="trend-pane-head">
+            <div class="trend-pane-title"><strong>24 小时订单趋势</strong><small>今日、昨日、上周同期同一自然时刻</small></div>
+            <div class="chart-legend" id="trendLegend"></div>
+          </div>
+          <div class="chart-stage" id="trendChart"></div>
+        </section>
+        <section class="trend-pane">
+          <div class="trend-pane-head">
+            <div class="trend-pane-title"><strong>近七日订单趋势</strong><small>每日完整订单；今日显示截至当前时刻</small></div>
+            <div class="chart-legend" id="dailyTrendLegend"></div>
+          </div>
+          <div class="chart-stage" id="dailyTrendChart"></div>
+        </section>
       </div>
     </section>
 
     <section class="panel">
-      <div class="panel-head">
+      <div class="panel-head list-panel-head">
         <div>
           <h2 id="listTitle">业务列表</h2>
           <small id="listSubtitle">默认展示全部业务，可在列表内筛选异常类型和排序</small>
         </div>
         <div class="toolbar" id="listToolbar">
+          <div class="unified-search" id="unifiedSearch">
+            <div class="search-with-clear"><input class="field" id="searchInput" placeholder="搜索业务、平台、业务ID，或输入用户名称 / ID"><button class="search-clear hidden" id="globalUserSearchClear" title="清空查询">×</button></div>
+            <button class="btn primary" id="globalUserSearchBtn">查询</button>
+          </div>
           <div class="segmented" id="viewTabs">
             <button class="active" data-view="list">业务列表</button>
             <button data-view="daily">每日业务数据</button>
@@ -1422,6 +1443,9 @@
     async function requestJson(url, options = {}) {
       let res;
       try {
+        if (window.BusinessUserDataHub && String(options.method || "GET").toUpperCase() === "GET") {
+          return await window.BusinessUserDataHub.requestJson(url, options);
+        }
         res = await fetch(url, options);
       } catch (error) {
         const target = url.startsWith("http://127.0.0.1") || location.protocol === "file:" ? "本地服务 http://127.0.0.1:8791" : "接口服务";
@@ -1888,6 +1912,27 @@
       return rows.sort((a, b) => sortRows(a, b) || rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
     }
 
+    function runUnifiedSearch() {
+      const query = $("#searchInput").value.trim();
+      $("#globalUserSearchClear").classList.toggle("hidden", !query);
+      state.dailyBusinessId = "";
+      if (!query) {
+        state.search = "";
+        render();
+        return;
+      }
+      const key = query.toLowerCase();
+      const businessMatches = state.businesses.filter(row => `${row.platform || ""}${row.name || ""}${row.businessId || ""}${row.platformBusinessId || ""}`.toLowerCase().includes(key));
+      if (businessMatches.length) {
+        state.search = query;
+        render();
+        return;
+      }
+      state.search = "";
+      renderTable();
+      openGlobalUserSearch(query);
+    }
+
     function abnormalUsers() {
       return state.users.map(row => ({ ...row, cmp: compare(row) })).filter(row => row.cmp.level !== "normal").sort((a, b) => rank(b.cmp.level) - rank(a.cmp.level) || b.cmp.impact - a.cmp.impact);
     }
@@ -1896,15 +1941,6 @@
       const platforms = Array.from(new Set(state.businesses.map(row => row.platform).filter(Boolean))).sort();
       $("#platformSelect").innerHTML = `<option value="all">全部平台</option>` + platforms.map(item => `<option value="${item}">${item}</option>`).join("");
       $("#platformSelect").value = state.platform;
-    }
-
-    function renderKpis() {
-      const biz = state.businesses.map(compare).filter(item => item.level !== "normal");
-      const summary = state.summary || {};
-      $("#kpiTotalBusiness").textContent = fmt(state.businesses.length);
-      $("#kpiTotalOrders").textContent = fmt(summary.orders ?? state.businesses.reduce((sum, row) => sum + Number(row.todayOrders || 0), 0));
-      $("#kpiTotalGmv").textContent = money(summary.paidAmount ?? summary.totalAmount ?? state.businesses.reduce((sum, row) => sum + Number(row.todayAmount || 0), 0));
-      $("#kpiAbnormal").textContent = fmt(biz.length);
     }
 
     function defaultTrendBusinessId() {
@@ -1925,12 +1961,6 @@
         }).join("");
     }
 
-    function renderMobileFilters() {
-      $(".filters").classList.toggle("mobile-collapsed", state.filtersCollapsed);
-      $("#sourceBox").classList.toggle("mobile-collapsed", state.filtersCollapsed);
-      $("#filterToggle").textContent = state.filtersCollapsed ? "展开筛选和提示" : "收起筛选和提示";
-    }
-
     function renderLocalControls() {
       const focusMode = state.view === "focus";
       $("#pageTitle").textContent = focusMode ? "重点用户看板" : "业务异常监控";
@@ -1938,32 +1968,64 @@
       $("#settingsBtn").classList.toggle("hidden", !isLocalSettings);
       $("#dailyControls").classList.toggle("open", state.view === "daily");
       $("#viewTabs").classList.toggle("hidden", focusMode);
-      $(".filters").classList.toggle("hidden", state.view !== "list");
+      $("#unifiedSearch").classList.toggle("hidden", state.view !== "list");
       $("#levelTabs").classList.toggle("hidden", state.view !== "list");
       $("#metricTabs").classList.toggle("hidden", state.view === "focus");
     }
 
     function renderOverviewToggle() {
-      $(".kpis").classList.toggle("overview-collapsed", state.overviewCollapsed || state.view === "focus");
-      $("#trendPanel").classList.toggle("overview-collapsed", state.overviewCollapsed || state.view === "focus");
-      $("#overviewToggle").textContent = state.overviewCollapsed ? "展开概览" : "收起概览";
       $("#trendContent").classList.toggle("hidden", state.trendCollapsed);
-      $("#trendBusinessSelect").classList.toggle("hidden", state.trendCollapsed);
-      $("#trendRefreshBtn").classList.toggle("hidden", state.trendCollapsed);
-      $("#trendToggle").textContent = state.trendCollapsed ? "展开趋势" : "收起趋势";
+      $("#trendToggle").textContent = state.trendCollapsed ? "展开" : "收起";
+    }
+
+    function selectedBusinessDailyTrend() {
+      const id = String(state.trendBusinessId || "");
+      const daily = state.businessDaily || {};
+      const row = (daily.rows || []).find(item => [item.platformBusinessId, item.businessId].filter(Boolean).some(value => String(value) === id));
+      const current = state.businesses.find(item => [item.platformBusinessId, item.businessId].filter(Boolean).some(value => String(value) === id));
+      const dates = (daily.dates || []).slice().sort().slice(-7);
+      const today = dayText(new Date());
+      return {
+        dates,
+        values: dates.map(date => date === today && current ? Number(current.todayOrders || 0) : Number(row?.days?.[date]?.orders || 0))
+      };
+    }
+
+    function renderDailyTrendChart() {
+      const daily = selectedBusinessDailyTrend();
+      $("#dailyTrendLegend").innerHTML = daily.dates.length
+        ? `<span><i class="legend-dot" style="background:#7c5ce5"></i>近七日订单</span>`
+        : `<span class="muted">等待每日业务缓存</span>`;
+      if (!daily.dates.length) {
+        $("#dailyTrendChart").innerHTML = `<div class="source" style="margin:14px;">暂无近七日数据</div>`;
+        return;
+      }
+      const width = 720, height = 260, pad = { left: 58, right: 20, top: 22, bottom: 40 };
+      const maxValue = Math.max(1, ...daily.values);
+      const x = index => pad.left + (index / Math.max(1, daily.dates.length - 1)) * (width - pad.left - pad.right);
+      const y = value => height - pad.bottom - (Number(value || 0) / maxValue) * (height - pad.top - pad.bottom);
+      const grid = [0, .25, .5, .75, 1].map(rate => {
+        const yy = y(maxValue * rate);
+        return `<line x1="${pad.left}" y1="${yy}" x2="${width - pad.right}" y2="${yy}" stroke="#edf1f6"/><text x="8" y="${yy + 4}" fill="#667085" font-size="11">${fmt(Math.round(maxValue * rate))}</text>`;
+      }).join("");
+      const labels = daily.dates.map((date, index) => `<text x="${x(index)}" y="${height - 12}" text-anchor="middle" fill="#667085" font-size="11">${date.slice(5)}</text>`).join("");
+      const path = daily.values.map((value, index) => `${index ? "L" : "M"}${x(index)} ${y(value)}`).join(" ");
+      const points = daily.values.map((value, index) => `<circle cx="${x(index)}" cy="${y(value)}" r="3.8" fill="#7c5ce5" data-tip="${daily.dates[index]}：${fmt(value)} 单"><title>${daily.dates[index]}：${fmt(value)} 单</title></circle>`).join("");
+      $("#dailyTrendChart").innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="业务近七日订单趋势">${grid}${labels}<line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#d9e0e8"/><path d="${path}" fill="none" stroke="#7c5ce5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g>${points}</g></svg>`;
     }
 
     function renderTrendChart() {
       const colors = ["#2563eb", "#e88a00", "#16a34a"];
       const data = state.trendData;
+      renderDailyTrendChart();
       $("#trendLegend").innerHTML = data?.series?.length
-        ? data.series.map((item, index) => `<span><i class="legend-dot" style="background:${colors[index]}"></i>${item.label} ${item.date}</span>`).join("") + `<span class="muted">来源：中台小时趋势接口</span>`
+        ? data.series.map((item, index) => `<span><i class="legend-dot" style="background:${colors[index]}"></i>${item.label}</span>`).join("")
         : `<span class="muted">${state.trendLoading ? "趋势加载中..." : "等待选择业务"}</span>`;
       if (!data?.series?.length) {
-        $("#trendChart").innerHTML = `<div class="source" style="margin:14px;">${state.trendLoading ? "正在加载业务小时趋势..." : "暂无趋势数据"}</div>`;
+        $("#trendChart").innerHTML = `<div class="source" style="margin:14px;">${state.trendLoading ? "正在加载业务小时趋势..." : "暂无小时趋势数据"}</div>`;
         return;
       }
-      const width = 960, height = 300, pad = { left: 54, right: 18, top: 22, bottom: 34 };
+      const width = 720, height = 260, pad = { left: 58, right: 20, top: 22, bottom: 40 };
       const maxValue = Math.max(1, ...data.series.flatMap(item => (item.points || []).map(point => Number(point.orders || 0))));
       const x = hour => pad.left + (hour / 23) * (width - pad.left - pad.right);
       const y = value => height - pad.bottom - (Number(value || 0) / maxValue) * (height - pad.top - pad.bottom);
@@ -1971,13 +2033,13 @@
         const yy = y(maxValue * rate);
         return `<line x1="${pad.left}" y1="${yy}" x2="${width - pad.right}" y2="${yy}" stroke="#edf1f6"/><text x="8" y="${yy + 4}" fill="#667085" font-size="11">${fmt(Math.round(maxValue * rate))}</text>`;
       }).join("");
-      const hourTicks = [0, 3, 6, 9, 12, 15, 18, 21, 23].map(hour => `<text x="${x(hour)}" y="${height - 10}" text-anchor="middle" fill="#667085" font-size="11">${String(hour).padStart(2, "0")}:00</text>`).join("");
+      const hourTicks = [0, 6, 12, 18, 23].map(hour => `<text x="${x(hour)}" y="${height - 12}" text-anchor="middle" fill="#667085" font-size="11">${String(hour).padStart(2, "0")}:00</text>`).join("");
       const paths = data.series.map((item, index) => {
         const points = item.points || [];
         const d = points.map((point, i) => `${i ? "L" : "M"}${x(point.hour)} ${y(point.orders)}`).join(" ");
-        return `<path d="${d}" fill="none" stroke="${colors[index]}" stroke-width="2.4"/><g>${points.map(point => `<circle cx="${x(point.hour)}" cy="${y(point.orders)}" r="3.2" fill="${colors[index]}" data-tip="${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单"><title>${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单</title></circle>`).join("")}</g>`;
+        return `<path d="${d}" fill="none" stroke="${colors[index]}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><g>${points.map(point => `<circle cx="${x(point.hour)}" cy="${y(point.orders)}" r="3.2" fill="${colors[index]}" data-tip="${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单"><title>${item.label} ${String(point.hour).padStart(2, "0")}:00：${fmt(point.orders)} 单</title></circle>`).join("")}</g>`;
       }).join("");
-      $("#trendChart").innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="业务小时订单趋势">${grid}${hourTicks}<line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${height - pad.bottom}" stroke="#d9e0e8"/><line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#d9e0e8"/>${paths}</svg>`;
+      $("#trendChart").innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="业务小时订单趋势">${grid}${hourTicks}<line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#d9e0e8"/>${paths}</svg>`;
     }
 
     async function loadBusinessTrend(refresh = false) {
@@ -2014,15 +2076,6 @@
         ? `缓存数据：${state.source.cacheSavedAt || state.source.latestDataTime || "未知时间"}`
         : (state.source.latestDataTime ? `最新数据：${state.source.latestDataTime}` : "最新数据：等待刷新");
       $("#snapshotInfo").textContent = `页面检查：${state.config?.refreshSeconds || 60} 秒（只读缓存）｜业务与趋势：每 ${state.config?.snapshotMinutes || 10} 分钟`;
-      const missing = state.source.missing || [];
-      $("#sourceBox").classList.toggle("warn", missing.length > 0);
-      $("#sourceText").textContent = state.loading
-        ? "数据加载中：正在请求中台业务数据、小时趋势和用户统计，请稍等。"
-        : (state.refreshing
-          ? "正在刷新最新数据，当前列表先保留上一次结果，刷新完成后会自动更新。"
-        : (missing.length ? missing.join("；") : (state.source.cached
-          ? `${state.source.cacheFallback ? "当前日期暂无缓存，已显示最近一次有数据缓存" : "当前显示本地缓存"}：${state.source.cacheSavedAt || "未知时间"}。需要最新数据请点右上角刷新。`
-          : (state.publicMode ? "当前为公网加密快照，已解密展示业务和用户明细。" : "已接入中台业务数据总览接口；当前固定展示今日数据，今天看前一日同时刻。"))));
     }
 
     function renderBusinessMobileCards(rows) {
@@ -2234,6 +2287,7 @@
       state.dailyBusinessId = String(row.platformBusinessId || row.businessId || "");
       state.search = "";
       $("#searchInput").value = "";
+      $("#globalUserSearchClear").classList.add("hidden");
       $$("#viewTabs button").forEach(item => item.classList.toggle("active", item.dataset.view === "daily"));
       render();
       $("#listTitle").textContent = `${row.name}｜每日业务数据`;
@@ -3461,18 +3515,12 @@
 
     function render() {
       const focusOnly = state.view === "focus";
-      $("#businessFilters").classList.toggle("hidden", focusOnly);
-      $("#businessKpis").classList.toggle("hidden", focusOnly);
       $("#trendPanel").classList.toggle("hidden", focusOnly);
       $("#listToolbar").classList.toggle("hidden", focusOnly);
-      $("#overviewToggle").classList.toggle("hidden", focusOnly);
-      $("#filterToggle").classList.toggle("hidden", focusOnly);
       renderPlatforms();
-      renderKpis();
       renderSource();
       renderTrendOptions();
       renderTrendChart();
-      renderMobileFilters();
       renderLocalControls();
       renderOverviewToggle();
       renderTable();
@@ -4782,18 +4830,20 @@
       render();
     }));
     $("#platformSelect").addEventListener("change", e => { state.platform = e.target.value; render(); });
-    $("#searchInput").addEventListener("input", e => { state.search = e.target.value.trim(); state.dailyBusinessId = ""; render(); });
-    $("#globalUserSearchInput").addEventListener("input", e => {
+    $("#searchInput").addEventListener("input", e => {
       $("#globalUserSearchClear").classList.toggle("hidden", !e.target.value);
     });
-    $("#globalUserSearchInput").addEventListener("keydown", e => {
-      if (e.key === "Enter") openGlobalUserSearch(e.target.value);
+    $("#searchInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") runUnifiedSearch();
     });
-    $("#globalUserSearchBtn").addEventListener("click", () => openGlobalUserSearch($("#globalUserSearchInput").value));
+    $("#globalUserSearchBtn").addEventListener("click", runUnifiedSearch);
     $("#globalUserSearchClear").addEventListener("click", () => {
-      $("#globalUserSearchInput").value = "";
+      $("#searchInput").value = "";
+      state.search = "";
+      state.dailyBusinessId = "";
       $("#globalUserSearchClear").classList.add("hidden");
-      $("#globalUserSearchInput").focus();
+      render();
+      $("#searchInput").focus();
     });
     $("#dailyStart").addEventListener("click", e => openDatePicker(e.target));
     $("#dailyEnd").addEventListener("click", e => openDatePicker(e.target));
@@ -4805,18 +4855,12 @@
     $("#mobileHeaderToggle").addEventListener("click", () => {
       setMobileHeaderCollapsed(!$("#dashboardTopbar").classList.contains("mobile-header-collapsed"), true);
     });
-    $("#overviewToggle").addEventListener("click", () => {
-      state.overviewCollapsed = !state.overviewCollapsed;
-      writeLocalValue("businessDashboardOverviewCollapsed", state.overviewCollapsed ? "1" : "0");
-      renderOverviewToggle();
-    });
     $("#trendToggle").addEventListener("click", () => {
       state.trendCollapsed = !state.trendCollapsed;
       writeLocalValue("businessDashboardTrendCollapsed", state.trendCollapsed ? "1" : "0");
       renderOverviewToggle();
       if (!state.trendCollapsed) loadBusinessTrend(false);
     });
-    $("#filterToggle").addEventListener("click", () => { state.filtersCollapsed = !state.filtersCollapsed; renderMobileFilters(); });
     $("#trendBusinessSelect").addEventListener("change", e => { state.trendBusinessId = e.target.value; state.trendData = null; loadBusinessTrend(true); });
     $("#trendRefreshBtn").addEventListener("click", () => loadBusinessTrend(true));
     $("#trendChart").addEventListener("mousemove", e => {
@@ -4832,6 +4876,19 @@
       tip.style.display = "block";
     });
     $("#trendChart").addEventListener("mouseleave", () => { $("#chartTooltip").style.display = "none"; });
+    $("#dailyTrendChart").addEventListener("mousemove", e => {
+      const target = e.target.closest("[data-tip]");
+      const tip = $("#chartTooltip");
+      if (!target) {
+        tip.style.display = "none";
+        return;
+      }
+      tip.textContent = target.dataset.tip;
+      tip.style.left = `${e.clientX + 12}px`;
+      tip.style.top = `${e.clientY + 12}px`;
+      tip.style.display = "block";
+    });
+    $("#dailyTrendChart").addEventListener("mouseleave", () => { $("#chartTooltip").style.display = "none"; });
     $("#helpBtn").addEventListener("click", openHelp);
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#closeHelp").addEventListener("click", closeHelp);
