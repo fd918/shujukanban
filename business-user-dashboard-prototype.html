@@ -323,13 +323,14 @@
     .trend-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; flex:1; }
     .trend-toolbar .field { width:min(420px,42vw); min-width:260px; }
     .trend-toolbar .btn { white-space:nowrap; }
-    .list-panel-head { align-items:flex-start; }
-    .list-panel-head > div:first-child { flex:0 0 190px; padding-top:3px; }
-    #listToolbar { flex:1; justify-content:flex-end; min-width:0; }
-    .unified-search { display:grid; grid-template-columns:minmax(250px,1fr) auto; gap:8px; align-items:center; flex:1 1 430px; min-width:300px; }
+    .list-panel-head { align-items:center; flex-wrap:nowrap; }
+    .list-panel-head > div:first-child { flex:0 0 150px; padding-top:3px; }
+    #listToolbar { flex:1; flex-wrap:nowrap; justify-content:flex-end; min-width:0; overflow-x:auto; scrollbar-width:none; }
+    #listToolbar::-webkit-scrollbar { display:none; }
+    .unified-search { display:grid; grid-template-columns:minmax(190px,1fr) auto; gap:8px; align-items:center; flex:0 1 300px; min-width:240px; max-width:320px; }
     .unified-search .search-with-clear { max-width:none; }
     .unified-search .field { min-width:0; }
-    #levelTabs { flex:1 1 100%; justify-content:flex-end; }
+    #levelTabs { flex:0 0 auto; justify-content:flex-end; }
     .daily-controls { display: none; gap: 8px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); background: #f8fafc; border-radius: 8px; padding: 8px; }
     .daily-controls.open { display: flex; }
     .daily-controls .field { width: 154px; }
@@ -661,6 +662,7 @@
       .trend-toolbar .field { width:100%; min-width:0; }
       .trend-grid { grid-template-columns:1fr; }
       .trend-pane + .trend-pane { border-left:0; border-top:1px solid var(--line); }
+      .list-panel-head { flex-wrap:wrap; }
       .list-panel-head > div:first-child { flex:0 0 auto; width:100%; }
       #listToolbar { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
       #listToolbar > .unified-search { grid-column:1/-1; width:100%; min-width:0; }
@@ -869,7 +871,7 @@
         </section>
         <section class="trend-pane">
           <div class="trend-pane-head">
-            <div class="trend-pane-title"><strong>近七日订单趋势</strong><small>每日完整订单；今日显示截至当前时刻</small></div>
+            <div class="trend-pane-title"><strong>近七日订单趋势</strong><small>最近七个完整自然日，不包含今日</small></div>
             <div class="chart-legend" id="dailyTrendLegend"></div>
           </div>
           <div class="chart-stage" id="dailyTrendChart"></div>
@@ -885,7 +887,7 @@
         </div>
         <div class="toolbar" id="listToolbar">
           <div class="unified-search" id="unifiedSearch">
-            <div class="search-with-clear"><input class="field" id="searchInput" placeholder="搜索业务、平台、业务ID，或输入用户名称 / ID"><button class="search-clear hidden" id="globalUserSearchClear" title="清空查询">×</button></div>
+            <div class="search-with-clear"><input class="field" id="searchInput" placeholder="搜索业务，或输入用户名称 / ID"><button class="search-clear hidden" id="globalUserSearchClear" title="清空查询">×</button></div>
             <button class="btn primary" id="globalUserSearchBtn">查询</button>
           </div>
           <div class="segmented" id="viewTabs">
@@ -2027,19 +2029,18 @@
       const id = String(state.trendBusinessId || "");
       const daily = state.businessDaily || {};
       const row = (daily.rows || []).find(item => [item.platformBusinessId, item.businessId].filter(Boolean).some(value => String(value) === id));
-      const current = state.businesses.find(item => [item.platformBusinessId, item.businessId].filter(Boolean).some(value => String(value) === id));
-      const dates = (daily.dates || []).slice().sort().slice(-7);
       const today = dayText(new Date());
+      const dates = (daily.dates || []).slice().sort().filter(date => date < today).slice(-7);
       return {
         dates,
-        values: dates.map(date => date === today && current ? Number(current.todayOrders || 0) : Number(row?.days?.[date]?.orders || 0))
+        values: dates.map(date => Number(row?.days?.[date]?.orders || 0))
       };
     }
 
     function renderDailyTrendChart() {
       const daily = selectedBusinessDailyTrend();
       $("#dailyTrendLegend").innerHTML = daily.dates.length
-        ? `<span><i class="legend-dot" style="background:#7c5ce5"></i>近七日订单</span>`
+        ? `<span><i class="legend-dot" style="background:#7c5ce5"></i>最近七个完整日（不含今日）</span>`
         : `<span class="muted">等待每日业务缓存</span>`;
       if (!daily.dates.length) {
         $("#dailyTrendChart").innerHTML = `<div class="source" style="margin:14px;">暂无近七日数据</div>`;
