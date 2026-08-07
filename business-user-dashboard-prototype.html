@@ -1853,8 +1853,8 @@
       return state.detailReportingMode === "t1" ? "上周同日" : "上周同时刻";
     }
 
-    function detailCacheKey(row = state.detailRow, scope = state.detailScope) {
-      return `${row?.platformBusinessId || row?.businessId || ""}|${scope}|${state.source?.latestDataTime || ""}`;
+    function detailCacheKey(row = state.detailRow) {
+      return String(row?.platformBusinessId || row?.businessId || "");
     }
 
     function findCurrentBusiness(row = state.detailRow) {
@@ -2644,7 +2644,7 @@
       }
       const loadVersion = ++state.focusLoadVersion;
       const lastGoodData = state.focusData;
-      state.focusLoading = true;
+      state.focusLoading = !lastGoodData;
       renderFocusUsers();
       try {
         const params = new URLSearchParams({ preset: state.focusRange, _: Date.now() });
@@ -2652,7 +2652,10 @@
           params.set("start_date", state.focusStart);
           params.set("end_date", state.focusEnd);
         }
-        const incoming = await requestJson(apiUrl(`/api/focus-users?${params}`));
+        const incoming = await requestJson(apiUrl(`/api/focus-users?${params}`), {
+          ttlMs: 10 * 60 * 1000,
+          staleWhileRevalidate: Boolean(lastGoodData)
+        });
         if (loadVersion !== state.focusLoadVersion) return;
         if (focusDataRegressed(lastGoodData, incoming)) {
           toast("重点用户本轮缓存不完整，已继续保留上一份非零数据");
@@ -2842,11 +2845,16 @@
         renderMarketingCosts();
         return;
       }
-      state.marketingCostLoading = true;
+      const lastGoodData = state.marketingCosts;
+      state.marketingCostLoading = !lastGoodData;
       renderMarketingCosts();
       try {
         const refreshValue = refresh ? "1" : "0";
-        state.marketingCosts = await requestJson(apiUrl("/api/marketing-costs?refresh=" + refreshValue + "&_=" + Date.now()));
+        state.marketingCosts = await requestJson(apiUrl("/api/marketing-costs?refresh=" + refreshValue + "&_=" + Date.now()), {
+          force: refresh,
+          ttlMs: 10 * 60 * 1000,
+          staleWhileRevalidate: Boolean(lastGoodData) && !refresh
+        });
       } finally {
         state.marketingCostLoading = false;
         renderMarketingCosts();
@@ -3784,7 +3792,6 @@
         state.dateRange = data.dateRange || null;
         state.historyFinalization = data.historyFinalization || null;
         state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
-        state.detailCache = {};
         if (!state.trendBusinessId || !state.businesses.some(row => String(row.platformBusinessId || row.businessId) === state.trendBusinessId)) {
           state.trendBusinessId = defaultTrendBusinessId();
         }
@@ -3795,8 +3802,10 @@
         render();
         syncOpenDetailAfterDataUpdate(previousDataTime, false);
         if (state.view === "focus") {
-          await loadFocusUsers();
-          if (state.focusWorkspace === "costs") await loadMarketingCosts();
+          const pendingLoads = [];
+          if (!state.focusData || manual) pendingLoads.push(loadFocusUsers());
+          if (state.focusWorkspace === "costs" && (!state.marketingCosts || manual)) pendingLoads.push(loadMarketingCosts(manual));
+          await Promise.all(pendingLoads);
         }
         else if (!state.trendCollapsed) loadBusinessTrend(manual);
         if (manual) toast("数据已刷新");
@@ -3838,7 +3847,6 @@
       state.historyFinalization = data.historyFinalization || null;
       state.source = { ...(data.source || {}), latestDataTime: data.latestDataTime };
       if (previousDataTime && previousDataTime !== state.source.latestDataTime) {
-        state.detailCache = {};
         state.detailHistory = null;
         state.detailMonthAnalysis = null;
       }
@@ -4158,6 +4166,12 @@
     }
 
     async function openBusiness(row, initialMode = "abnormal") {
+      const cacheKey = detailCacheKey(row);
+      const cachedDetail = state.detailCache[cacheKey] || null;
+      const shouldRefreshCachedDetail = Boolean(cachedDetail) && (
+        Date.now() - Number(cachedDetail.savedAt || 0) >= 10 * 60 * 1000
+        || cachedDetail.sourceDataTime !== (state.source?.latestDataTime || "")
+      );
       state.detailRow = row;
       state.detailMode = initialMode;
       state.detailScope = "today";
@@ -4170,14 +4184,14 @@
       state.detailExpandedUserId = "";
       state.detailMobileLimit = 80;
       state.detailHistoryUserId = "";
-      state.detailUsers = [];
-      state.detailHistory = null;
+      state.detailUsers = cachedDetail?.data?.users || [];
+      state.detailHistory = cachedDetail?.data?.history || null;
       state.detailHistoryStart = "";
       state.detailHistoryEnd = "";
       setDetailHistoryRange("7", false);
       state.detailMonthAnalysis = null;
-      state.detailSyncedData = null;
-      state.detailSyncedBusinessId = "";
+      state.detailSyncedData = cachedDetail?.data || null;
+      state.detailSyncedBusinessId = cachedDetail ? cacheKey : "";
       state.detailStats = null;
       state.detailReportingMode = "realtime";
       state.detailCurrentBusinessDate = "";
@@ -4194,6 +4208,9 @@
       if (initialMode === "history") {
         setDetailHistoryRange("7", false);
         await loadBusinessUserHistory(false);
+      } else if (cachedDetail?.data) {
+        applySynchronizedUserData(cachedDetail.data, row, true);
+        if (shouldRefreshCachedDetail) loadBusinessUsers(row, false, true).catch(error => toast(error.message || "用户缓存更新失败"));
       } else {
         await loadBusinessUsers(row, false);
         refreshOpenBusinessUsersIfStale();
@@ -4281,6 +4298,11 @@
       state.detailLatestTime = state.detailScope === "today" ? state.detailStats.currentLatestDataTime : state.detailStats.historyLatestDataTime;
       state.detailSyncedData = data;
       state.detailSyncedBusinessId = String(row.platformBusinessId || row.businessId || "");
+      state.detailCache[state.detailSyncedBusinessId] = {
+        data,
+        savedAt: Date.now(),
+        sourceDataTime: state.source?.latestDataTime || ""
+      };
       state.detailRefreshing = false;
       state.detailLoadingLabel = "";
       renderDetail(cached);
@@ -4319,44 +4341,28 @@
         }, row, true);
         return;
       }
-      state.detailRefreshing = true;
+      state.detailRefreshing = refresh || !lastGoodData;
       state.detailLoadingLabel = "全部用户数据";
       if (state.detailUsers.length > 0) renderDetail(false);
-      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在并行读取当前业务的两个近7天缓存；点击“刷新用户”时只更新本业务今天的全部用户，近30天在选择后按需查询。</section>`;
+      else $("#detailBody").innerHTML = `<section class="source"><strong>正在加载：</strong>正在读取当前业务近14天共享缓存；点击“刷新用户”时只更新本业务今天的全部用户，近30天在选择后按需查询。</section>`;
       const today = dayText(new Date());
-      const currentStart = shiftDayText(today, -6);
-      const previousEnd = shiftDayText(currentStart, -1);
-      const previousStart = shiftDayText(previousEnd, -6);
-      const currentParams = new URLSearchParams({
+      const previousStart = shiftDayText(today, -13);
+      const params = new URLSearchParams({
         business_id: businessId,
-        start_date: currentStart,
+        start_date: previousStart,
         end_date: today,
         page_size: 5000,
         refresh: refresh ? "1" : "0",
         _: Date.now()
       });
-      const previousParams = new URLSearchParams({
-        business_id: businessId,
-        start_date: previousStart,
-        end_date: previousEnd,
-        page_size: 5000,
-        refresh: "0",
-        _: Date.now()
-      });
       try {
-        const [currentResult, previousResult] = await Promise.allSettled([
-          requestJson(apiUrl(`/api/business-users-sync?${currentParams.toString()}`)),
-          requestJson(apiUrl(`/api/business-users-sync?${previousParams.toString()}`))
-        ]);
+        const currentData = await requestJson(apiUrl(`/api/business-users-sync?${params.toString()}`), {
+          force: refresh,
+          ttlMs: 10 * 60 * 1000,
+          staleWhileRevalidate: Boolean(lastGoodData) && !refresh
+        });
         if (loadVersion !== state.detailLoadVersion || String(state.detailRow?.platformBusinessId || state.detailRow?.businessId || "") !== businessId) return;
-        if (currentResult.status === "rejected" && previousResult.status === "rejected") throw currentResult.reason;
-        if (currentResult.status === "rejected" && !lastGoodData) throw currentResult.reason;
-        const currentData = currentResult.status === "fulfilled" ? currentResult.value : { users: [], history: { rows: [], dates: [] } };
-        const previousData = previousResult.status === "fulfilled" ? previousResult.value : { users: [], history: { rows: [], dates: [] } };
-        const mergedHistory = mergeBusinessUserHistory(
-          mergeBusinessUserHistory(lastGoodData?.history || {}, previousData.history || {}),
-          currentData.history || {}
-        );
+        const mergedHistory = mergeBusinessUserHistory(lastGoodData?.history || {}, currentData.history || {});
         const usersById = new Map((lastGoodData?.users || []).map(user => [String(user.id || user.userId || ""), user]));
         (currentData.users || []).forEach(user => {
           const id = String(user.id || user.userId || "");
@@ -4372,11 +4378,10 @@
           ...currentData,
           users: [...usersById.values()],
           history: mergedHistory,
-          total: Math.max(Number(lastGoodData?.total || 0), Number(currentData.total || 0), Number(previousData.total || 0), Number(mergedHistory.total || 0)),
-          historyLatestDataTime: latestDataTimeText(currentData.historyLatestDataTime, previousData.historyLatestDataTime, mergedHistory.latestDataTime, lastGoodData?.historyLatestDataTime)
+          total: Math.max(Number(lastGoodData?.total || 0), Number(currentData.total || 0), Number(mergedHistory.total || 0)),
+          historyLatestDataTime: latestDataTimeText(currentData.historyLatestDataTime, mergedHistory.latestDataTime, lastGoodData?.historyLatestDataTime)
         };
         applySynchronizedUserData(data, row, Boolean(data.cached));
-        if (currentResult.status === "rejected" || previousResult.status === "rejected") toast("部分日期缓存暂时不可用，已保留当前完整数据，不会变成0");
       } catch (error) {
         state.detailRefreshing = false;
         state.detailLoadingLabel = "";
@@ -5041,7 +5046,7 @@
       state.dailyBusinessId = "";
       $$("#viewTabs button").forEach(item => item.classList.toggle("active", item === btn));
       render();
-      if (state.view === "focus") loadFocusUsers().catch(error => toast(error.message || "重点用户加载失败"));
+      if (state.view === "focus" && !state.focusData) loadFocusUsers().catch(error => toast(error.message || "重点用户加载失败"));
     });
     $("#levelTabs").addEventListener("click", e => {
       const btn = e.target.closest("button");

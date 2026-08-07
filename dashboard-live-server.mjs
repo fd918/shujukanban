@@ -69,8 +69,11 @@ const userDetailCache = new Map();
 const userHistoryRequests = new Map();
 let userDetailCacheSavedAtText = "";
 let userDetailCacheRevision = 0;
+const businessUserCacheRevisions = new Map();
 let parsedUserDetailEntriesCache = { revision: -1, entries: [], byBusinessId: new Map() };
 const latestPositiveOrderCaches = new Map();
+const focusUserIndexCaches = new Map();
+const focusUsersWorkspaceCaches = new Map();
 const synchronizedBusinessUsersCaches = new Map();
 const userPhoneCache = new Map();
 const userProfileCache = new Map();
@@ -94,21 +97,30 @@ let requestStats = { day: dayKey(), total: 0, byPath: {}, byName: {}, updatedAt:
 let userRefreshState = { scheduledRuns: {}, top100: {} };
 let publicPublishQueue = Promise.resolve();
 
-function touchUserDetailCache() {
+function touchUserDetailCache(cacheKey = "") {
   userDetailCacheRevision += 1;
+  try {
+    const businessId = String(JSON.parse(cacheKey).businessId || "");
+    if (businessId) businessUserCacheRevisions.set(businessId, number(businessUserCacheRevisions.get(businessId)) + 1);
+  } catch {}
   parsedUserDetailEntriesCache = { revision: -1, entries: [], byBusinessId: new Map() };
   latestPositiveOrderCaches.clear();
+  focusUserIndexCaches.clear();
 }
 
 function setUserDetailCache(cacheKey, payload) {
   userDetailCache.set(cacheKey, payload);
-  touchUserDetailCache();
+  touchUserDetailCache(cacheKey);
 }
 
 function deleteUserDetailCache(cacheKey) {
   const deleted = userDetailCache.delete(cacheKey);
-  if (deleted) touchUserDetailCache();
+  if (deleted) touchUserDetailCache(cacheKey);
   return deleted;
+}
+
+function businessUserCacheRevision(businessId) {
+  return number(businessUserCacheRevisions.get(String(businessId || "")));
 }
 
 function parsedUserDetailEntries() {
@@ -1957,15 +1969,16 @@ function trimSynchronizedBusinessUsersCaches() {
 function startSynchronizedBusinessUsersBuild(options, statuses, cacheKey) {
   const current = synchronizedBusinessUsersCaches.get(cacheKey) || {};
   if (current.promise) return current.promise;
-  const revision = userDetailCacheRevision;
+  const businessRevision = businessUserCacheRevision(options.businessId);
   const promise = buildSynchronizedBusinessUsers(options, statuses).then(data => {
     synchronizedBusinessUsersCaches.set(cacheKey, {
       data,
-      revision,
+      businessRevision,
       snapshotCount: snapshotMemoryCache?.length || 0,
-      expiresAt: Date.now() + 2 * 60 * 1000,
+      expiresAt: Date.now() + 10 * 60 * 1000,
       lastUsedAt: Date.now(),
-      promise: null
+      promise: null,
+      scheduled: false
     });
     trimSynchronizedBusinessUsersCaches();
     return data;
@@ -1974,23 +1987,32 @@ function startSynchronizedBusinessUsersBuild(options, statuses, cacheKey) {
     synchronizedBusinessUsersCaches.set(cacheKey, { ...latest, promise: null, lastUsedAt: Date.now() });
     throw error;
   });
-  synchronizedBusinessUsersCaches.set(cacheKey, { ...current, promise, lastUsedAt: Date.now() });
+  synchronizedBusinessUsersCaches.set(cacheKey, { ...current, promise, scheduled: false, lastUsedAt: Date.now() });
   return promise;
+}
+
+function scheduleSynchronizedBusinessUsersBuild(options, cacheKey) {
+  const current = synchronizedBusinessUsersCaches.get(cacheKey) || {};
+  if (current.promise || current.scheduled) return;
+  synchronizedBusinessUsersCaches.set(cacheKey, { ...current, scheduled: true, lastUsedAt: Date.now() });
+  setTimeout(() => {
+    const latest = synchronizedBusinessUsersCaches.get(cacheKey) || {};
+    synchronizedBusinessUsersCaches.set(cacheKey, { ...latest, scheduled: false });
+    startSynchronizedBusinessUsersBuild(options, [], cacheKey).catch(error => console.error(`[${nowText()}] 后台更新共享用户响应失败：${error.message}`));
+  }, 0);
 }
 
 async function fetchSynchronizedBusinessUsers(options, statuses = []) {
   const cacheKey = synchronizedBusinessUsersCacheKey(options);
   const current = synchronizedBusinessUsersCaches.get(cacheKey) || {};
   const snapshotCount = snapshotMemoryCache?.length || 0;
-  const stale = current.revision !== userDetailCacheRevision
+  const stale = current.businessRevision !== businessUserCacheRevision(options.businessId)
     || current.snapshotCount !== snapshotCount
     || Date.now() >= number(current.expiresAt);
   if (options.refresh) return startSynchronizedBusinessUsersBuild(options, statuses, cacheKey);
   if (current.data) {
     current.lastUsedAt = Date.now();
-    if (stale && !current.promise) {
-      startSynchronizedBusinessUsersBuild(options, [], cacheKey).catch(error => console.error(`[${nowText()}] 后台更新共享用户响应失败：${error.message}`));
-    }
+    if (stale) scheduleSynchronizedBusinessUsersBuild(options, cacheKey);
     statuses.push({ name: "共享用户响应缓存", ok: true, message: stale ? "已立即返回旧完整结果，后台更新中" : "已立即返回内存结果", durationMs: 0 });
     return { ...current.data, cached: true, refreshing: stale };
   }
@@ -3940,7 +3962,11 @@ function mergePrimaryBusinessUserDays(currentDays = {}, primaryCurrentDays = {},
 }
 
 function focusUserCacheIndex(userIds = []) {
-  const wanted = new Set([...userIds].map(String));
+  const wantedIds = [...new Set([...userIds].map(String))].sort();
+  const memoKey = wantedIds.join(",");
+  const memo = focusUserIndexCaches.get(memoKey);
+  if (memo?.revision === userDetailCacheRevision) return memo.index;
+  const wanted = new Set(wantedIds);
   const index = new Map();
   const cacheGroups = new Map();
   if (!wanted.size) return index;
@@ -4096,6 +4122,8 @@ function focusUserCacheIndex(userIds = []) {
       }));
     }
   }
+  focusUserIndexCaches.set(memoKey, { revision: userDetailCacheRevision, index });
+  if (focusUserIndexCaches.size > 12) focusUserIndexCaches.delete(focusUserIndexCaches.keys().next().value);
   return index;
 }
 

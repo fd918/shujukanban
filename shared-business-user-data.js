@@ -42,6 +42,7 @@
     const force = method !== "GET" || options.force === true || url.searchParams.get("refresh") === "1" || url.searchParams.get("force") === "1";
     const ttlMs = Number(options.ttlMs ?? DEFAULT_TTL_MS);
     const timeoutMs = Number(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    const staleWhileRevalidate = options.staleWhileRevalidate === true;
     const saved = cache.get(key);
     if (!force && saved && Date.now() - saved.savedAt < ttlMs) return saved.data;
     if (!force && pending.has(key)) return pending.get(key);
@@ -50,6 +51,7 @@
     delete fetchOptions.force;
     delete fetchOptions.ttlMs;
     delete fetchOptions.timeoutMs;
+    delete fetchOptions.staleWhileRevalidate;
     // A shared request must not be cancelled by one iframe changing selection.
     if (method === "GET") {
       delete fetchOptions.signal;
@@ -74,6 +76,10 @@
       throw error;
     }).finally(() => pending.delete(key));
     pending.set(key, request);
+    if (!force && saved?.data && staleWhileRevalidate) {
+      request.catch(() => {});
+      return saved.data;
+    }
     return request;
   }
 
