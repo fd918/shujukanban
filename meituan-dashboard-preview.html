@@ -2940,6 +2940,16 @@
     });
 
     document.getElementById("open-switch").addEventListener("click", () => {
+      const current = activeActivity();
+      const currentGroup = activityStatusGroup(current);
+      if (activityGroup !== "all" && activityGroup !== currentGroup) {
+        activityGroup = currentGroup;
+        localStorage.setItem(ACTIVITY_GROUP_KEY, activityGroup);
+      }
+      if (activityCategory !== "all" && !activityMatchesCategory(current, activityCategory)) {
+        activityCategory = "all";
+        localStorage.setItem(ACTIVITY_CATEGORY_KEY, activityCategory);
+      }
       renderActivityManager();
       document.getElementById("switch-modal").classList.add("open");
     });
