@@ -428,7 +428,7 @@ async function readMailChurnDashboard() {
 
 async function writeMailChurnDashboard(payload) {
   if (!payload || !Array.isArray(payload.platforms)) throw new Error("邮件流失数据格式不正确。");
-  const allowed = new Set(["美团外卖", "淘宝闪购", "京东外卖"]);
+  const allowed = new Set(["美团外卖", "淘宝闪购", "京东万单", "京东四川云瞻"]);
   if (payload.platforms.some(item => !allowed.has(String(item?.name || "")))) throw new Error("邮件流失数据包含未允许的平台。");
   await mkdir(join(ROOT, "data/private"), { recursive: true });
   await writeFile(MAIL_CHURN_PATH, JSON.stringify(payload));
