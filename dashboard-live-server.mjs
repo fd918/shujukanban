@@ -2082,10 +2082,7 @@ function scheduleSynchronizedBusinessUsersBuild(options, cacheKey) {
 async function fetchSynchronizedBusinessUsers(options, statuses = []) {
   const cacheKey = synchronizedBusinessUsersCacheKey(options);
   const current = synchronizedBusinessUsersCaches.get(cacheKey) || {};
-  const snapshotCount = snapshotMemoryCache?.length || 0;
-  const stale = current.businessRevision !== businessUserCacheRevision(options.businessId)
-    || current.snapshotCount !== snapshotCount
-    || Date.now() >= number(current.expiresAt);
+  const stale = Date.now() >= number(current.expiresAt);
   if (options.refresh) return startSynchronizedBusinessUsersBuild(options, statuses, cacheKey);
   if (current.data) {
     current.lastUsedAt = Date.now();
@@ -2925,7 +2922,6 @@ function snapshotReference(match, quality = match?.quality) {
 function businessUserSnapshotMatch(snapshots, targetDay, targetMinute, businessId, userId, maxOffsetMinutes = 20) {
   const businessKey = String(businessId || "");
   const userKey = String(userId || "");
-  const containsUser = match => Boolean(match.snapshot?.businessUsers?.[businessKey]?.[userKey]);
   let cache = businessUserSnapshotCandidateCaches.get(snapshots);
   if (!cache) {
     const days = new Map();
@@ -2935,7 +2931,7 @@ function businessUserSnapshotMatch(snapshots, targetDay, targetMinute, businessI
       group[snapshot.userDataStrict === true ? "strict" : "legacy"].push(snapshot);
       days.set(day, group);
     });
-    cache = { days, candidates: new Map() };
+    cache = { days, candidates: new Map(), businessUserMatches: new Map() };
     businessUserSnapshotCandidateCaches.set(snapshots, cache);
   }
   const candidateKey = `${targetDay}:${number(targetMinute)}:${number(maxOffsetMinutes)}`;
@@ -2950,14 +2946,26 @@ function businessUserSnapshotMatch(snapshots, targetDay, targetMinute, businessI
     };
     cache.candidates.set(candidateKey, candidates);
   }
-  const strict = candidates.strict.find(containsUser);
-  if (strict) return strict;
-  const legacy = candidates.legacy.find(containsUser);
-  if (legacy) return { ...legacy, quality: "legacy" };
-  const historical = candidates.strictAll.find(containsUser);
-  if (historical) return { ...historical, quality: "historical_nearest" };
-  const historicalLegacy = candidates.legacyAll.find(containsUser);
-  return historicalLegacy ? { ...historicalLegacy, quality: "legacy" } : null;
+  cache.businessUserMatches ||= new Map();
+  const matchKey = `${candidateKey}:${businessKey}`;
+  let userMatches = cache.businessUserMatches.get(matchKey);
+  if (!userMatches) {
+    userMatches = new Map();
+    const addMatches = (items, quality = "") => {
+      for (const match of items) {
+        const users = match.snapshot?.businessUsers?.[businessKey] || {};
+        for (const currentUserId of Object.keys(users)) {
+          if (!userMatches.has(currentUserId)) userMatches.set(currentUserId, quality ? { ...match, quality } : match);
+        }
+      }
+    };
+    addMatches(candidates.strict);
+    addMatches(candidates.legacy, "legacy");
+    addMatches(candidates.strictAll, "historical_nearest");
+    addMatches(candidates.legacyAll, "legacy");
+    cache.businessUserMatches.set(matchKey, userMatches);
+  }
+  return userMatches.get(userKey) || null;
 }
 
 function enrichWithSnapshots(rows, snapshots, type, dateRange = rangeFromQuery(), comparisonMinute = minuteOfDay()) {
