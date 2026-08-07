@@ -141,7 +141,7 @@
       })
     }
     function renormalizeCurrentUsers(){if(state.source==='mail'){const selected=state.platform==='全部平台'?(state.mailData?.platforms||[]):(state.mailData?.platforms||[]).filter(item=>item.name===state.platform);state.rawUsers=selected.flatMap(item=>item.users||[]);state.users=normalizeMailUsers(selected,state.platform,mailRuleFor(state.platform))}else{const end=state.catalog.dateRange?.endDate||new Date().toISOString().slice(0,10);state.users=normalizeUsers(state.rawUsers,end)}}
-    function maskPhone(value){const p=String(value||'').replace(/\D/g,'');return p.length>=11?`${p.slice(0,3)}****${p.slice(-4)}`:(p||'-')}
+    function maskPhone(value){const raw=String(value||'').trim();if(raw.includes('*'))return raw;const p=raw.replace(/\D/g,'');return p.length>=11?`${p.slice(0,3)}****${p.slice(-4)}`:(p||'-')}
     function stats(users=state.users){const s={lost:0,risk:0,growth:0,recovered:0,today:0,yesterday:0,lastWeek:0,impact:0,comparable:0};users.forEach(u=>{if(s[u.status]!==undefined)s[u.status]++;s.today+=u.today;if(u.yesterdaySame!==null){s.yesterday+=n(u.yesterdaySame);s.comparable++}if(u.lastWeekSame!==null)s.lastWeek+=n(u.lastWeekSame);if(['lost','risk'].includes(u.status)&&u.diff!==null)s.impact+=Math.abs(u.diff)});return s}
     function renderContext(){}
     const statusName=s=>({lost:'流失',risk:'高风险',growth:'增长',recovered:'已回流',normal:'正常'}[s]||s);
