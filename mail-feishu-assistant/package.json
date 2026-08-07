@@ -1,0 +1,31 @@
+{
+  "name": "mail-feishu-assistant",
+  "version": "1.0.0",
+  "description": "Mac 本地飞书邮箱巡检与飞书指令回复助手",
+  "main": "src/index.js",
+  "scripts": {
+    "auth": "node src/auth.js",
+    "scan": "node src/scan-now.js",
+    "sync-churn": "node src/sync-churn-now.js --force",
+    "start": "node src/index.js",
+    "install-service": "zsh scripts/install-launchd.sh",
+    "install-tunnel": "zsh scripts/install-tunnel-launchd.sh",
+    "uninstall-service": "zsh scripts/uninstall-launchd.sh",
+    "desktop": "zsh scripts/create-desktop-command.sh",
+    "check": "node --check src/*.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.68.0",
+    "dotenv": "^17.4.2",
+    "localtunnel": "^2.0.2",
+    "node-cron": "^4.5.0",
+    "read-excel-file": "^9.3.5"
+  },
+  "overrides": {
+    "axios": "1.18.1"
+  }
+}
