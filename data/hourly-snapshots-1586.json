@@ -2803,5 +2803,22 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 1,
     "cumulativeRedemptionAmount": 130
+  },
+  {
+    "activityId": "1586",
+    "title": "【8.6-8.8餐饮团购企业媒体返点奖励赛】",
+    "metric": "amount",
+    "date": "2026-08-07",
+    "hour": 22,
+    "slotMinute": 40,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-07 22:40",
+    "recordedAt": "2026/8/7 22:48:58",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 1,
+    "cumulativeRedemptionAmount": 130
   }
 ]
