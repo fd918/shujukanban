@@ -1987,8 +1987,9 @@ async function buildSynchronizedBusinessUsers({ businessId = "", startDate, endD
       realtimeToday: Boolean(full || current)
     };
   });
+  const historyUserIds = new Set(historyRows.map(row => String(row.id || "")).filter(Boolean));
   for (const currentRow of currentById.values()) {
-    if (historyRows.some(row => String(row.id || "") === String(currentRow.id || ""))) continue;
+    if (historyUserIds.has(String(currentRow.id || ""))) continue;
     todayRows.push({ ...currentRow, days: { [endDate]: number(currentRow.todayOrders) }, realtimeToday: true });
   }
   const fullCurrentLatestDataTime = full?.savedAtText || "";
