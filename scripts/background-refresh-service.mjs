@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { disableExpiredActivityRefresh } from "../lib/activity-refresh-policy.mjs";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -239,6 +240,18 @@ async function notifyMeituanAuthError(error, activityId = "") {
 function writeJson(path, value) {
   mkdirSync(resolve(root, "data"), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function pruneExpiredAutoRefresh(config = readConfig()) {
+  const savedActivities = readJson(savedActivitiesPath, {});
+  const result = disableExpiredActivityRefresh(config, savedActivities);
+  if (!result.changed) return result;
+  writeJson(configPath, result.config);
+  writeJson(savedActivitiesPath, result.activities);
+  if (result.disabledIds.length) {
+    console.log(`[${nowText()}] 已关闭结束满24小时活动的自动刷新：${result.disabledIds.join(", ")}`);
+  }
+  return result;
 }
 
 function rememberActivity(activityId, { primary = false } = {}) {
@@ -921,14 +934,17 @@ async function runOnce() {
   }
   autoRefreshRequested = true;
   autoRefreshRunning = true;
-  const config = readConfig();
+  let config = readConfig();
   try {
+    const cleanup = pruneExpiredAutoRefresh(config);
+    config = cleanup.config;
     const primary = Number(config.primaryActivityId);
     const ids = [...config.activityIds];
     const ordered = ids.filter(id => Number(id) !== primary);
     if (ids.some(id => Number(id) === primary)) ordered.push(primary);
     if (!ordered.length) {
       console.log(`[${nowText()}] 没有开启自动刷新的活动，跳过本轮。`);
+      if (cleanup.changed && config.autoPush) await pushPublicFiles();
       return;
     }
     console.log(`[${nowText()}] 开始后台刷新：${ordered.join(", ")}`);
