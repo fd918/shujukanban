@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { disableExpiredActivityRefresh, isActivityAutoRefreshExpired } from "../lib/activity-refresh-policy.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const envPath = resolve(root, ".env");
@@ -221,7 +222,7 @@ function mergeActivities(fetched) {
   return saved;
 }
 
-function enableOngoingAutoRefresh(saved) {
+function reconcileAutoRefresh(saved) {
   const fallback = {
     intervalMinutes: 30,
     primaryActivityId: 1199,
@@ -229,14 +230,16 @@ function enableOngoingAutoRefresh(saved) {
     autoPush: true
   };
   const current = readJson(configPath, fallback);
+  const cleanup = disableExpiredActivityRefresh(current, saved);
+  const nextSaved = cleanup.activities;
   const ids = new Set(
-    (Array.isArray(current.activityIds) ? current.activityIds : [])
+    (Array.isArray(cleanup.config.activityIds) ? cleanup.config.activityIds : [])
       .map(id => Number(id))
       .filter(id => Number.isFinite(id) && id > 0)
   );
   let enabledCount = 0;
-  Object.values(saved).forEach(activity => {
-    if (Number(activity.activityStatus) !== 2) return;
+  Object.values(nextSaved).forEach(activity => {
+    if (Number(activity.activityStatus) !== 2 || isActivityAutoRefreshExpired(activity)) return;
     const id = Number(activity.id);
     if (!Number.isFinite(id) || id <= 0) return;
     if (!ids.has(id) || activity.recordSnapshot !== true) enabledCount += 1;
@@ -245,12 +248,12 @@ function enableOngoingAutoRefresh(saved) {
   });
   const next = {
     ...fallback,
-    ...current,
+    ...cleanup.config,
     activityIds: [...ids].sort((a, b) => a - b)
   };
   writeJson(configPath, next);
-  writeJson(savedActivitiesPath, saved);
-  return enabledCount;
+  writeJson(savedActivitiesPath, nextSaved);
+  return { saved: nextSaved, enabledCount, disabledCount: cleanup.disabledIds.length };
 }
 
 function replaceBetween(source, startMarker, endMarker, replacement) {
@@ -281,8 +284,8 @@ async function main() {
   const byId = new Map();
   all.forEach(activity => byId.set(activity.id, { ...(byId.get(activity.id) || {}), ...activity }));
   const fetched = [...byId.values()].sort((a, b) => Number(a.id) - Number(b.id));
-  const saved = mergeActivities(fetched);
-  const autoEnabled = enableOngoingAutoRefresh(saved);
+  const merged = mergeActivities(fetched);
+  const { saved, enabledCount, disabledCount } = reconcileAutoRefresh(merged);
   const counts = fetched.reduce((acc, activity) => {
     if (activity.activityStatus === 1) acc.upcoming += 1;
     else if (activity.activityStatus === 2) acc.ongoing += 1;
@@ -295,7 +298,7 @@ async function main() {
     activities: fetched
   });
   updateHtml(saved);
-  console.log(`已同步活动列表：未开始 ${counts.upcoming} 个，进行中 ${counts.ongoing} 个，已结束 ${counts.ended} 个；已确保 ${counts.ongoing} 个进行中活动开启自动刷新，本次新增 ${autoEnabled} 个。`);
+  console.log(`已同步活动列表：未开始 ${counts.upcoming} 个，进行中 ${counts.ongoing} 个，已结束 ${counts.ended} 个；本次新增自动刷新 ${enabledCount} 个，关闭结束满24小时活动 ${disabledCount} 个。`);
 }
 
 main().catch(error => {
