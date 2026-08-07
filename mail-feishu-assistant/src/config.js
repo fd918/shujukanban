@@ -53,7 +53,7 @@ module.exports = {
   notifyReceiveId: process.env.FEISHU_NOTIFY_RECEIVE_ID || '',
   notifyReceiveIdType: process.env.FEISHU_NOTIFY_RECEIVE_ID_TYPE || 'chat_id',
   allowSendEmail: (process.env.ALLOW_SEND_EMAIL || 'true').toLowerCase() === 'true',
-  churnSyncCron: process.env.MAIL_CHURN_CRON || '5,15,25,35,45,55 9 * * *',
+  churnSyncCron: process.env.MAIL_CHURN_CRON || '15 9 * * *',
   churnOutputPath: path.resolve(process.env.MAIL_CHURN_OUTPUT_PATH || path.join(rootDir, '..', 'data', 'private', 'mail-churn-dashboard.json')),
   churnLocalSyncUrl: process.env.MAIL_CHURN_LOCAL_SYNC_URL || 'http://127.0.0.1:8791/api/mail-churn-sync',
   churnServerSyncUrl: process.env.MAIL_CHURN_SERVER_SYNC_URL || '',

@@ -10,7 +10,8 @@ const MAIL_SUBJECT_PREFIX = '外卖业务订单推广统计 - ';
 const PLATFORM_FILES = [
   { key: 'meituan', name: '美团外卖', pattern: /^美团订单-数据统计-\d{10}\.xlsx$/ },
   { key: 'taobao', name: '淘宝闪购', pattern: /^淘宝闪购订单-数据统计-\d{10}\.xlsx$/ },
-  { key: 'jd', name: '京东外卖', pattern: /^京东订单-数据统计-\d{10}\.xlsx$/ },
+  { key: 'jd_wandan', name: '京东万单', pattern: /^京东订单-万单-数据统计-\d{10}\.xlsx$/ },
+  { key: 'jd_sichuan', name: '京东四川云瞻', pattern: /^京东订单-四川云瞻（非密令业务）-数据统计-\d{10}\.xlsx$/ },
 ];
 
 function textValue(value) {
@@ -155,6 +156,21 @@ function latestMailDay(message) {
   }).format(new Date(Number(message?.internal_date) || Date.now()));
 }
 
+function currentDay() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: config.timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+function dayDistance(later, earlier) {
+  const end = Date.parse(`${later}T00:00:00Z`);
+  const start = Date.parse(`${earlier}T00:00:00Z`);
+  return Number.isFinite(end) && Number.isFinite(start) ? Math.max(0, Math.round((end - start) / 86400000)) : 0;
+}
+
 function readExistingPayload() {
   try {
     return JSON.parse(fs.readFileSync(config.churnOutputPath, 'utf8'));
@@ -192,35 +208,95 @@ async function pushPayload(payload) {
   return syncResults;
 }
 
+async function saveAndPushPayload(payload, eventName) {
+  fs.mkdirSync(path.dirname(config.churnOutputPath), { recursive: true });
+  fs.writeFileSync(config.churnOutputPath, JSON.stringify(payload));
+  const syncResults = await pushPayload(payload);
+  appendLog(eventName, {
+    subject: payload.sourceMail?.subject || '',
+    status: payload.refreshStatus,
+    platforms: (payload.platforms || []).map((item) => ({ name: item.name, users: item.userCount, completeThrough: item.completeThrough })),
+    destinations: syncResults.map((item) => ({ url: item.url, ok: item.ok })),
+  });
+  return syncResults;
+}
+
+function buildStalePayload(existing, reason, expectedMailDay, checkedAt = new Date().toISOString()) {
+  if (!existing?.platforms?.length) throw new Error(reason);
+  const dataMailDay = existing.sourceMail?.mailDay || '';
+  return {
+    ...existing,
+    refreshStatus: {
+      ok: false,
+      checkedAt,
+      checkedDay: expectedMailDay,
+      expectedMailDay,
+      dataMailDay,
+      dataAgeDays: dataMailDay ? dayDistance(expectedMailDay, dataMailDay) : 0,
+      reason,
+    },
+  };
+}
+
+async function keepPreviousPayload(existing, reason, expectedMailDay) {
+  const payload = buildStalePayload(existing, reason, expectedMailDay);
+  const syncResults = await saveAndPushPayload(payload, 'mail_churn_stale');
+  return { ok: true, cached: true, stale: true, payload, syncResults };
+}
+
 async function syncMailChurn({ force = false } = {}) {
+  const existing = readExistingPayload();
+  const expectedMailDay = currentDay();
+  if (!force && existing?.schemaVersion === 2 && existing?.refreshStatus?.checkedDay === expectedMailDay) {
+    return { ok: true, cached: true, payload: existing, syncResults: [] };
+  }
   const messages = await listInboxMessages({
     shouldContinue: (pageMessages) => !pageMessages.some((message) => String(message.subject || '').startsWith(MAIL_SUBJECT_PREFIX)),
   });
   const message = messages
     .filter((item) => String(item.subject || '').startsWith(MAIL_SUBJECT_PREFIX))
     .sort((a, b) => Number(b.internal_date || 0) - Number(a.internal_date || 0))[0];
-  if (!message) throw new Error(`没有找到主题以“${MAIL_SUBJECT_PREFIX}”开头的邮件。`);
-
-  const existing = readExistingPayload();
-  if (!force && existing?.sourceMail?.messageId === message.message_id) {
-    const syncResults = await pushPayload(existing);
-    return { ok: true, cached: true, payload: existing, syncResults };
-  }
+  if (!message) return keepPreviousPayload(existing, `截至今日检查时间，未找到主题以“${MAIL_SUBJECT_PREFIX}”开头的邮件。`, expectedMailDay);
 
   const mailDay = latestMailDay(message);
+  if (mailDay < expectedMailDay) {
+    return keepPreviousPayload(existing, `截至今日检查时间，尚未收到 ${expectedMailDay} 的“外卖业务订单推广统计”邮件。`, expectedMailDay);
+  }
+  if (!force && existing?.schemaVersion === 2 && existing?.sourceMail?.messageId === message.message_id) {
+    const payload = {
+      ...existing,
+      refreshStatus: {
+        ok: true,
+        checkedAt: new Date().toISOString(),
+        checkedDay: expectedMailDay,
+        expectedMailDay,
+        dataMailDay: mailDay,
+        dataAgeDays: dayDistance(expectedMailDay, mailDay),
+        reason: '今日邮件及四个目标附件已读取，数据每天自动更新一次。',
+      },
+    };
+    const syncResults = await saveAndPushPayload(payload, 'mail_churn_checked');
+    return { ok: true, cached: true, payload, syncResults };
+  }
+
   const platforms = [];
-  for (const platform of PLATFORM_FILES) {
-    const attachment = (message.attachments || []).find((item) => platform.pattern.test(String(item.filename || '')));
-    if (!attachment?.id) throw new Error(`${message.subject} 缺少“${platform.name}”目标附件。`);
-    const buffer = await downloadAttachmentBuffer({
-      mailboxId: message.mailboxId,
-      messageId: message.message_id,
-      attachmentId: attachment.id,
-    });
-    platforms.push(await parsePlatformWorkbook(buffer, platform, attachment.filename, mailDay));
+  try {
+    for (const platform of PLATFORM_FILES) {
+      const attachment = (message.attachments || []).find((item) => platform.pattern.test(String(item.filename || '')));
+      if (!attachment?.id) throw new Error(`${message.subject} 缺少“${platform.name}”目标附件。`);
+      const buffer = await downloadAttachmentBuffer({
+        mailboxId: message.mailboxId,
+        messageId: message.message_id,
+        attachmentId: attachment.id,
+      });
+      platforms.push(await parsePlatformWorkbook(buffer, platform, attachment.filename, mailDay));
+    }
+  } catch (error) {
+    return keepPreviousPayload(existing, `今日邮件已收到，但更新失败：${error.message}`, expectedMailDay);
   }
 
   const payload = {
+    schemaVersion: 2,
     ok: true,
     generatedAt: new Date().toISOString(),
     generatedAtText: new Date().toLocaleString('zh-CN', { hour12: false, timeZone: config.timezone }),
@@ -230,22 +306,24 @@ async function syncMailChurn({ force = false } = {}) {
       receivedAt: new Date(Number(message.internal_date) || Date.now()).toISOString(),
       mailDay,
     },
+    refreshStatus: {
+      ok: true,
+      checkedAt: new Date().toISOString(),
+      checkedDay: expectedMailDay,
+      expectedMailDay,
+      dataMailDay: mailDay,
+      dataAgeDays: dayDistance(expectedMailDay, mailDay),
+      reason: '今日邮件及四个目标附件已读取，数据每天自动更新一次。',
+    },
     platforms,
   };
-  fs.mkdirSync(path.dirname(config.churnOutputPath), { recursive: true });
-  fs.writeFileSync(config.churnOutputPath, JSON.stringify(payload));
-
-  const syncResults = await pushPayload(payload);
-  appendLog('mail_churn_synced', {
-    subject: message.subject,
-    platforms: platforms.map((item) => ({ name: item.name, users: item.userCount, completeThrough: item.completeThrough })),
-    destinations: syncResults.map((item) => ({ url: item.url, ok: item.ok })),
-  });
+  const syncResults = await saveAndPushPayload(payload, 'mail_churn_synced');
   return { ok: true, cached: false, payload, syncResults };
 }
 
 module.exports = {
   PLATFORM_FILES,
+  buildStalePayload,
   parsePlatformWorkbook,
   parsePlatformRows,
   syncMailChurn,

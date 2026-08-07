@@ -1,6 +1,37 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parsePlatformRows } = require('../src/churnSync');
+const { PLATFORM_FILES, buildStalePayload, parsePlatformRows } = require('../src/churnSync');
+
+test('邮件流失看板只读取美团、淘宝和京东两个指定来源', () => {
+  const files = [
+    '美团订单-数据统计-2026080709.xlsx',
+    '淘宝闪购订单-数据统计-2026080709.xlsx',
+    '京东订单-万单-数据统计-2026080709.xlsx',
+    '京东订单-四川云瞻（非密令业务）-数据统计-2026080709.xlsx',
+  ];
+  assert.deepEqual(PLATFORM_FILES.map((item) => item.name), ['美团外卖', '淘宝闪购', '京东万单', '京东四川云瞻']);
+  assert.deepEqual(PLATFORM_FILES.map((item, index) => item.pattern.test(files[index])), [true, true, true, true]);
+  assert.equal(PLATFORM_FILES.some((item) => item.pattern.test('京东订单-数据统计-2026080709.xlsx')), false);
+});
+
+test('当天邮件缺失时保留上一份平台数据并记录滞后原因', () => {
+  const existing = {
+    schemaVersion: 2,
+    sourceMail: { mailDay: '2026-08-05' },
+    platforms: [{ name: '美团外卖', users: [{ id: '1' }] }],
+  };
+  const payload = buildStalePayload(existing, '尚未收到今日邮件。', '2026-08-07', '2026-08-07T01:15:00.000Z');
+  assert.equal(payload.platforms, existing.platforms);
+  assert.deepEqual(payload.refreshStatus, {
+    ok: false,
+    checkedAt: '2026-08-07T01:15:00.000Z',
+    checkedDay: '2026-08-07',
+    expectedMailDay: '2026-08-07',
+    dataMailDay: '2026-08-05',
+    dataAgeDays: 2,
+    reason: '尚未收到今日邮件。',
+  });
+});
 
 test('邮件平台联盟解析自动排除邮件当天并计算两个完整7日', () => {
   const dates = Array.from({ length: 16 }, (_, index) => {

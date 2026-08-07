@@ -162,7 +162,16 @@ console.log(`定时规则：每分钟检查，到用户配置时间段的整点�
 console.log('在飞书里给机器人发送“绑定我”可设置通知目标；发送“巡检”可手动扫描。');
 
 runScan('启动');
-syncMailChurn({ force: true }).catch((error) => {
-  console.error(`启动时同步邮件流失数据失败：${safeErrorMessage(error)}`);
-  appendLog('mail_churn_sync_failed', { phase: 'startup', error: safeErrorMessage(error) });
-});
+const startupTimeParts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+  timeZone: config.timezone,
+  hour12: false,
+  hourCycle: 'h23',
+  hour: '2-digit',
+  minute: '2-digit',
+}).formatToParts(new Date()).filter((item) => item.type !== 'literal').map((item) => [item.type, Number(item.value)]));
+if ((startupTimeParts.hour * 60 + startupTimeParts.minute) >= 9 * 60 + 15) {
+  syncMailChurn().catch((error) => {
+    console.error(`启动时同步邮件流失数据失败：${safeErrorMessage(error)}`);
+    appendLog('mail_churn_sync_failed', { phase: 'startup', error: safeErrorMessage(error) });
+  });
+}
