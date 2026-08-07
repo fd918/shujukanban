@@ -915,8 +915,9 @@ function startRefreshServer() {
 }
 
 async function pushPublicFiles() {
-  await runCommand("git", ["add", "index.html", "meituan-dashboard-preview.html", "README.md", ".gitignore", ".env.example", "scripts", "assets", "data"]);
-  const status = await runCommand("git", ["status", "--short"]);
+  const paths = ["meituan-dashboard-preview.html", "assets", "data"];
+  await runCommand("git", ["add", ...paths]);
+  const status = await runCommand("git", ["status", "--short", "--", ...paths]);
   if (!status) {
     console.log(`[${nowText()}] 没有需要推送的文件。`);
     return;

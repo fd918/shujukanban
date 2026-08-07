@@ -5438,8 +5438,9 @@ async function publishPublicFocusNotes() {
 }
 
 async function pushPublicDashboard() {
-  await runCommand("git", ["add", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "business-churn-dashboard-prototype.html", "shared-business-user-data.js", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
-  const status = await runCommand("git", ["status", "--short", "--", ".gitignore", "README.md", "index.html", "business-user-dashboard-prototype.html", "business-churn-dashboard-prototype.html", "shared-business-user-data.js", "dashboard-live-server.mjs", "scripts/start-business-user-dashboard-service.zsh", "vendor/fflate.min.js", "vendor/fflate.LICENSE", "data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"]);
+  const paths = ["data/business-dashboard-public.enc.json", "data/business-global-user-index.enc.json", "data/business-public-users"];
+  await runCommand("git", ["add", ...paths]);
+  const status = await runCommand("git", ["status", "--short", "--", ...paths]);
   if (!status) {
     console.log(`[${nowText()}] 业务看板公开文件没有变化，跳过 GitHub 推送。`);
     return false;
@@ -5451,7 +5452,7 @@ async function pushPublicDashboard() {
 }
 
 async function pushPublicFocusNotes() {
-  const paths = ["business-user-dashboard-prototype.html", "business-churn-dashboard-prototype.html", "shared-business-user-data.js", "dashboard-live-server.mjs", "README.md", "data/business-focus-notes-public.enc.json"];
+  const paths = ["data/business-focus-notes-public.enc.json"];
   await runCommand("git", ["add", ...paths]);
   const status = await runCommand("git", ["status", "--short", "--", ...paths]);
   if (!status) return false;
