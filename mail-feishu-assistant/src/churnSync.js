@@ -57,6 +57,7 @@ function roundOne(value) {
 function platformMetrics(user, completeDates) {
   const recentDates = completeDates.slice(-7);
   const previousDates = completeDates.slice(-14, -7);
+  const displayDates = completeDates.slice(-15);
   const monthDates = completeDates.slice(-30);
   const recentAverage = mean(recentDates.map((day) => numberValue(user.days[day])));
   const previousAverage = mean(previousDates.map((day) => numberValue(user.days[day])));
@@ -71,6 +72,7 @@ function platformMetrics(user, completeDates) {
     impactOrders: roundOne(recentAverage - previousAverage),
     maximum30: maximum || { date: '', value: 0 },
     minimum30: minimum || { date: '', value: 0 },
+    orders15: displayDates.map((day) => ({ date: day, value: numberValue(user.days[day]) })),
     orders30: monthDates.map((day) => ({ date: day, value: numberValue(user.days[day]) })),
   };
 }

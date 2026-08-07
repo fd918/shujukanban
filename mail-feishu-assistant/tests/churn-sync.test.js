@@ -18,7 +18,7 @@ test('邮件平台联盟解析自动排除邮件当天并计算两个完整7日'
 
   assert.equal(platform.completeThrough, '2026-08-06');
   assert.equal(platform.completeDates.length, 15);
-  assert.equal(user.orders30.at(-1).value, 15);
+  assert.equal(user.orders15.at(-1).value, 15);
   assert.equal(user.recentAverage, 12);
   assert.equal(user.previousAverage, 5);
   assert.equal(user.impactOrders, 7);
