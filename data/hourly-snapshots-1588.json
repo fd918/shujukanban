@@ -729,5 +729,22 @@
     "todayRedemptionAmount": 12665.49,
     "cumulativeRedemptionOrders": 237,
     "cumulativeRedemptionAmount": 12665.49
+  },
+  {
+    "activityId": "1588",
+    "title": "【8.7~8.9美团闪购企业媒体水果单单奖励】",
+    "metric": "orders",
+    "date": "2026-08-07",
+    "hour": 17,
+    "slotMinute": 0,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-07 17:00",
+    "recordedAt": "2026/8/7 17:08:54",
+    "todayValidOrders": 280,
+    "todayRedemptionOrders": 241,
+    "todayActualPayment": 15404.34,
+    "todayRedemptionAmount": 12934.08,
+    "cumulativeRedemptionOrders": 241,
+    "cumulativeRedemptionAmount": 12934.08
   }
 ]
