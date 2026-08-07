@@ -1001,5 +1001,22 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 0,
     "cumulativeRedemptionAmount": 0
+  },
+  {
+    "activityId": "1594",
+    "title": "【8.7-8.31美团闪购企业媒体伊利奶粉返点奖励】",
+    "metric": "amount",
+    "date": "2026-08-07",
+    "hour": 20,
+    "slotMinute": 10,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-07 20:10",
+    "recordedAt": "2026/8/7 20:10:40",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 0,
+    "cumulativeRedemptionAmount": 0
   }
 ]
