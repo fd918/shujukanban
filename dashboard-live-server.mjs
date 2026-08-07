@@ -7,7 +7,7 @@ import { extname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
 import { promisify } from "node:util";
-import { gzipSync } from "node:zlib";
+import { gzipSync, gunzipSync } from "node:zlib";
 
 const execFileAsync = promisify(execFile);
 const BASE_URL = "https://adminalliance.yunzhanxinxi.com";
@@ -30,6 +30,7 @@ const PUBLIC_DASHBOARD_PATH = join(ROOT, "data/business-dashboard-public.enc.jso
 const PUBLIC_FOCUS_NOTES_PATH = join(ROOT, "data/business-focus-notes-public.enc.json");
 const PUBLIC_GLOBAL_USER_INDEX_PATH = join(ROOT, "data/business-global-user-index.enc.json");
 const PUBLIC_USER_DETAIL_DIR = join(ROOT, "data/business-public-users");
+const MAIL_CHURN_PATH = join(ROOT, "data/private/mail-churn-dashboard.json");
 const USER_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.username";
 const PASS_SERVICE = "com.tanwenjie.yunzhan-business-dashboard.password";
 const FEISHU_WEBHOOK_SERVICE = "com.tanwenjie.business-dashboard.feishu.webhook";
@@ -182,6 +183,7 @@ const defaultConfig = {
   },
   churn: {
     rules: {},
+    mailRules: {},
     platformOrder: []
   }
 };
@@ -389,6 +391,65 @@ async function readBody(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
+async function readCompressedJsonBody(req, maxBytes = 10 * 1024 * 1024) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > maxBytes) throw new Error("邮件表格同步内容超过 10MB 限制。");
+    chunks.push(chunk);
+  }
+  const input = Buffer.concat(chunks);
+  const decoded = String(req.headers["content-encoding"] || "").toLowerCase() === "gzip" ? gunzipSync(input) : input;
+  return decoded.length ? JSON.parse(decoded.toString("utf8")) : {};
+}
+
+function isLoopbackRequest(req) {
+  const address = String(req.socket?.remoteAddress || "");
+  return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
+}
+
+function validMailChurnSyncRequest(req) {
+  const expected = String(process.env.MAIL_CHURN_SYNC_TOKEN || "").trim();
+  if (!expected) return isLoopbackRequest(req);
+  const authorization = String(req.headers.authorization || "");
+  const supplied = authorization.replace(/^Bearer\s+/i, "").trim();
+  return supplied && createHash("sha256").update(supplied).digest("hex") === createHash("sha256").update(expected).digest("hex");
+}
+
+async function readMailChurnDashboard() {
+  try {
+    const saved = JSON.parse(await readFile(MAIL_CHURN_PATH, "utf8"));
+    return saved && saved.ok !== false ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeMailChurnDashboard(payload) {
+  if (!payload || !Array.isArray(payload.platforms)) throw new Error("邮件流失数据格式不正确。");
+  const allowed = new Set(["美团外卖", "淘宝闪购", "京东外卖"]);
+  if (payload.platforms.some(item => !allowed.has(String(item?.name || "")))) throw new Error("邮件流失数据包含未允许的平台。");
+  await mkdir(join(ROOT, "data/private"), { recursive: true });
+  await writeFile(MAIL_CHURN_PATH, JSON.stringify(payload));
+  return payload;
+}
+
+async function refreshMailChurnFromMailbox() {
+  const script = join(ROOT, "mail-feishu-assistant/src/sync-churn-now.js");
+  if (!existsSync(script)) return { refreshed: false, error: "当前版本未安装本机邮件同步助手。" };
+  try {
+    const { stdout } = await execFileAsync(process.execPath, [script, "--force"], {
+      cwd: join(ROOT, "mail-feishu-assistant"),
+      timeout: 120000,
+      maxBuffer: 2 * 1024 * 1024
+    });
+    return { refreshed: true, message: stdout.trim() };
+  } catch (error) {
+    return { refreshed: false, error: error.stderr?.trim() || error.message };
+  }
+}
+
 async function readSecret(service) {
   try {
     const { stdout } = await execFileAsync("/usr/bin/security", ["find-generic-password", "-a", "default", "-s", service, "-w"]);
@@ -443,6 +504,7 @@ async function readConfig() {
       public: { ...defaultConfig.public, ...(saved.public || {}) },
       churn: {
         rules: saved.churn?.rules && typeof saved.churn.rules === "object" ? saved.churn.rules : {},
+        mailRules: saved.churn?.mailRules && typeof saved.churn.mailRules === "object" ? saved.churn.mailRules : {},
         platformOrder: Array.isArray(saved.churn?.platformOrder) ? saved.churn.platformOrder.map(String) : []
       }
     };
@@ -469,6 +531,7 @@ async function writeConfig(nextConfig) {
     public: { ...defaultConfig.public, ...(nextConfig.public || {}) },
     churn: {
       rules: nextConfig.churn?.rules && typeof nextConfig.churn.rules === "object" ? nextConfig.churn.rules : {},
+      mailRules: nextConfig.churn?.mailRules && typeof nextConfig.churn.mailRules === "object" ? nextConfig.churn.mailRules : {},
       platformOrder: Array.isArray(nextConfig.churn?.platformOrder) ? [...new Set(nextConfig.churn.platformOrder.map(item => String(item || "").trim()).filter(Boolean))] : []
     }
   };
@@ -494,10 +557,21 @@ function normalizeChurnRule(value = {}) {
   };
 }
 
+function normalizeMailChurnRule(value = {}) {
+  const allowedModes = new Set(["and", "or", "orders", "rate"]);
+  return {
+    impactThreshold: Math.max(0, Number(value.impactThreshold) || 0),
+    declinePct: Math.max(0, Number(value.declinePct) || 0),
+    risePct: Math.max(0, Number(value.risePct) || 0),
+    mode: allowedModes.has(String(value.mode)) ? String(value.mode) : "and"
+  };
+}
+
 async function saveChurnSettings(body = {}) {
   const current = await readConfig();
   const churn = {
     rules: { ...(current.churn?.rules || {}) },
+    mailRules: { ...(current.churn?.mailRules || {}) },
     platformOrder: Array.isArray(current.churn?.platformOrder) ? [...current.churn.platformOrder] : []
   };
   if (Array.isArray(body.platformOrder)) {
@@ -505,6 +579,8 @@ async function saveChurnSettings(body = {}) {
   }
   const businessId = String(body.businessId || "").trim();
   if (businessId) churn.rules[businessId] = normalizeChurnRule(body.rule || {});
+  const mailPlatform = String(body.mailPlatform || "").trim();
+  if (mailPlatform) churn.mailRules[mailPlatform] = normalizeMailChurnRule(body.mailRule || {});
   const config = await writeConfig({ ...current, churn });
   return config.churn;
 }
@@ -2022,20 +2098,16 @@ async function fetchSynchronizedBusinessUsers(options, statuses = []) {
 async function alignFocusIndexWithSynchronizedBusinessUsers(cacheIndex, userIds, range) {
   const wantedUserIds = new Set((userIds || []).map(String).filter(Boolean));
   if (!wantedUserIds.size || !cacheIndex.size) return cacheIndex;
-  const businessIds = [...new Set(
-    [...cacheIndex.keys()]
-      .map(key => String(key).split(":")[0])
-      .filter(Boolean)
-  )];
   const dates = dayList(range.startDate, range.endDate);
-  await mapLimit(businessIds, 4, async businessId => {
-    const data = await fetchSynchronizedBusinessUsers({
-      businessId,
-      startDate: range.startDate,
-      endDate: range.endDate,
-      pageSize: 5000,
-      refresh: false
-    }, []);
+  const latestByBusiness = new Map();
+  for (const [syncKey, current] of synchronizedBusinessUsersCaches.entries()) {
+    if (!current?.data) continue;
+    const businessId = String(syncKey).split(":")[0];
+    const previous = latestByBusiness.get(businessId);
+    if (!previous || number(current.lastUsedAt) > number(previous.lastUsedAt)) latestByBusiness.set(businessId, current);
+  }
+  for (const [businessId, current] of latestByBusiness.entries()) {
+    const data = current.data;
     for (const row of data.users || []) {
       const userId = String(row.id || row.userId || "");
       if (!wantedUserIds.has(userId)) continue;
@@ -2051,11 +2123,12 @@ async function alignFocusIndexWithSynchronizedBusinessUsers(cacheIndex, userIds,
         ...row,
         id: userId,
         days,
+        sameTime: row.sameTime || current.sameTime,
         primaryToday: true,
         cacheSavedAtText: row.currentDataTime || data.currentLatestDataTime || data.latestDataTime || current.cacheSavedAtText || ""
       }));
     }
-  });
+  }
   return cacheIndex;
 }
 
@@ -2929,7 +3002,7 @@ function enrichBusinessUsersWithSnapshots(rows, snapshots, businessId, dateRange
   const businessKey = String(businessId || "");
 
   return rows.map(row => {
-    const rowMinute = comparisonMinuteFromText(row.currentDataTime || row.userDataTime) ?? comparisonMinute;
+    const rowMinute = Number.isFinite(Number(comparisonMinute)) ? Number(comparisonMinute) : minuteOfDay();
     const id = String(row.id || "");
     const matchFor = offset => businessUserSnapshotMatch(snapshots, dayKey(addDays(currentDate, offset)), rowMinute, businessKey, id);
     const yesterdayMatch = matchFor(-1);
@@ -3770,6 +3843,7 @@ async function writeFocusUsers(items, operatorGroups = null) {
   const payload = { schemaVersion: 3, items: mergedItems, operatorGroups: normalizeFocusGroups(sourceGroups, mergedItems), updatedAt: new Date().toISOString(), updatedAtText: nowText() };
   await mkdir(join(ROOT, "data"), { recursive: true });
   await writeFile(FOCUS_USERS_PATH, JSON.stringify(payload, null, 2));
+  focusUsersWorkspaceCaches.clear();
   invalidateMarketingCostWorkspace();
   return payload;
 }
@@ -4189,7 +4263,7 @@ async function buildGlobalUserSearch(query = {}) {
   const catalog = await focusBusinessCatalog();
   const cacheIndex = focusUserCacheIndex([selectedId]);
   const item = { userId: selectedId, name: selected.name, phone: selected.phone, version: selected.version, businessHints: [] };
-  const businessRows = catalog.map(business => focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex)).filter(Boolean);
+  const businessRows = catalog.map(business => focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex, businessComparisonMinuteFromCache(business.businessId))).filter(Boolean);
   const todayOrders = businessRows.reduce((sum, row) => sum + number(row.todayOrders), 0);
   const comparable = businessRows.filter(row => row.yesterdaySameTime !== null && row.yesterdaySameTime !== undefined);
   const yesterdaySameTime = comparable.length ? comparable.reduce((sum, row) => sum + number(row.yesterdaySameTime), 0) : null;
@@ -4288,23 +4362,36 @@ async function focusRelatedBusinessCatalog() {
   return catalog.filter(business => relatedIds.has(String(business.businessId)) || relatedIds.has(String(business.catalogBusinessId)));
 }
 
-function focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex) {
+function businessComparisonMinuteFromCache(businessId) {
+  let latest = null;
+  for (const entry of userDetailEntriesForBusiness(businessId)) {
+    const endDate = entry.key.endDate || entry.key.end_date || entry.key.date || "";
+    if (endDate && endDate !== dayKey()) continue;
+    const savedAt = Date.parse(String(entry.payload?.savedAtText || "").replace(/\//g, "-")) || 0;
+    if (!latest || savedAt > latest.savedAt) latest = { savedAt, text: entry.payload?.savedAtText || "" };
+  }
+  return comparisonMinuteFromText(latest?.text) ?? minuteOfDay();
+}
+
+function focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex, comparisonMinute = null) {
     const cached = cacheIndex.get(`${business.businessId}:${item.userId}`) || {};
     const current = cached.primaryToday ? cached : cachedFocusCurrentUser(business.businessId, item.userId);
     const businessId = String(business.businessId);
     const userId = String(item.userId);
     const topState = userRefreshState.top100[businessId] || {};
     const userDataTime = current?.savedAtText || cached.cacheSavedAtText || topState.updatedAtText || "";
+    const targetMinute = Number.isFinite(Number(comparisonMinute)) ? Number(comparisonMinute) : businessComparisonMinuteFromCache(businessId);
     const yesterdayMatch = businessUserSnapshotMatch(
       snapshots,
       shiftDay(dayKey(), -1),
-      comparisonMinuteFromText(userDataTime),
+      targetMinute,
       businessId,
       userId
     );
-    const yesterdayReference = snapshotReference(yesterdayMatch, yesterdayMatch?.quality);
+    const synchronizedSameTime = cached.sameTime || null;
+    const yesterdayReference = synchronizedSameTime?.yesterdayReference || snapshotReference(yesterdayMatch, yesterdayMatch?.quality);
     const snapshotUser = yesterdayMatch?.snapshot?.businessUsers?.[businessId]?.[userId] || {};
-    const buildMetric = ({ daysField, currentField, snapshotField }) => {
+    const buildMetric = ({ daysField, currentField, snapshotField, synchronizedField }) => {
       const sourceDays = cached[daysField] || {};
       const metricDays = Object.fromEntries(dates.map(date => [date, number(sourceDays?.[date])]));
       if (dates.includes(dayKey())) {
@@ -4315,7 +4402,10 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
       const previousPeriodTotal = previousDates.reduce((sum, date) => sum + number(sourceDays?.[date]), 0);
       const periodDiff = periodTotal - previousPeriodTotal;
       const todayValue = current ? number(current[currentField]) : number(metricDays[dayKey()]);
-      const rawYesterday = snapshotField && Object.prototype.hasOwnProperty.call(snapshotUser, snapshotField) ? snapshotUser[snapshotField] : undefined;
+      const synchronizedYesterday = synchronizedSameTime?.yesterday;
+      const rawYesterday = synchronizedField && synchronizedYesterday && Object.prototype.hasOwnProperty.call(synchronizedYesterday, synchronizedField)
+        ? synchronizedYesterday[synchronizedField]
+        : (snapshotField && Object.prototype.hasOwnProperty.call(snapshotUser, snapshotField) ? snapshotUser[snapshotField] : undefined);
       const yesterdaySameTime = rawYesterday === undefined ? null : number(rawYesterday);
       const diff = yesterdaySameTime === null ? null : todayValue - yesterdaySameTime;
       return {
@@ -4331,9 +4421,9 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
       };
     };
     const metrics = {
-      orders: buildMetric({ daysField: "days", currentField: "todayOrders", snapshotField: "orders" }),
-      commission: buildMetric({ daysField: "commissionDays", currentField: "todayCommission", snapshotField: null }),
-      gmv: buildMetric({ daysField: "gmvDays", currentField: "todayAmount", snapshotField: null })
+      orders: buildMetric({ daysField: "days", currentField: "todayOrders", snapshotField: "orders", synchronizedField: "orders" }),
+      commission: buildMetric({ daysField: "commissionDays", currentField: "todayCommission", snapshotField: "commission", synchronizedField: "commission" }),
+      gmv: buildMetric({ daysField: "gmvDays", currentField: "todayAmount", snapshotField: "amount", synchronizedField: "amount" })
     };
     const orders = metrics.orders;
     const row = {
@@ -4355,7 +4445,8 @@ function focusBusinessRow(item, business, dates, previousDates, snapshots, cache
       todayOrders: orders.today,
       yesterdaySameTime: orders.yesterdaySameTime,
       sameTime: {
-        yesterday: yesterdayMatch ? { orders: metrics.orders.yesterdaySameTime, commission: metrics.commission.yesterdaySameTime, amount: metrics.gmv.yesterdaySameTime } : null,
+        ...(synchronizedSameTime || {}),
+        yesterday: synchronizedSameTime?.yesterday || (yesterdayMatch ? { orders: metrics.orders.yesterdaySameTime, commission: metrics.commission.yesterdaySameTime, amount: metrics.gmv.yesterdaySameTime } : null),
         ...yesterdayReference,
         yesterdayReference
       },
@@ -4388,6 +4479,12 @@ async function buildFocusUsers(query = {}) {
   const catalog = await focusBusinessCatalog();
   const cacheIndex = focusUserCacheIndex(saved.items.map(item => item.userId));
   await alignFocusIndexWithSynchronizedBusinessUsers(cacheIndex, saved.items.map(item => item.userId), range);
+  const comparisonMinutes = new Map();
+  const comparisonMinuteFor = businessId => {
+    const key = String(businessId);
+    if (!comparisonMinutes.has(key)) comparisonMinutes.set(key, businessComparisonMinuteFromCache(key));
+    return comparisonMinutes.get(key);
+  };
   const businessRows = [];
   for (const item of saved.items) {
     const hintMap = new Map(catalog.map(row => [row.businessId, row]));
@@ -4396,7 +4493,7 @@ async function buildFocusUsers(query = {}) {
       if (businessId && !hintMap.has(businessId)) hintMap.set(businessId, { ...hint, businessId, businessName: hint.businessName || "未命名业务" });
     });
     for (const business of hintMap.values()) {
-      const row = focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex);
+      const row = focusBusinessRow(item, business, dates, previousDates, snapshots, cacheIndex, comparisonMinuteFor(business.businessId));
       if (row) businessRows.push(row);
     }
   }
@@ -4475,6 +4572,78 @@ async function buildFocusUsers(query = {}) {
     realtimeUserCount: businessRows.filter(row => row.realtimeToday).length,
     latestDataTime: currentTimes.at(-1) || userDetailCacheSavedAtText || "-"
   };
+}
+
+function focusUsersWorkspaceCacheKey(query = {}) {
+  const range = focusRange(query);
+  return `${range.preset}:${range.startDate}:${range.endDate}`;
+}
+
+function focusUsersWorkspaceQuality(data = {}) {
+  const rows = data.businessRows || data.rows || [];
+  let positiveCells = 0;
+  let historySum = 0;
+  for (const row of rows) {
+    const days = row.metrics?.orders?.days || row.days || {};
+    for (const value of Object.values(days)) {
+      const amount = number(value);
+      if (amount > 0) positiveCells += 1;
+      historySum += amount;
+    }
+  }
+  return { users: (data.users || []).length, relations: rows.length, positiveCells, historySum };
+}
+
+function focusUsersWorkspaceRegressed(current, incoming) {
+  if (!current || !incoming) return false;
+  const oldQuality = focusUsersWorkspaceQuality(current);
+  const nextQuality = focusUsersWorkspaceQuality(incoming);
+  if (oldQuality.relations > 0 && nextQuality.relations === 0) return true;
+  if (oldQuality.users >= 4 && nextQuality.users < oldQuality.users * 0.5) return true;
+  if (oldQuality.positiveCells >= 8 && nextQuality.positiveCells < oldQuality.positiveCells * 0.3) return true;
+  return oldQuality.historySum > 100 && nextQuality.historySum < oldQuality.historySum * 0.15;
+}
+
+function startFocusUsersWorkspaceBuild(query = {}, cacheKey = focusUsersWorkspaceCacheKey(query)) {
+  const current = focusUsersWorkspaceCaches.get(cacheKey) || {};
+  if (current.promise) return current.promise;
+  const promise = buildFocusUsers(query).then(data => {
+    const latest = focusUsersWorkspaceCaches.get(cacheKey) || current;
+    const selected = focusUsersWorkspaceRegressed(latest.data, data) ? latest.data : data;
+    if (selected !== data) console.warn(`[${nowText()}] 重点用户缓存本轮明显退化，继续保留上一份非零结果。`);
+    focusUsersWorkspaceCaches.set(cacheKey, { data: selected, expiresAt: Date.now() + 10 * 60 * 1000, lastUsedAt: Date.now(), promise: null, scheduled: false });
+    return selected;
+  }).catch(error => {
+    const latest = focusUsersWorkspaceCaches.get(cacheKey) || current;
+    focusUsersWorkspaceCaches.set(cacheKey, { ...latest, promise: null, scheduled: false });
+    throw error;
+  });
+  focusUsersWorkspaceCaches.set(cacheKey, { ...current, promise, scheduled: false, lastUsedAt: Date.now() });
+  return promise;
+}
+
+function scheduleFocusUsersWorkspaceBuild(query, cacheKey) {
+  const current = focusUsersWorkspaceCaches.get(cacheKey) || {};
+  if (current.promise || current.scheduled) return;
+  focusUsersWorkspaceCaches.set(cacheKey, { ...current, scheduled: true, lastUsedAt: Date.now() });
+  setTimeout(() => {
+    const latest = focusUsersWorkspaceCaches.get(cacheKey) || {};
+    focusUsersWorkspaceCaches.set(cacheKey, { ...latest, scheduled: false });
+    startFocusUsersWorkspaceBuild(query, cacheKey).catch(error => console.error(`[${nowText()}] 后台更新重点用户读缓存失败：${error.message}`));
+  }, 0);
+}
+
+async function readFocusUsersWorkspace(query = {}, { refresh = false } = {}) {
+  const cacheKey = focusUsersWorkspaceCacheKey(query);
+  const current = focusUsersWorkspaceCaches.get(cacheKey) || {};
+  const stale = Date.now() >= number(current.expiresAt);
+  if (refresh) return startFocusUsersWorkspaceBuild(query, cacheKey);
+  if (current.data) {
+    current.lastUsedAt = Date.now();
+    if (stale) scheduleFocusUsersWorkspaceBuild(query, cacheKey);
+    return { ...current.data, cached: true, refreshing: stale };
+  }
+  return startFocusUsersWorkspaceBuild(query, cacheKey);
 }
 
 async function marketingCostContext() {
@@ -4568,24 +4737,43 @@ function calculateMarketingCostItem(item, context) {
 }
 
 function invalidateMarketingCostWorkspace() {
-  marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null };
+  marketingCostWorkspaceCache = { data: null, expiresAt: 0, promise: null, scheduled: false };
+}
+
+function marketingRelationshipsFromContext(context) {
+  const focusById = new Map((context.focus.items || []).map(item => [String(item.userId), item]));
+  const hinted = new Set();
+  for (const item of context.focus.items || []) {
+    for (const hint of item.businessHints || []) hinted.add(`${String(hint.businessId || hint.catalogBusinessId || "")}:${String(item.userId)}`);
+  }
+  const relationships = [];
+  for (const [relationKey, cached] of context.cacheIndex.entries()) {
+    const separator = relationKey.indexOf(":");
+    const businessId = relationKey.slice(0, separator);
+    const userId = relationKey.slice(separator + 1);
+    const hasMetric = number(cached.todayOrders) > 0 || Object.values(cached.days || {}).some(value => number(value) > 0);
+    if (!hasMetric && !hinted.has(relationKey)) continue;
+    const user = focusById.get(userId) || {};
+    const business = context.catalogById.get(businessId) || {};
+    relationships.push({
+      userId,
+      userName: context.aliases[userId] || cached.name || user.name || `用户 ${userId}`,
+      businessId,
+      businessName: business.businessName || cached.businessName || "未命名业务",
+      platform: business.platform || cached.platform || "-",
+      days: cached.days || {},
+      dataTime: cached.cacheSavedAtText || "-",
+      t1: T1_USER_BUSINESS_IDS.has(businessId)
+    });
+  }
+  return relationships;
 }
 
 async function buildMarketingCostWorkspaceFresh() {
   const saved = await readMarketingCosts();
   const context = await marketingCostContext();
   const items = saved.items.map(item => calculateMarketingCostItem(item, context)).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  const focusData = await buildFocusUsers({ preset: "custom", start_date: shiftDay(dayKey(), -(DEFAULT_USER_HISTORY_DAYS - 1)), end_date: dayKey() });
-  const relationships = (focusData.businessRows || []).map(row => ({
-    userId: String(row.userId),
-    userName: context.aliases[String(row.userId)] || row.name || `用户 ${row.userId}`,
-    businessId: String(row.businessId),
-    businessName: row.businessName || "未命名业务",
-    platform: row.platform || "-",
-    days: row.days || {},
-    dataTime: row.userDataTime || "-",
-    t1: T1_USER_BUSINESS_IDS.has(String(row.businessId))
-  }));
+  const relationships = marketingRelationshipsFromContext(context);
   const summary = {
     itemCount: items.length,
     userCount: new Set(items.map(item => item.userId)).size,
@@ -4601,8 +4789,8 @@ async function buildMarketingCostWorkspaceFresh() {
     latestDataTime: relationships.map(row => row.dataTime).filter(Boolean).sort().at(-1) || userDetailCacheSavedAtText || "-",
     items,
     summary,
-    operatorGroups: focusData.operatorGroups || [],
-    users: focusData.users.map(user => ({
+    operatorGroups: context.focus.operatorGroups || [],
+    users: (context.focus.items || []).map(user => ({
       userId: String(user.userId),
       name: context.aliases[String(user.userId)] || user.name || `用户 ${user.userId}`,
       note: String(user.note || (Array.isArray(user.notes) ? user.notes.join("；") : "")).trim().slice(0, 200)
@@ -4613,19 +4801,28 @@ async function buildMarketingCostWorkspaceFresh() {
 }
 
 async function buildMarketingCostWorkspace({ refresh = false } = {}) {
-  if (!refresh && marketingCostWorkspaceCache.data && Date.now() < marketingCostWorkspaceCache.expiresAt) {
-    return { ...marketingCostWorkspaceCache.data, cached: true };
+  const startBuild = () => {
+    if (marketingCostWorkspaceCache.promise) return marketingCostWorkspaceCache.promise;
+    const promise = buildMarketingCostWorkspaceFresh().then(data => {
+      marketingCostWorkspaceCache = { data, expiresAt: Date.now() + 10 * 60 * 1000, promise: null, scheduled: false };
+      return data;
+    }).catch(error => {
+      marketingCostWorkspaceCache = { ...marketingCostWorkspaceCache, promise: null, scheduled: false };
+      throw error;
+    });
+    marketingCostWorkspaceCache = { ...marketingCostWorkspaceCache, promise, scheduled: false };
+    return promise;
+  };
+  if (refresh) return startBuild();
+  if (marketingCostWorkspaceCache.data) {
+    const stale = Date.now() >= marketingCostWorkspaceCache.expiresAt;
+    if (stale && !marketingCostWorkspaceCache.promise && !marketingCostWorkspaceCache.scheduled) {
+      marketingCostWorkspaceCache.scheduled = true;
+      setTimeout(() => startBuild().catch(error => console.error(`[${nowText()}] 后台更新营销费用读缓存失败：${error.message}`)), 0);
+    }
+    return { ...marketingCostWorkspaceCache.data, cached: true, refreshing: stale };
   }
-  if (!refresh && marketingCostWorkspaceCache.promise) return marketingCostWorkspaceCache.promise;
-  const promise = buildMarketingCostWorkspaceFresh().then(data => {
-    marketingCostWorkspaceCache = { data, expiresAt: Date.now() + 60 * 1000, promise: null };
-    return data;
-  }).catch(error => {
-    marketingCostWorkspaceCache.promise = null;
-    throw error;
-  });
-  marketingCostWorkspaceCache.promise = promise;
-  return promise;
+  return startBuild();
 }
 
 function enqueueMarketingCostMutation(task) {
@@ -5087,6 +5284,7 @@ async function sanitizePublicDashboard(data) {
     users: data.users || [],
     businessDaily: data.businessDaily || null,
     businessTrends: await encryptedPublicBusinessTrends(data.businesses || []),
+    mailChurn: await readMailChurnDashboard(),
     userDetails: await encryptedPublicUserDetails(dateRange),
     focusUsers: await buildFocusUsers({ preset: "7" }),
     focusUsersByRange: {
@@ -5276,6 +5474,19 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (req.method === "OPTIONS") return json(res, 204, {});
   try {
+    if (url.pathname === "/api/mail-churn-sync" && req.method === "POST") {
+      if (!validMailChurnSyncRequest(req)) return json(res, 401, { ok: false, error: "邮件表格同步认证失败。" });
+      const payload = await writeMailChurnDashboard(await readCompressedJsonBody(req));
+      json(res, 200, { ok: true, generatedAtText: payload.generatedAtText || nowText(), platforms: payload.platforms.length, syncing: true });
+      publishLatestCachedDashboard().catch(error => console.error(`[${nowText()}] 邮件流失数据公网同步失败：${error.message}`));
+      return;
+    }
+    if (url.pathname === "/api/mail-churn-dashboard" && req.method === "GET") {
+      const refresh = url.searchParams.get("refresh") === "1" ? await refreshMailChurnFromMailbox() : null;
+      const data = await readMailChurnDashboard();
+      if (!data) return json(res, 404, { ok: false, error: refresh?.error || "尚未同步邮件表格数据。" });
+      return json(res, 200, { ...data, refresh });
+    }
     if (url.pathname === "/api/live-dashboard") {
       const query = Object.fromEntries(url.searchParams.entries());
       // Old or duplicated browser tabs must never turn their periodic page check into a full upstream refresh.
@@ -5372,7 +5583,7 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { ok: true, config });
     }
     if (url.pathname === "/api/global-user-search" && req.method === "GET") return json(res, 200, await buildGlobalUserSearch(Object.fromEntries(url.searchParams.entries())));
-    if (url.pathname === "/api/focus-users" && req.method === "GET") return json(res, 200, await buildFocusUsers(Object.fromEntries(url.searchParams.entries())));
+    if (url.pathname === "/api/focus-users" && req.method === "GET") return json(res, 200, await readFocusUsersWorkspace(Object.fromEntries(url.searchParams.entries())));
     if (url.pathname === "/api/focus-users/state" && req.method === "GET") {
       const saved = await readFocusUsers();
       return json(res, 200, { ok: true, updatedAt: saved.updatedAt || "", total: saved.items?.length || 0 });
