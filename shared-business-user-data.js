@@ -214,20 +214,38 @@
   async function copyText(value) {
     const text = String(value || "");
     if (!text) return false;
+    let copyDocument = document;
+    let copyNavigator = navigator;
     try {
-      await navigator.clipboard.writeText(text);
+      if (window.top && window.top !== window && window.top.document) {
+        copyDocument = window.top.document;
+        copyNavigator = window.top.navigator;
+      }
     } catch {
-      const input = document.createElement("textarea");
-      input.value = text;
-      input.setAttribute("readonly", "");
-      input.style.position = "fixed";
-      input.style.opacity = "0";
-      document.body.appendChild(input);
-      input.select();
-      const copied = document.execCommand("copy");
-      input.remove();
-      if (!copied) throw new Error("复制失败");
+      copyDocument = document;
+      copyNavigator = navigator;
     }
+    const activeElement = copyDocument.activeElement;
+    const input = copyDocument.createElement("textarea");
+    input.value = text;
+    input.setAttribute("readonly", "");
+    input.style.position = "fixed";
+    input.style.left = "-9999px";
+    input.style.opacity = "0";
+    copyDocument.body.appendChild(input);
+    input.focus({ preventScroll: true });
+    input.select();
+    input.setSelectionRange(0, text.length);
+    let copied = false;
+    try {
+      copied = copyDocument.execCommand("copy");
+    } finally {
+      input.remove();
+      activeElement?.focus?.({ preventScroll: true });
+    }
+    if (copied) return true;
+    if (!copyNavigator.clipboard?.writeText) throw new Error("复制失败");
+    await copyNavigator.clipboard.writeText(text);
     return true;
   }
 

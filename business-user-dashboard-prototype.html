@@ -254,9 +254,29 @@
     .user-data-table thead th:nth-child(3) { position: sticky; left: auto; top: 0; z-index: 2; min-width: 86px; box-shadow: none; background: #f8fafc; }
     .summary-body td { position:static !important; left:auto !important; z-index:1 !important; font-weight:700; background:#fff7ed !important; border-bottom:2px solid #fed7aa; box-shadow:none !important; }
     .scroll-hint { margin: 7px 2px 0; color: var(--muted); font-size: 12px; }
-    .user-cell { max-width: 150px; white-space: normal; line-height: 1.35; }
-    .user-cell strong { display: block; }
-    .user-cell .muted { display: block; margin-top: 3px; font-size: 12px; }
+    .user-cell { width:220px; min-width:220px; max-width:250px; white-space:normal; line-height:1.35; }
+    .user-cell strong { display:block; }
+    .user-cell .muted { display:block; margin-top:3px; font-size:12px; }
+    .user-identity { min-width:0; max-width:250px; line-height:1.35; }
+    .user-identity-name-row { display:flex; align-items:center; gap:4px; min-width:0; }
+    .user-identity-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); font-weight:700; }
+    button.user-identity-name { border:0; background:transparent; padding:0; font:inherit; font-weight:700; text-align:left; cursor:pointer; }
+    button.user-identity-name:hover { color:var(--blue); text-decoration:underline; text-underline-offset:3px; }
+    .user-identity-action { width:28px; height:28px; flex:0 0 28px; display:inline-grid; place-items:center; border:1px solid var(--line); border-radius:7px; background:#fff; color:#64748b; padding:0; cursor:pointer; transition:background .18s ease,border-color .18s ease,color .18s ease; touch-action:manipulation; }
+    .user-identity-action:hover { border-color:#fdba74; background:#fff7ed; color:#c2410c; }
+    .user-identity-action:focus-visible,.user-identity-copy:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+    .user-identity-action svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .user-identity-action.favorite[aria-pressed="true"] { border-color:#fdba74; background:#fff7ed; color:#e98200; }
+    .user-identity-action.favorite[aria-pressed="true"] svg { fill:currentColor; }
+    .user-identity-action:disabled { opacity:1; cursor:default; }
+    .user-identity-action:disabled:hover { border-color:#fdba74; background:#fff7ed; color:#e98200; }
+    .user-identity-meta,.user-identity-phone { display:flex; align-items:center; gap:5px; min-width:0; margin-top:4px; color:var(--muted); font-size:11px; }
+    .user-identity-phone { margin-top:2px; }
+    .user-identity-copy { display:inline-flex; align-items:center; min-width:0; min-height:22px; border:0; background:transparent; color:var(--blue); padding:0; font:inherit; font-size:11px; cursor:pointer; touch-action:manipulation; }
+    .user-identity-copy:hover { text-decoration:underline; text-underline-offset:2px; }
+    .user-identity-copy.phone { max-width:100%; overflow:hidden; color:#475569; text-overflow:ellipsis; white-space:nowrap; }
+    .user-identity-copy:disabled { color:var(--muted); cursor:default; text-decoration:none; }
+    .user-identity-version { display:inline-flex; max-width:92px; overflow:hidden; padding:2px 6px; border-radius:5px; background:#f1f5f9; color:#475569; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
     .user-toggle { border: 0; background: transparent; color: var(--text); padding: 0; font-weight: 700; text-align: left; }
     .user-toggle:hover { color: var(--blue); }
     .user-history-link { border:0; background:transparent; color:var(--text); padding:0; font-weight:700; text-align:left; cursor:pointer; }
@@ -417,6 +437,8 @@
     .focus-profile-stat strong { display:block; margin-top:3px; font-size:18px; }
     .focus-user { min-width:150px; }
     .focus-user strong, .focus-user span { display:block; }
+    .focus-user .user-identity-meta,.focus-user .user-identity-phone { display:flex; }
+    .focus-user .user-identity-version { display:inline-flex; }
     .focus-table th, .focus-table td { padding-top:8px; padding-bottom:8px; white-space:nowrap; }
     .focus-table .focus-user { white-space:normal; }
     .focus-table .focus-user span { margin-top:1px; line-height:1.25; }
@@ -491,8 +513,10 @@
     .cost-sort-button:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
     .cost-sort-button span { min-width:12px; color:#64748b; font-size:12px; text-align:center; }
     .cost-sort-button.active span { color:#1d4ed8; }
-    .cost-table .cost-user { min-width:160px; white-space:normal; }
+    .cost-table .cost-user { width:230px; min-width:230px; max-width:250px; white-space:normal; }
     .cost-table .cost-user span { display:block; margin-top:2px; color:var(--muted); font-size:12px; }
+    .cost-table .cost-user .user-identity-meta,.cost-table .cost-user .user-identity-phone { display:flex; }
+    .cost-table .cost-user .user-identity-version { display:inline-flex; margin-top:0; color:#475569; font-size:10px; }
     .cost-table .cost-business { min-width:210px; white-space:normal; }
     .cost-entity-button,.cost-orders-button { border:0; background:transparent; color:inherit; padding:0; font:inherit; text-align:left; cursor:pointer; }
     .cost-entity-button strong,.cost-orders-button strong { color:#1d4ed8; text-decoration:underline; text-decoration-color:#bfdbfe; text-underline-offset:3px; }
@@ -791,13 +815,17 @@
       .detail-controls [data-detail-info] { min-height:44px; }
       .mobile-detail-matrix { background:#fff; }
       .mobile-detail-matrix .mobile-matrix-status { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-      .mobile-detail-table .mobile-identity-col { width:142px; min-width:142px; max-width:142px; }
-      .mobile-detail-table .mobile-identity-col button { width:100%; min-height:44px; border:0; background:transparent; color:var(--text); padding:0; text-align:left; touch-action:manipulation; }
+      .mobile-detail-table .mobile-identity-col { width:210px; min-width:210px; max-width:210px; }
+      .mobile-detail-table .mobile-identity-col .user-identity { width:100%; max-width:none; padding:7px 6px; }
+      .mobile-detail-table .mobile-identity-col .user-identity-action { width:44px; height:44px; flex-basis:44px; border-radius:10px; }
+      .mobile-detail-table .mobile-identity-col .user-identity-copy { min-height:32px; padding:4px 7px; border:1px solid #dbe5f6; border-radius:7px; background:#eff8ff; }
+      .mobile-detail-table .mobile-identity-col .user-identity-copy.phone { border-color:var(--line); background:#f8fafc; }
+      .mobile-detail-table .mobile-identity-col button.user-identity-name { min-height:44px; touch-action:manipulation; }
       .mobile-user-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
       .mobile-user-id { display:block; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:10px; }
       .mobile-detail-table td { min-width:110px; }
       .mobile-detail-table .mobile-status-col { min-width:110px; text-align:center; }
-      .mobile-detail-table .mobile-expanded-spacer { position:sticky; left:0; z-index:4; width:142px; min-width:142px; background:#f8fafc; box-shadow:5px 0 8px rgba(15,23,42,.06); }
+      .mobile-detail-table .mobile-expanded-spacer { position:sticky; left:0; z-index:4; width:210px; min-width:210px; background:#f8fafc; box-shadow:5px 0 8px rgba(15,23,42,.06); }
       .mobile-detail-table .mobile-expanded-cell { padding:10px; background:#f8fafc; text-align:left; }
       .mobile-expanded-meta { display:flex; flex-wrap:wrap; gap:5px 14px; margin-bottom:9px; color:var(--muted); font-size:11px; }
       .mobile-expanded-days { display:flex; gap:6px; min-width:max-content; }
@@ -815,6 +843,10 @@
       .mobile-card-title { min-width:0; }
       .mobile-card-title strong { display:block; font-size:15px; line-height:1.4; word-break:break-word; }
       .mobile-card-title span { display:block; margin-top:3px; color:var(--muted); font-size:11px; line-height:1.45; word-break:break-word; }
+      .mobile-card-title .user-identity { max-width:none; }
+      .mobile-card-title .user-identity-action { width:44px; height:44px; flex-basis:44px; border-radius:10px; }
+      .mobile-card-title .user-identity-copy { min-height:32px; padding:4px 7px; border:1px solid #dbe5f6; border-radius:7px; background:#eff8ff; }
+      .mobile-card-title .user-identity-copy.phone { border-color:var(--line); background:#f8fafc; }
       .mobile-card-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
       .mobile-card-stat { min-width:0; padding:10px 9px; border-right:1px solid #edf1f6; border-bottom:1px solid #edf1f6; }
       .mobile-card-stat:nth-child(3n) { border-right:0; }
@@ -1407,15 +1439,42 @@
     const userIdOf = user => String(user?.id || user?.userId || "");
     const userDisplayName = user => Object.prototype.hasOwnProperty.call(state.userAliases, userIdOf(user)) ? (state.userAliases[userIdOf(user)] || user?.name || "-") : (user?.name || "-");
     const userSearchText = user => `${userDisplayName(user)}${user?.name || ""}${userIdOf(user)}`.toLowerCase();
+    const userEditSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
+    const userFavoriteSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/></svg>';
     const unifiedNoteEditButton = user => {
-      if (state.view === "focus") return "";
       const userId = userIdOf(user);
       const note = (state.userNotes?.[userId] || []).join("\n");
-      return `<button class="alias-edit" data-edit-unified-note="${escapeHtml(userId)}" title="${escapeHtml(note || "添加用户备注")}" aria-label="修改用户备注">记</button>`;
+      return `<button class="btn" data-edit-unified-note="${escapeHtml(userId)}" title="${escapeHtml(note || "添加用户备注")}">编辑备注</button>`;
     };
-    const aliasEditButton = user => `<button class="alias-edit" data-edit-user-alias="${escapeHtml(userIdOf(user))}" title="修改用户备注名" aria-label="修改用户备注名">✎</button>${unifiedNoteEditButton(user)}`;
-    const addFocusButton = user => `<button class="add-focus-icon" data-add-detail-focus="${escapeHtml(userIdOf(user))}" title="加入重点用户" aria-label="加入重点用户">+</button>`;
-    const copyUserIdButton = user => `<button class="copy-user-id" data-copy-user-id="${escapeHtml(userIdOf(user))}" title="点击复制用户ID">ID：${escapeHtml(userIdOf(user) || "-")}</button>`;
+    const aliasEditButton = user => `<button class="user-identity-action" data-edit-user-alias="${escapeHtml(userIdOf(user))}" title="修改名字" aria-label="修改名字">${userEditSvg}</button>`;
+    function userIsFocused(user) {
+      const userId = userIdOf(user);
+      if (!userId) return false;
+      if (user?.focused === true || user?.isFocused === true || user?.isFocus === true) return true;
+      const group = activeFocusOperatorGroup(state.focusData);
+      return Boolean(group?.userIds?.map(String).includes(userId));
+    }
+    function focusFavoriteButton(user, options = {}) {
+      const userId = userIdOf(user);
+      const focused = options.focused === true || userIsFocused(user);
+      const action = focused ? `data-remove-focus="1" data-user-id="${escapeHtml(userId)}"` : `data-add-detail-focus="${escapeHtml(userId)}"`;
+      const label = focused ? "取消收藏" : "收藏";
+      return `<button class="user-identity-action favorite" ${action} title="${label}" aria-label="${label}" aria-pressed="${focused}">${userFavoriteSvg}</button>`;
+    }
+    const addFocusButton = user => focusFavoriteButton(user);
+    const copyUserIdButton = user => `<button class="user-identity-copy" type="button" data-copy-user-id="${escapeHtml(userIdOf(user))}" title="点击复制用户ID">ID ${escapeHtml(userIdOf(user) || "-")}</button>`;
+    const copyUserPhoneButton = user => {
+      const phone = String(user?.phone || "-");
+      const disabled = !phone || phone === "-";
+      return `<button class="user-identity-copy phone" type="button" ${disabled ? "disabled" : `data-copy-user-phone="${escapeHtml(phone)}"`} title="${disabled ? "暂无手机号" : "点击复制手机号"}">手机号 ${escapeHtml(phone || "-")}</button>`;
+    };
+    function userIdentityMarkup(user, options = {}) {
+      const name = escapeHtml(userDisplayName(user));
+      const version = escapeHtml(user?.version || "-");
+      const nameHtml = options.nameHtml || `<strong class="user-identity-name">${name}</strong>`;
+      const favorite = options.favorite === false ? "" : (options.favoriteHtml || focusFavoriteButton(user, { focused: options.focused }));
+      return `<div class="user-identity ${options.className || ""}"><div class="user-identity-name-row">${nameHtml}${options.edit === false ? "" : aliasEditButton(user)}${favorite}${options.extraActions || ""}</div><div class="user-identity-meta">${copyUserIdButton(user)}<span class="user-identity-version" title="版本：${version}">${version}</span></div><div class="user-identity-phone">${copyUserPhoneButton(user)}</div></div>`;
+    }
     const pad = n => String(n).padStart(2, "0");
     const dayText = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
     const parseDateText = value => {
@@ -1586,6 +1645,14 @@
     });
 
     document.addEventListener("click", event => {
+      const copyButton = event.target.closest("[data-copy-user-id],[data-copy-user-phone]");
+      if (copyButton) {
+        event.preventDefault();
+        const isPhone = copyButton.hasAttribute("data-copy-user-phone");
+        const value = isPhone ? copyButton.dataset.copyUserPhone : copyButton.dataset.copyUserId;
+        copyUserValue(value, isPhone ? "手机号" : "用户ID").catch(() => toast("复制失败，请手动复制"));
+        return;
+      }
       const button = event.target.closest("[data-edit-unified-note]");
       if (!button) return;
       event.preventDefault();
@@ -1598,11 +1665,11 @@
       return [...(detail.history?.rows || []), ...(detail.rows || [])].find(row => String(row.id || "") === String(item.userId)) || null;
     }
 
-    async function copyUserId(userId) {
-      const value = String(userId || "");
+    async function copyUserValue(rawValue, label) {
+      const value = String(rawValue || "");
       if (!value) return;
       await window.BusinessUserDataHub.copyText(value);
-      toast(`已复制用户ID：${value}`);
+      toast(`已复制${label}：${value}`);
     }
 
     function publicFocusRange(preset, endDate) {
@@ -2470,14 +2537,12 @@
       container.innerHTML = rows.length ? rows.map((row, index) => {
         const comparison = compareFocusRow(row);
         const title = state.focusMode === "business" ? userDisplayName(row) : (row.businessName || "-");
-        const subtitle = state.focusMode === "business"
-          ? `ID ${row.userId || "-"}｜${row.phone || "-"}｜${row.version || "-"}`
-          : `${row.platform || "-"}｜${row.businessId || "-"}`;
+        const subtitle = `${row.platform || "-"}｜${row.businessId || "-"}`;
         const note = state.focusMode === "business" ? focusNoteText(row) : "";
         const dailyItems = dates.map(date => `<div class="mobile-daily-item"><label>${escapeHtml(date.slice(5).replace("-", "/"))}</label><strong>${metricMeta.formatter(row.days?.[date])}</strong></div>`).join("");
         return `<article class="mobile-data-card ${state.focusMode === "business" ? "focus-user-drilldown" : ""}" data-mobile-focus-card="${index}" ${state.focusMode === "business" ? `data-focus-user-detail="${escapeHtml(row.userId)}" tabindex="0" aria-label="查看${escapeHtml(title)}的全部业务数据" title="点击查看该用户的全部业务数据"` : ""}>
           <div class="mobile-card-head">
-            <div class="mobile-card-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span></div>
+            <div class="mobile-card-title">${state.focusMode === "business" ? userIdentityMarkup(row, { focused:true }) : `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span>`}</div>
             ${tag(comparison.level, comparison.label)}
           </div>
           ${state.focusMode === "business" ? `<div class="mobile-card-note"><span class="muted">观察备注</span>${escapeHtml(note || "暂无备注")}${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${escapeHtml(row.newTop100At)}</span>` : ""}</div>` : ""}
@@ -2492,7 +2557,7 @@
             <div class="mobile-card-stat"><label>合计${metricMeta.impactLabel}</label><strong>${metricMeta.formatter(row.periodImpact)}</strong></div>
           </div>
           <details class="mobile-card-daily"><summary>查看${metricMeta.dailyLabel}（${dates.length}天）</summary><div class="mobile-daily-grid">${dailyItems || '<span class="muted">当前日期范围暂无每日数据。</span>'}</div></details>
-          ${state.focusMode === "business" ? `<div class="mobile-card-foot"><details class="mobile-card-actions"><summary>用户操作</summary><div class="mobile-card-action-list"><button class="btn" data-copy-user-id="${escapeHtml(row.userId)}">复制用户ID</button><button class="btn" data-edit-user-alias="${escapeHtml(row.userId)}">修改名称</button><button class="btn" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}">编辑备注</button><button class="btn" data-pin-focus="1" data-user-id="${escapeHtml(row.userId)}" data-pinned="${row.pinned ? "1" : "0"}">${row.pinned ? "取消置顶" : "置顶用户"}</button><button class="btn danger" data-remove-focus="1" data-user-id="${escapeHtml(row.userId)}">从当前工作区移除</button></div></details></div>` : ""}
+          ${state.focusMode === "business" ? `<div class="mobile-card-foot"><details class="mobile-card-actions"><summary>用户操作</summary><div class="mobile-card-action-list"><button class="btn" type="button" data-copy-user-id="${escapeHtml(row.userId)}">复制用户ID</button><button class="btn" data-edit-user-alias="${escapeHtml(row.userId)}">修改名称</button><button class="btn" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}">编辑备注</button><button class="btn" data-pin-focus="1" data-user-id="${escapeHtml(row.userId)}" data-pinned="${row.pinned ? "1" : "0"}">${row.pinned ? "取消置顶" : "置顶用户"}</button><button class="btn danger" data-remove-focus="1" data-user-id="${escapeHtml(row.userId)}">从当前工作区移除</button></div></details></div>` : ""}
         </article>`;
       }).join("") : `<div class="mobile-data-card"><div class="mobile-card-note muted">${state.focusMode === "business" ? "当前业务暂无有单重点用户。" : "该用户当前没有匹配到有单业务。"}</div></div>`;
     }
@@ -2575,7 +2640,7 @@
       const profile = $("#focusProfile");
       profile.classList.toggle("hidden", state.focusMode !== "user" || !selectedUser);
       if (state.focusMode === "user" && selectedUser) {
-        profile.innerHTML = `<div class="focus-profile-main"><strong>${escapeHtml(userDisplayName(selectedUser))}${aliasEditButton(selectedUser)}<button class="user-pin-icon ${selectedUser.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" data-pinned="${selectedUser.pinned ? "1" : "0"}" title="${selectedUser.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="从当前运营工作区移除">−</button></strong><span>${copyUserIdButton(selectedUser)}｜${escapeHtml(selectedUser.phone || "-")}｜${escapeHtml(selectedUser.version || "-")}</span><div class="focus-profile-note"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="编辑观察备注">✎</button><span>${escapeHtml(focusNoteText(selectedUser) || "添加观察备注")}</span></div></div><div class="focus-profile-stats"><div class="focus-profile-stat"><label>有单业务</label><strong>${fmt(rows.length)}</strong></div><div class="focus-profile-stat"><label>${metricMeta.todayLabel}合计</label><strong>${metricMeta.formatter(todaySum)}</strong></div><div class="focus-profile-stat"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? metricMeta.formatter(yesterdaySum) : "-"}</strong></div><div class="focus-profile-stat"><label>净变化</label><strong class="${todaySum - yesterdaySum < 0 ? "down" : todaySum - yesterdaySum > 0 ? "up" : ""}">${yesterdayComparable.length ? `${todaySum - yesterdaySum > 0 ? "+" : ""}${metricMeta.formatter(todaySum - yesterdaySum)}` : "-"}</strong></div></div>`;
+        profile.innerHTML = `<div class="focus-profile-main">${userIdentityMarkup(selectedUser, { focused:true, extraActions:`<button class="user-pin-icon ${selectedUser.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${escapeHtml(selectedUser.userId)}" data-pinned="${selectedUser.pinned ? "1" : "0"}" title="${selectedUser.pinned ? "取消置顶" : "置顶用户"}">↑</button>` })}<div class="focus-profile-note"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(selectedUser.userId)}" title="编辑观察备注">✎</button><span>${escapeHtml(focusNoteText(selectedUser) || "添加观察备注")}</span></div></div><div class="focus-profile-stats"><div class="focus-profile-stat"><label>有单业务</label><strong>${fmt(rows.length)}</strong></div><div class="focus-profile-stat"><label>${metricMeta.todayLabel}合计</label><strong>${metricMeta.formatter(todaySum)}</strong></div><div class="focus-profile-stat"><label>昨日参考合计</label><strong>${yesterdayComparable.length ? metricMeta.formatter(yesterdaySum) : "-"}</strong></div><div class="focus-profile-stat"><label>净变化</label><strong class="${todaySum - yesterdaySum < 0 ? "down" : todaySum - yesterdaySum > 0 ? "up" : ""}">${yesterdayComparable.length ? `${todaySum - yesterdaySum > 0 ? "+" : ""}${metricMeta.formatter(todaySum - yesterdaySum)}` : "-"}</strong></div></div>`;
       }
       const firstColumns = state.focusMode === "business" ? `<th>序号</th><th class="focus-user-col">用户</th><th class="focus-note-col">观察备注</th>` : `<th>序号</th><th class="focus-business-col">业务</th>`;
       $("#focusHead").innerHTML = `<tr>${firstColumns}<th class="focus-order-col">${metricMeta.todayLabel}${majorityHeader("多数数据", currentMajority, currentMatched.length)}</th><th class="focus-order-col">昨日同时刻${majorityHeader("多数参考", yesterdayMajority, yesterdayMatched.length)}</th><th>变化比例</th><th>${metricMeta.impactLabel}</th><th>状态</th>${dates.map(date => `<th>${date.slice(5).replace("-", "/")}</th>`).join("")}<th>${data.range?.label || "本期"}合计</th><th>上一同期</th><th>合计变化比例</th><th>合计${metricMeta.impactLabel}</th></tr>`;
@@ -2596,7 +2661,7 @@
         ? `<tr><td colspan="${dates.length + baseColumns + 9}" class="muted">正在更新重点用户，原有数据会在加载完成后替换...</td></tr>`
         : (rows.length ? rows.map((row, index) => `<tr ${state.focusMode === "business" ? `class="focus-user-drilldown" data-focus-user-detail="${escapeHtml(row.userId)}" tabindex="0" aria-label="查看${escapeHtml(userDisplayName(row))}的全部业务数据" title="点击查看该用户的全部业务数据"` : ""}>
           <td>${index + 1}</td>
-          ${state.focusMode === "business" ? `<td class="focus-user focus-user-col"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(row))}</strong>${aliasEditButton(row)}<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${row.userId}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button><button class="user-remove-icon" data-remove-focus="1" data-user-id="${row.userId}" title="从当前运营工作区移除">−</button></div><span class="muted">${copyUserIdButton(row)}｜${escapeHtml(row.phone || "-")}</span><span class="muted">版本：${escapeHtml(row.version || "-")}</span>${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" data-full-note="${escapeHtml(focusNoteText(row) || "添加观察备注")}" tabindex="0" aria-label="完整观察备注：${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
+          ${state.focusMode === "business" ? `<td class="focus-user focus-user-col">${userIdentityMarkup(row, { focused:true, extraActions:`<button class="user-pin-icon ${row.pinned ? "active" : ""}" data-pin-focus="1" data-user-id="${escapeHtml(row.userId)}" data-pinned="${row.pinned ? "1" : "0"}" title="${row.pinned ? "取消置顶" : "置顶用户"}">↑</button>` })}${row.pendingProfile ? '<span class="new-top">资料待补全</span>' : row.newTop100At ? `<span class="new-top">新进前100 ${row.newTop100At}</span>` : ""}</td><td class="focus-note-col"><div class="focus-note-content"><button class="focus-note-edit" data-edit-focus-note="1" data-user-id="${escapeHtml(row.userId)}" title="编辑观察备注">✎</button><span class="focus-note-text ${focusNoteText(row) ? "" : "focus-note-empty"}" data-full-note="${escapeHtml(focusNoteText(row) || "添加观察备注")}" tabindex="0" aria-label="完整观察备注：${escapeHtml(focusNoteText(row) || "添加观察备注")}">${escapeHtml(focusNoteText(row) || "添加备注")}</span></div></td>` : `<td class="focus-business-col"><strong>${escapeHtml(row.businessName || "-")}</strong><span class="muted">${escapeHtml(row.platform || "-")}</span></td>`}
           <td class="focus-order-col">${metricMeta.formatter(row.todayOrders)}${focusDataTimeLabel(row) ? `<small class="comparison-ref">数据 ${escapeHtml(focusDataTimeLabel(row))}</small>` : ""}</td><td class="focus-order-col">${comparisonReferenceCell(row.yesterdaySameTime, row.sameTime?.yesterdayReference || row.sameTime || row, metricMeta.formatter, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td class="${Number(row.ratio) < 0 ? "down" : Number(row.ratio) > 0 ? "up" : ""}">${pctValue(row.ratio)}</td><td>${row.impact === null || row.impact === undefined ? "-" : metricMeta.formatter(row.impact)}</td>
           <td>${tag(compareFocusRow(row).level, compareFocusRow(row).label)}</td>
           ${dates.map(date => `<td>${metricMeta.formatter(row.days?.[date])}</td>`).join("")}
@@ -2833,7 +2898,7 @@
       $("#marketingCostSummary").innerHTML = `<div class="cost-summary-item"><label>费用项</label><strong>${fmt(summary.itemCount)}</strong></div><div class="cost-summary-item"><label>涉及用户</label><strong>${fmt(summary.userCount)}</strong></div><div class="cost-summary-item"><label>周期订单</label><strong>${fmt(summary.orderCount)}</strong></div><div class="cost-summary-item total"><label>费用总额</label><strong>¥${costMoney(summary.finalAmount)}</strong></div>`;
       $("#marketingCostBody").innerHTML = state.marketingCostLoading && !rows.length
         ? `<tr><td colspan="12" class="cost-empty">正在加载费用数据...</td></tr>`
-        : rows.length ? rows.map((item, index) => { const status = marketingCostStatus(item); const estimatedCount = item.estimatedDates?.length || 0; return `<tr><td>${index + 1}</td><td class="cost-user"><button class="cost-entity-button" type="button" data-filter-marketing-cost-user="${escapeHtml(item.userId)}" aria-label="查看用户 ${escapeHtml(item.userName || item.userId)} 的全部费用项"><strong>${escapeHtml(item.userName || `用户 ${item.userId}`)}</strong><span>ID：${escapeHtml(item.userId)}</span></button></td><td class="cost-business"><button class="cost-entity-button" type="button" data-filter-marketing-cost-business="${escapeHtml(item.businessId)}" aria-label="查看业务 ${escapeHtml(item.businessName || item.businessId)} 的全部费用项"><strong>${escapeHtml(item.businessName || "-")}</strong><span class="muted">${escapeHtml(item.platform || "-")}</span></button></td><td>${escapeHtml(item.startDate)}</td><td>${escapeHtml(item.endDate)}</td><td>${fmt(marketingCostDayCount(item))}</td><td><button class="cost-orders-button" type="button" data-marketing-cost-orders="${escapeHtml(item.id)}" aria-label="查看 ${escapeHtml(item.userName || item.userId)} 的周期每日订单"><strong>${fmt(item.orderCount)}</strong></button>${item.complete === false ? `<span class="cost-incomplete">${item.t1Pending ? "缺近3日基准" : `缺${fmt(item.missingDates?.length || 0)}天数据`}</span>` : estimatedCount ? `<span class="cost-incomplete">${fmt(estimatedCount)}天按近3日均值预估</span>` : ""}</td><td>¥${costMoney(item.unitPrice)}</td><td><strong>¥${costMoney(marketingCostFinalAmount(item))}</strong><span class="cost-amount-kind">${status === "settled" ? "实际" : "预估"}</span></td><td><span class="cost-status ${status === "settled" ? "settled" : ""}">${status === "settled" ? "已结算" : "待结算"}</span></td><td class="cost-note" title="${escapeHtml(item.note || "")}"><div class="cost-note-wrap"><span class="cost-note-text">${escapeHtml(item.note || "-")}</span><button class="cost-note-edit" type="button" data-edit-marketing-cost-note="${escapeHtml(item.id)}" title="修改备注" aria-label="修改 ${escapeHtml(item.userName || item.userId)} 的费用备注"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button></div></td><td><div class="cost-actions"><button class="btn" data-edit-marketing-cost="${escapeHtml(item.id)}">编辑</button><button class="btn" data-settle-marketing-cost="${escapeHtml(item.id)}" ${item.complete === false ? "disabled" : ""}>${status === "settled" ? "修改结算" : "结算"}</button><button class="btn danger" data-remove-marketing-cost="${escapeHtml(item.id)}">删除</button></div></td></tr>`; }).join("")
+        : rows.length ? rows.map((item, index) => { const status = marketingCostStatus(item); const estimatedCount = item.estimatedDates?.length || 0; const savedUser = (data.users || []).find(user => String(user.userId || user.id) === String(item.userId)) || {}; const user = { ...savedUser, id:item.userId, userId:item.userId, name:item.userName || savedUser.name || `用户 ${item.userId}`, phone:savedUser.phone || item.phone || "-", version:savedUser.version || item.version || "-" }; const nameHtml = `<button class="user-identity-name" type="button" data-filter-marketing-cost-user="${escapeHtml(item.userId)}" aria-label="查看用户 ${escapeHtml(item.userName || item.userId)} 的全部费用项">${escapeHtml(userDisplayName(user))}</button>`; return `<tr><td>${index + 1}</td><td class="cost-user">${userIdentityMarkup(user, { nameHtml, focused:true })}</td><td class="cost-business"><button class="cost-entity-button" type="button" data-filter-marketing-cost-business="${escapeHtml(item.businessId)}" aria-label="查看业务 ${escapeHtml(item.businessName || item.businessId)} 的全部费用项"><strong>${escapeHtml(item.businessName || "-")}</strong><span class="muted">${escapeHtml(item.platform || "-")}</span></button></td><td>${escapeHtml(item.startDate)}</td><td>${escapeHtml(item.endDate)}</td><td>${fmt(marketingCostDayCount(item))}</td><td><button class="cost-orders-button" type="button" data-marketing-cost-orders="${escapeHtml(item.id)}" aria-label="查看 ${escapeHtml(item.userName || item.userId)} 的周期每日订单"><strong>${fmt(item.orderCount)}</strong></button>${item.complete === false ? `<span class="cost-incomplete">${item.t1Pending ? "缺近3日基准" : `缺${fmt(item.missingDates?.length || 0)}天数据`}</span>` : estimatedCount ? `<span class="cost-incomplete">${fmt(estimatedCount)}天按近3日均值预估</span>` : ""}</td><td>¥${costMoney(item.unitPrice)}</td><td><strong>¥${costMoney(marketingCostFinalAmount(item))}</strong><span class="cost-amount-kind">${status === "settled" ? "实际" : "预估"}</span></td><td><span class="cost-status ${status === "settled" ? "settled" : ""}">${status === "settled" ? "已结算" : "待结算"}</span></td><td class="cost-note" title="${escapeHtml(item.note || "")}"><div class="cost-note-wrap"><span class="cost-note-text">${escapeHtml(item.note || "-")}</span><button class="cost-note-edit" type="button" data-edit-marketing-cost-note="${escapeHtml(item.id)}" title="修改备注" aria-label="修改 ${escapeHtml(item.userName || item.userId)} 的费用备注"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button></div></td><td><div class="cost-actions"><button class="btn" data-edit-marketing-cost="${escapeHtml(item.id)}">编辑</button><button class="btn" data-settle-marketing-cost="${escapeHtml(item.id)}" ${item.complete === false ? "disabled" : ""}>${status === "settled" ? "修改结算" : "结算"}</button><button class="btn danger" data-remove-marketing-cost="${escapeHtml(item.id)}">删除</button></div></td></tr>`; }).join("")
         : `<tr><td colspan="12" class="cost-empty">当前筛选条件下暂无费用项。点击“新增费用项”开始计算。</td></tr>`;
       $("#refreshMarketingCostBtn").disabled = state.marketingCostLoading;
       $("#refreshMarketingCostBtn").textContent = state.marketingCostLoading ? "刷新中..." : "刷新费用";
@@ -3484,11 +3549,13 @@
         });
         return;
       }
-      await requestJson(apiUrl("/api/focus-users"), {
+      const result = await requestJson(apiUrl("/api/focus-users"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ businessId, userId, groupId: activeFocusOperatorGroup(state.focusData)?.id || "" })
       });
+      state.focusData = result.data || state.focusData;
+      if ($("#detailModal")?.classList.contains("open")) renderDetail(true);
       toast("已加入重点用户看板");
     }
 
@@ -3528,6 +3595,8 @@
       const result = await requestJson(apiUrl("/api/focus-users/remove"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId, groupId: group.id }) });
       state.focusData = result.data;
       renderFocusUsers();
+      if (state.focusWorkspace === "costs") renderMarketingCosts();
+      if ($("#detailModal")?.classList.contains("open")) renderDetail(true);
       toast("已移除重点用户");
     }
 
@@ -4755,7 +4824,8 @@
         <tbody>${visibleUsers.length ? visibleUsers.map(user => {
           const id = String(user.id || "");
           const expanded = state.detailExpandedUserId === id;
-          return `<tr data-mobile-user-id="${escapeHtml(id)}"><td class="mobile-identity-col"><button data-detail-user-toggle="${escapeHtml(id)}" aria-expanded="${expanded}"><span class="mobile-user-name">${escapeHtml(userDisplayName(user))}</span><span class="mobile-user-id">ID：${escapeHtml(id || "-")}｜${expanded ? "收起" : "展开"}</span></button></td><td class="mobile-today-col" data-field="today" data-value="${Number(user.cmp?.today || 0)}">${fmt(user.cmp?.today)}</td><td data-field="base" data-value="${user.cmp?.base ?? ""}">${fmtValue(user.cmp?.base)}</td><td data-field="ratio" data-value="${user.cmp?.ratio ?? ""}" class="${user.cmp?.diff < 0 ? "down" : user.cmp?.diff > 0 ? "up" : ""}">${pctValue(user.cmp?.ratio)}</td><td data-field="impact" data-value="${user.cmp?.impact ?? ""}" class="${user.cmp?.diff < 0 ? "down" : ""}">${fmtValue(user.cmp?.impact)}</td><td class="mobile-status-col">${detailUserStatusTag(user)}</td>${selectedDate ? `<td data-field="date" data-date="${selectedDate}" data-value="${Number(user.days?.[selectedDate] || 0)}">${fmt(user.days?.[selectedDate])}</td>` : ""}${showRangeTotal ? `<td data-field="range-total" data-value="${detailRangeTotal(user, dates)}"><strong>${fmt(detailRangeTotal(user, dates))}</strong></td>` : ""}</tr>${expanded ? `<tr class="mobile-expanded-row"><td class="mobile-expanded-spacer"></td><td class="mobile-expanded-cell" colspan="${(selectedDate ? 6 : 5) + (showRangeTotal ? 1 : 0)}"><div class="mobile-expanded-meta"><span>手机号：${escapeHtml(user.phone || "-")}</span><span>版本：${escapeHtml(user.version || "-")}</span><span>${copyUserIdButton(user)}</span>${aliasEditButton(user)}${addFocusButton(user)}</div><div class="mobile-expanded-days">${dates.map(date => `<div class="mobile-expanded-day" data-date="${date}" data-value="${Number(user.days?.[date] || 0)}"><span>${date.slice(5)}</span><strong>${fmt(user.days?.[date])}</strong></div>`).join("")}</div></td></tr>` : ""}`;
+          const nameHtml = `<button class="user-identity-name" data-detail-user-toggle="${escapeHtml(id)}" aria-expanded="${expanded}" title="${expanded ? "收起每日数据" : "展开每日数据"}">${escapeHtml(userDisplayName(user))}</button>`;
+          return `<tr data-mobile-user-id="${escapeHtml(id)}"><td class="mobile-identity-col">${userIdentityMarkup(user, { nameHtml })}</td><td class="mobile-today-col" data-field="today" data-value="${Number(user.cmp?.today || 0)}">${fmt(user.cmp?.today)}</td><td data-field="base" data-value="${user.cmp?.base ?? ""}">${fmtValue(user.cmp?.base)}</td><td data-field="ratio" data-value="${user.cmp?.ratio ?? ""}" class="${user.cmp?.diff < 0 ? "down" : user.cmp?.diff > 0 ? "up" : ""}">${pctValue(user.cmp?.ratio)}</td><td data-field="impact" data-value="${user.cmp?.impact ?? ""}" class="${user.cmp?.diff < 0 ? "down" : ""}">${fmtValue(user.cmp?.impact)}</td><td class="mobile-status-col">${detailUserStatusTag(user)}</td>${selectedDate ? `<td data-field="date" data-date="${selectedDate}" data-value="${Number(user.days?.[selectedDate] || 0)}">${fmt(user.days?.[selectedDate])}</td>` : ""}${showRangeTotal ? `<td data-field="range-total" data-value="${detailRangeTotal(user, dates)}"><strong>${fmt(detailRangeTotal(user, dates))}</strong></td>` : ""}</tr>${expanded ? `<tr class="mobile-expanded-row"><td class="mobile-expanded-spacer"></td><td class="mobile-expanded-cell" colspan="${(selectedDate ? 6 : 5) + (showRangeTotal ? 1 : 0)}"><div class="mobile-expanded-meta">${unifiedNoteEditButton(user)}</div><div class="mobile-expanded-days">${dates.map(date => `<div class="mobile-expanded-day" data-date="${date}" data-value="${Number(user.days?.[date] || 0)}"><span>${date.slice(5)}</span><strong>${fmt(user.days?.[date])}</strong></div>`).join("")}</div></td></tr>` : ""}`;
         }).join("") : `<tr><td class="mobile-identity-col">暂无数据</td><td colspan="${(selectedDate ? 6 : 5) + (showRangeTotal ? 1 : 0)}" class="muted">${emptyText}</td></tr>`}</tbody></table></div>
         ${visibleUsers.length < users.length ? `<button class="btn mobile-load-more" data-detail-load-more="1">继续加载（剩余 ${fmt(users.length - visibleUsers.length)} 人）</button>` : `<div class="mobile-matrix-status">已显示当前筛选下的全部 ${fmt(users.length)} 人</div>`}
       </div>`;
@@ -4810,7 +4880,7 @@
               const userTimeNote = !isT1Detail && isFiniteMinute(userMinute) && isFiniteMinute(currentMajority.minute) && userMinute !== currentMajority.minute
                 ? `<small class="comparison-ref">数据 ${minuteText(userMinute)} · 较多数${userMinute < currentMajority.minute ? "早" : "晚"} ${Math.abs(userMinute - currentMajority.minute)} 分钟</small>`
                 : "";
-              return `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><strong>${escapeHtml(userDisplayName(user))}</strong>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td><td>${fmt(user.cmp.today)}${userTimeNote}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {}, fmt, { dominantMinute: lastWeekMajority.minute, compactMajority: true })}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}${showRangeTotal ? `<td><strong>${fmt(detailRangeTotal(user, dates))}</strong></td>` : ""}</tr>`;
+              return `<tr><td>${index + 1}</td><td class="user-cell">${userIdentityMarkup(user)}</td><td>${fmt(user.cmp.today)}${userTimeNote}</td><td>${comparisonReferenceCell(user.cmp.base, same.yesterdayReference || same, fmt, { dominantMinute: yesterdayMajority.minute, compactMajority: true })}</td><td>${comparisonReferenceCell(lastWeek, same.lastWeekReference || {}, fmt, { dominantMinute: lastWeekMajority.minute, compactMajority: true })}</td><td class="${user.cmp.diff < 0 ? "down" : user.cmp.diff > 0 ? "up" : ""}">${pctValue(user.cmp.ratio)}</td><td>${fmtValue(user.cmp.impact)}</td><td>${detailUserStatusTag(user)}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}${showRangeTotal ? `<td><strong>${fmt(detailRangeTotal(user, dates))}</strong></td>` : ""}</tr>`;
             }).join("") : `<tr><td colspan="${dates.length + 8 + (showRangeTotal ? 1 : 0)}" class="muted">${state.detailMode === "abnormal" ? "当前业务没有达到阈值的下降异常用户。" : state.detailMode === "up" ? "当前业务没有可对比的增长用户。" : "当前业务没有返回用户明细。"}</td></tr>`}</tbody>
           </table>
         </div>
@@ -4853,7 +4923,7 @@
                 : (user.cmp?.reason || riskCmp.reason || "-");
               return `<tr>
                 <td>${index + 1}</td>
-                <td class="user-cell"><div class="user-name-line"><button class="user-toggle" data-detail-user-toggle="${user.id || ""}" title="展开周期数据">${expanded ? "▾" : "›"}</button><button class="user-history-link" data-user-history="${user.id || ""}" title="查看该用户历史订单">${escapeHtml(userDisplayName(user))}</button>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>
+                <td class="user-cell">${userIdentityMarkup(user, { nameHtml:`<button class="user-identity-name" data-user-history="${escapeHtml(user.id || "")}" title="查看该用户历史订单">${escapeHtml(userDisplayName(user))}</button>`, extraActions:`<button class="user-toggle" data-detail-user-toggle="${escapeHtml(user.id || "")}" title="${expanded ? "收起周期数据" : "展开周期数据"}">${expanded ? "▾" : "›"}</button>` })}</td>
                 <td>${fmt(displayCmp.today)}</td>
                 <td>${fmtValue(displayCmp.base)}</td>
                 <td class="${displayCmp.diff < 0 ? "down" : displayCmp.diff > 0 ? "up" : ""}">${pctValue(displayCmp.ratio)}</td>
@@ -4893,7 +4963,7 @@
       <div class="detail-table-wrap"><table class="compact wide-date-table user-data-table">
         <thead><tr><th>序号</th><th>用户</th>${dates.map(date => `<th>${date}</th>`).join("")}<th>合计</th></tr></thead>
         ${rows.length ? `<tbody class="summary-body"><tr><td colspan="2">当前列表合计（${fmt(rows.length)} 人）</td>${dates.map(date => `<td>${fmt(dailySums[date])}</td>`).join("")}<td>${fmt(totalSum)}</td></tr></tbody>` : ""}
-        <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell"><div class="user-name-line"><button class="user-history-link" data-select-history-user="${user.id || ""}">${escapeHtml(userDisplayName(user))}</button>${aliasEditButton(user)}${addFocusButton(user)}</div><span class="muted">${copyUserIdButton(user)}｜${user.phone || "-"}</span><span class="muted">版本：${user.version || "-"}</span></td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
+        <tbody>${rows.length ? rows.map((user, index) => `<tr><td>${index + 1}</td><td class="user-cell">${userIdentityMarkup(user, { nameHtml:`<button class="user-identity-name" data-select-history-user="${escapeHtml(user.id || "")}">${escapeHtml(userDisplayName(user))}</button>` })}</td>${dates.map(date => `<td>${fmt(user.days?.[date])}</td>`).join("")}<td>${fmt(user.todayOrders)}</td></tr>`).join("") : `<tr><td colspan="${dates.length + 3}" class="muted">当前没有用户历史订单。</td></tr>`}</tbody>
       </table></div>
       ${dates.length > 7 ? `<div class="scroll-hint">当前共 ${dates.length} 天，表格底部可左右拖动查看全部日期。</div>` : ""}`;
     }
@@ -5163,11 +5233,6 @@
         loadGlobalUserSearch({ userId: candidate.dataset.globalUserSelect }).catch(error => toast(error.message || "用户查询失败"));
         return;
       }
-      const copyId = e.target.closest("[data-copy-user-id]");
-      if (copyId) {
-        copyUserId(copyId.dataset.copyUserId);
-        return;
-      }
       const alias = e.target.closest("[data-edit-user-alias]");
       if (alias) {
         editUserAlias(alias.dataset.editUserAlias).catch(error => toast(error.message || "备注保存失败"));
@@ -5296,11 +5361,6 @@
       const note = e.target.closest("[data-edit-focus-note]");
       if (note) {
         openFocusNote(note.dataset.userId);
-        return;
-      }
-      const copyId = e.target.closest("[data-copy-user-id]");
-      if (copyId) {
-        copyUserId(copyId.dataset.copyUserId);
         return;
       }
       const alias = e.target.closest("[data-edit-user-alias]");
@@ -5443,11 +5503,6 @@
         loadData(true).catch(error => toast(error.message || "历史订单查询失败"));
         return;
       }
-      const copyId = e.target.closest("[data-copy-user-id]");
-      if (copyId) {
-        copyUserId(copyId.dataset.copyUserId);
-        return;
-      }
       const alias = e.target.closest("[data-edit-user-alias]");
       if (alias) {
         editUserAlias(alias.dataset.editUserAlias).catch(error => toast(error.message || "备注保存失败"));
@@ -5456,6 +5511,11 @@
       const addFocus = e.target.closest("[data-add-detail-focus]");
       if (addFocus) {
         addDetailFocusUser(addFocus.dataset.addDetailFocus).catch(error => toast(error.message || "添加重点用户失败"));
+        return;
+      }
+      const removeFocus = e.target.closest("[data-remove-focus]");
+      if (removeFocus) {
+        removeFocusUser(removeFocus.dataset.userId).catch(error => toast(error.message || "取消收藏失败"));
         return;
       }
       const selectedHistoryUser = e.target.closest("[data-select-history-user]");
