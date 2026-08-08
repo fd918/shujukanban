@@ -12510,5 +12510,22 @@
     "todayRedemptionAmount": null,
     "cumulativeRedemptionOrders": 5,
     "cumulativeRedemptionAmount": 1365
+  },
+  {
+    "activityId": "1556",
+    "title": "【8.1-8.31酒店企业媒体暑期团购返点奖励赛】",
+    "metric": "amount",
+    "date": "2026-08-08",
+    "hour": 16,
+    "slotMinute": 50,
+    "slotIntervalMinutes": 10,
+    "dateHour": "2026-08-08 16:50",
+    "recordedAt": "2026/8/8 16:58:00",
+    "todayValidOrders": null,
+    "todayRedemptionOrders": null,
+    "todayActualPayment": null,
+    "todayRedemptionAmount": null,
+    "cumulativeRedemptionOrders": 5,
+    "cumulativeRedemptionAmount": 1365
   }
 ]
